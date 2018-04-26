@@ -11,7 +11,7 @@
 #' names(r)
 #'     "Cc"  "E"
 #' }
-#' @importFrom ggplot2 ggplot geom_point theme theme_set aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
+#' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth
 #' @importFrom gridExtra grid.arrange
 #' @importFrom grDevices palette
