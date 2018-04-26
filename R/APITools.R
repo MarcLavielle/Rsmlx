@@ -34,6 +34,7 @@
   return(invisible(x))
 }
 
+#' @importFrom RJSONIO toJSON 
 .makeRequest = function(applicationName, functionName, arguments, requestType, wait = TRUE){
   loadedDLLs <- getLoadedDLLs();
   tryCatch(expr = {
@@ -44,7 +45,7 @@
     outputStruct <- invisible ( .C( "applyJson",
                                     .encodeString(applicationName),
                                     .encodeString(functionName),
-                                    RJSONIO::toJSON( .encodeString(arguments), digits = 15, .level = -Inf),
+                                    toJSON( .encodeString(arguments), digits = 15, .level = -Inf),
                                     .encodeString(requestType),
                                     wait,
                                     output_R = "",
@@ -127,6 +128,7 @@
   return(invisible(struct))
 }
 
+#' @importFrom RJSONIO fromJSON
 .decodeFromJSON = function(jsonObj, type){
   tryCatch({
     decodedOutput = (fromJSON(jsonObj,digits = 15))
@@ -178,7 +180,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = parse0("\n(from : ",source,")")
+    source = paste0("\n(from : ",source,")")
   }
   message(paste0("[ERROR] ",str,source))
 }
@@ -189,7 +191,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = parse0("\n(from : ",source,")")
+    source = paste0("\n(from : ",source,")")
   }
   message(paste0("[WARNING] ",str,source))
 }
@@ -200,7 +202,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = parse0("\n(from : ",source,")")
+    source = paste0("\n(from : ",source,")")
   }
   writeLines(paste0("[INFO] ",str,source)) 
 }

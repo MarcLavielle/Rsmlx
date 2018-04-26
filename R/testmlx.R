@@ -1,11 +1,34 @@
+#' Statistical tests
+#'
+#' Get the individual predictions obtained with the simulated individual parameters :
+#' @param project a Monolix project
+#' @param test.list  the tests to perform
+#' @param plot  FALSSE/TRUE  plot the results
+#' @return a list of data frames (one data frame per output).
+#' @examples
+#' \dontrun{
+#' r = getSimulatedPredictions()
+#' names(r)
+#'     "Cc"  "E"
+#' }
+#' @importFrom ggplot2 ggplot geom_point theme aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
+#'             geom_abline geom_boxplot geom_smooth
+#' @importFrom gridExtra grid.arrange
+#' @importFrom grDevices palette
+#' @importFrom stats quantile anova binom.test cor cov dnorm lm logLik nlm p.adjust pchisq pnorm qnorm
+#'             quantile rnorm runif sd shapiro.test spline t.test
+#' @importFrom utils ls.str read.csv read.table write.table
+#' @export
 
-testmlx <- function(project=NULL, 
+testmlx <- function(project, 
                     test.list=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
-  if (!is.null(project)) 
+  if (is.null(project)) 
+    stop("A valid Monolix project is required", call.=FALSE)  
+  else 
     loadProject(project)
- 
+  
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
     cat("\nEstimation of the population parameters... \n")
@@ -51,8 +74,6 @@ residualTest <- function(project=NULL, plot=FALSE) {
   }
   
   if (plot) {
-    library(ggplot2)
-    library(gridExtra)
     x <- seq(-3,3,length.out=100)
     dn <- data.frame(x,F=pnorm(x))
     pl <- list()
@@ -92,8 +113,6 @@ randomEffectTest <- function(project=NULL, plot=FALSE) {
   }
   
   if (plot) {
-    library(ggplot2)
-    library(gridExtra)
     x <- seq(-3,3,length.out=100)
     dn <- data.frame(x,F=pnorm(x))
     pop.param <- getEstimatedPopulationParameters()
@@ -161,8 +180,6 @@ correlationTest <- function(project=NULL, plot=FALSE) {
     }
     
     if (plot) {
-      library(ggplot2)
-      library(gridExtra)
       pop.param <- getEstimatedPopulationParameters()
       names.pop.param <- gsub(" ","",names(pop.param))
       ind.param.omega <- grep("omega_",names.pop.param)
@@ -283,8 +300,6 @@ covariateTest <- function(project=NULL, plot=FALSE) {
   }
   
   if (plot) {
-    library(ggplot2)
-    library(gridExtra)
     sim.param <- getSimulatedIndividualParameters()
     sim.param$rep <- NULL
     tr.param <- NULL

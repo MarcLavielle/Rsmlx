@@ -5,6 +5,7 @@
 #' \item COSSAC: ranked SCM
 #' \item SCM: SCM method
 #' }
+#' @param project a Monolix project
 #' @param covariateToSearch [optional] defines the covariate to search. By default, all covariates are searched.
 #' @param parameterToTest [optional] defines the parameters on which the covariates are applied. By default, all parameters are used.
 #' @param settings [optional] defines the settings search. This is a list of all settings for the search. 
@@ -494,6 +495,7 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
 ######################################################################################################################
 # Compute the pValue based on a statistical test (LogLikelihood Ratio test) 
 ######################################################################################################################
+#' @importFrom stats pchisq
 .getPvalueLRT <- function(referenceOFV, OFV, dof){
   if(dof>0){
     pValue <- 1-pchisq(max(referenceOFV-OFV,.1), df=dof)

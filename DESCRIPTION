@@ -7,7 +7,19 @@ Author: c(
 Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-Depends: R (>= 3.0.0), R6, RJSONIO
+Depends: R (>= 3.0.0)
+Imports:
+    R6,
+    RJSONIO,
+    ggplot2,
+    gridExtra,
+    tools,
+    methods,
+    graphics,
+    grDevices,
+    utils,
+    stats,
+    tcltk
 Collate: APITools.R displayTools.R MlxEnvironment.R APIManager.R
         ProjectManagement.R Scenario.R Settings2.R
         PopulationParameters.R IndividualModel.R CovariateModel.R
@@ -18,7 +30,6 @@ Collate: APITools.R displayTools.R MlxEnvironment.R APIManager.R
   correlationModelSelection.R
   covariateModelSelection.R
   covariateSearch.R
-  cvAssesment.R
   errorModelSelection.R
   llp.R
   newConnectors.R

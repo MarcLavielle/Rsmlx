@@ -1,15 +1,3 @@
-#' Get simulated predictions
-#' 
-#' Get the individual predictions obtained with the simulated individual parameters :
-#' @return a list of data frames (one data frame per output).
-#' @examples
-#' \dontrun{
-#' r = getSimulatedPredictions()
-#' names(r)
-#'     "Cc"  "E" 
-#' }
-#' @export
-
 covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="all", param.cov="all") {
   
   project.folder <- getProjectSettings()$directory

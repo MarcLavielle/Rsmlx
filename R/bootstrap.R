@@ -3,7 +3,7 @@
 #' Sample data set from a project
 #' @param project project where the data set will be sampled
 #' @param dataFolder [optional] folder where to get the data set
-#' @param [optional] settings of the sampling. These settings are
+#' @param settings [optional] settings of the sampling. These settings are
 #' \itemize{
 #' \item samples, the number of bootstrapped data set to generate (default value is 100)
 #' \item sample_size, the number of subjects in each bootstrap data set (default value is the  number of individuals in the original data set).
@@ -11,6 +11,8 @@
 #' \item stratify_on, categorical covariate (or tranformed categorical covariate) of the project (default is NULL). It allows to respect the proportion of these covariate in the generated data set
 #' }
 #'
+#' @importFrom graphics boxplot lines par plot
+#' @importFrom stats quantile
 #' @export
 generateBootstrap = function(project, settings, dataFolder = NULL){
 
@@ -254,18 +256,18 @@ runBootstrap <- function(project, dataFolder = NULL, settings = NULL){
       isValid = FALSE
     }
   }else if(settingName == tolower("stratify_on")){
-    if(is.vector(inputValue) == FALSE){
+    if(is.vector(settingValue) == FALSE){
       message("ERROR: Unexpected type encountered. covariateToSearch must be a vector")
       isValid = FALSE
     }else{
-      if(length(intersect(getCovariateInformation()$name, inputValue))==0){
-        message(paste0("ERROR: ",inputValue," is not a valid covariate of the project."))
+      if(length(intersect(getCovariateInformation()$name, settingValue))==0){
+        message(paste0("ERROR: ",settingValue," is not a valid covariate of the project."))
         isValid = FALSE
       }else{
-        indexCAT <- which(getCovariateInformation()$name==inputValue)
+        indexCAT <- which(getCovariateInformation()$name==settingValue)
         catType <- getCovariateInformation()$type[indexCAT[1]]
         if(!((catType=="categorical")||(catType=="categoricaltransformed"))){
-          message(paste0("ERROR: ",inputValue," is not a categorical covariate."))
+          message(paste0("ERROR: ",settingValue," is not a categorical covariate."))
           isValid = FALSE
         }
       }

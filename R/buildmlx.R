@@ -1,6 +1,16 @@
 #' Build a model
 #'
 #' Get the individual predictions obtained with the simulated individual parameters :
+#' @param project a Monolix project
+#' @param final.project  the new Monolix project
+#' @param max.iter  maximum number of iterations
+#' @param model  model
+#' @param penalization  menalization
+#' @param nb.model  nbmodel
+#' @param seq  seq
+#' @param trans.cov  covariates to be transformed
+#' @param param.cov  parameters with covariates
+#' @param print.out  display results
 #' @return a list of data frames (one data frame per output).
 #' @examples
 #' \dontrun{
@@ -9,23 +19,17 @@
 #'     "Cc"  "E"
 #' }
 #' @export
-buildmlx <- function(project=NULL, final.project=NULL, max.iter=100,
+buildmlx <- function(project, final.project=NULL, max.iter=100,
                      model=c("residualError", "covariate", "correlation"), penalization="BIC",
                      nb.model=1, seq=TRUE, trans.cov="all", param.cov="all", print.out=TRUE)
 {
   
   initializeMlxConnectors(software = "monolix")
   
-  if (is.null(project)) {
-    dp <- getProjectSettings()$directory
-    if (!is.null(dp))
-      project <- paste0(basename(dp),".mlxtran")
-    else
-      project <- "temp"
-    saveProject(project)
-  } else {
+  if (is.null(project)) 
+    stop("A valid Monolix project is required", call.=FALSE)  
+  else 
     loadProject(project)
-  }
   
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {

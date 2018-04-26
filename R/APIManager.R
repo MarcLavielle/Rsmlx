@@ -10,6 +10,7 @@
 ###: initializeMlxConnectors(software = "monolix", mlxDirectory = "/path/to/mlxRuntime/")
 ###: }
 ###: @export
+
 initializeMlxConnectors <- function (software, mlxDirectory = "") {
   if (is.character(software) == FALSE){
     .error("Unexpected type encountered for the \"software\" field. Please give a string corresponding to the name of the Lixoft software to be used.")
@@ -191,7 +192,7 @@ initializeMlxConnectors <- function (software, mlxDirectory = "") {
 
 .onDetach <- function(libpath){}
 
-.Last.lib <- function(libpath){}
+#.Last.lib <- function(libpath){}
 
 ###: Get information about MlxEnvironment object
 ###: @export

@@ -5,20 +5,25 @@
 #' @param parameters a vector of parameters to search. [Optional] By default, all the parameters are run.
 #' @param settings a list of settings of the llp. It contains
 #' \itemize{
-#' \item method, method for the Log-Likelihood calculation, it can be "lin" or "is" (default value is linearisation)
+#' \item method, method for the Log-Likelihood calculation, it can be "lin" or "is" 
+#' (default value is linearisation)
 #' \item dLLthreshold, the threshold of -2LL (default value at 3.841)
 #' \item nbMaxIterations, the maximum number of iterations to find the dLLthreshold (default value at 10)
-#' \item method, the method of calculation of the Log-Likelihood. It can be "lin" or "is" (default value is 'lin')
+#' \item method, the method of calculation of the Log-Likelihood. It can be "lin" or "is" 
+#' default value is 'lin')
 #' \item toldLL, the tolerance in terms of -2LL for the search of the threshold (default value is 1e-3)
 #' \item tolParam, the relative tolerance for the parameter (1e-2)
 #' }
 #' @examples
 #' \dontrun{
 #' llp(project) => run the llp for the project for all parameters
-#' llp(project, settings = list(method = 'is')) => run the llp for the project for all parameters with the LogLikelihood computed with the Importance Sampling method
-#' llp(project, settings = list(maxNbIterations = 3)) => run the llp for the project for all parameters at most 3 iterations to search the target on both directions
-#' llp(project, parameters = c("Cl_pop","V_pop")) => run the llp for Cl_pop and V_pop (if those are population parameters)
-#' llp(project, parameters = c("Cl_pop","V_pop"), settings = list(dLLthreshold = 2)) => run the llp for Cl_pop and V_pop (if those are population parameters) with a dLLthreshold of 2
+#' llp(project, settings = list(method = 'is')) => run the llp for the project for all parameters 
+#' with the LogLikelihood computed with the Importance Sampling method
+#' llp(project, settings = list(maxNbIterations = 3)) => run the llp for the project for all 
+#' parameters at most 3 iterations to search the target on both directions
+#' llp(project, parameters = c("Cl_pop","V_pop")) => run the llp for Cl_pop and V_pop 
+#' llp(project, parameters = c("Cl_pop","V_pop"), settings = list(dLLthreshold = 2)) 
+#' => run the llp for Cl_pop and V_pop  with a dLLthreshold of 2
 #' }
 #' @export
 llp <-function(project, parameters = NULL, settings=NULL){

@@ -9,15 +9,15 @@ generateBootstrap(project, settings, dataFolder = NULL)
 \arguments{
 \item{project}{project where the data set will be sampled}
 
-\item{dataFolder}{[optional] folder where to get the data set}
-
-\item{[optional]}{settings of the sampling. These settings are
+\item{settings}{[optional] settings of the sampling. These settings are
 \itemize{
 \item samples, the number of bootstrapped data set to generate (default value is 100)
 \item sample_size, the number of subjects in each bootstrap data set (default value is the  number of individuals in the original data set).
 \item regenerateData, boolean to regenerate or not the data sets (default value is F).
 \item stratify_on, categorical covariate (or tranformed categorical covariate) of the project (default is NULL). It allows to respect the proportion of these covariate in the generated data set
 }}
+
+\item{dataFolder}{[optional] folder where to get the data set}
 }
 \description{
 Sample data set from a project

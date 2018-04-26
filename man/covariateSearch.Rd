@@ -8,6 +8,8 @@ covariateSearch(project, covariateToSearch = NULL, parameterToTest = NULL,
   settings = NULL)
 }
 \arguments{
+\item{project}{a Monolix project}
+
 \item{covariateToSearch}{[optional] defines the covariate to search. By default, all covariates are searched.}
 
 \item{parameterToTest}{[optional] defines the parameters on which the covariates are applied. By default, all parameters are used.}

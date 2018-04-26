@@ -4,10 +4,31 @@
 \alias{buildmlx}
 \title{Build a model}
 \usage{
-buildmlx(project = NULL, final.project = NULL, max.iter = 100,
+buildmlx(project, final.project = NULL, max.iter = 100,
   model = c("residualError", "covariate", "correlation"),
   penalization = "BIC", nb.model = 1, seq = TRUE, trans.cov = "all",
   param.cov = "all", print.out = TRUE)
+}
+\arguments{
+\item{project}{a Monolix project}
+
+\item{final.project}{the new Monolix project}
+
+\item{max.iter}{maximum number of iterations}
+
+\item{model}{model}
+
+\item{penalization}{menalization}
+
+\item{nb.model}{nbmodel}
+
+\item{seq}{seq}
+
+\item{trans.cov}{covariates to be transformed}
+
+\item{param.cov}{parameters with covariates}
+
+\item{print.out}{display results}
 }
 \value{
 a list of data frames (one data frame per output).
