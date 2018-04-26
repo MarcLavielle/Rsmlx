@@ -9,7 +9,6 @@ Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
 Depends: R (>= 3.0.0)
 Imports:
-    R6,
     RJSONIO,
     ggplot2,
     gridExtra,
