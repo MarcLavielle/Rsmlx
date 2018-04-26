@@ -4,9 +4,13 @@ Title: Model building
 Version: 0.1.0
 Author: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" )
-Maintainer: Marc LAvielle <Marc.Lavielle@inria.fr>
+Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
+Collate: APITools.R displayTools.R MlxEnvironment.R APIManager.R
+        ProjectManagement.R Settings.R Scenario.R
+        PopulationParameters.R IndividualModel.R CovariateModel.R
+        ObservationModel.R Results.R MlxCore.R
 License: BSD_2_clause + file LICENSE
 Copyright: Inria
 Encoding: UTF-8

@@ -123,7 +123,10 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   s <- rep("0:1", nx)
   j.num <- which(!sapply(x, is.factor))
   if (length(j.num)>0) {
-    j0 <- which(sapply(x[,j.num],min)>0)
+    if (length(j.num)==1)
+      j0 <- which(min(x[,j.num])>0)
+    else
+      j0 <- which(sapply(x[,j.num],min)>0)
     j0.num <- j.num[j0]
     s[j0.num] <- "0:2"
     l[,j0.num] <- log(x[,j0.num])
@@ -132,7 +135,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   x[,j.num] <- scale(x[j.num], scale=FALSE)
   l[,j.num] <- scale(l[j.num], scale=FALSE)
   
-  if (!is.null(tr.names)){
+  if (length(tr.names)>0){
     j.newc <- which((names(x) %in% tr.names))
     if (length(j.newc)>0)
       s[j.newc] <- "0:1"
@@ -191,15 +194,17 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   
   bic <- round(bic, digits=3)
   i0 <- rep(1,ng)
+  mG <- ncol(G)
   for (k in 1:(ng-1)) {
     if (i0[k]==1) {
       ik <- which(bic[(k):ng]==bic[k]) + k-1
-      sk <- rowSums(G[ik,]==2)
+      sk <- .rowSums(G[ik,]==2, n=length(ik), m=mG)
       ik0 <- ik[which(sk==0)]
       if (length(ik0)==0)
         ik0 <- ik[order(sk)[1]]
       i0[ik] <- 0
       i0[ik0] <- 1
+      i0[k] <- 1
     }
   }
   res <- data.frame(ll=round(ll,digits=3), df=df, criteria=bic)
@@ -211,12 +216,17 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   eval(parse(text=paste0(names(y)," <- y[[1]]")))
   obic <- order(bic)
   k.min <- obic[1]
-  j1 <- which(G[k.min,]==1)
+  if (mG==1) 
+    Gkmin <- G[k.min]
+  else
+    Gkmin <- G[k.min,]
+  
+  j1 <- which(Gkmin==1)
+  j2 <- which(Gkmin==2)
   if (length(j1)>0) {
     for (k in (1:length(j1)))
       eval(parse(text=paste0(names(x)[j1[k]]," <- x[[j1[k]]]")))
   }
-  j2 <- which(G[k.min,]==2)
   if (length(j2)>0) {
     for (k in (1:length(j2)))
       eval(parse(text=paste0(names(l)[j2[k]]," <- l[[j2[k]]]")))
@@ -224,7 +234,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   list.x <- c("1",names(x)[j1],names(l)[j2])
   form1 <- paste0(names(y), "~",  paste(list.x, collapse = "+")) 
   eval(parse(text=paste0("lm.min <- lm(",form1,")")))
-  lm.min$covsel=G[k.min,]
+  lm.min$covsel=Gkmin
   
   res <- cbind(G, res)
   nb.model <- min(nb.model, length(bic))
