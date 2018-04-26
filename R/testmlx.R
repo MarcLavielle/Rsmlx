@@ -24,6 +24,7 @@ testmlx <- function(project,
                     test.list=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
+  theme_set(theme_bw())
   if (is.null(project)) 
     stop("A valid Monolix project is required", call.=FALSE)  
   else 
