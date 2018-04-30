@@ -11,12 +11,12 @@ a list of data frames.
 }
 \description{
 Get the individual individual parameters, the population parameters with the population covariates 
-and the population parameters with the individual covariates :
+and the population parameters with the individual covariates.
 }
 \examples{
 \dontrun{
 r = getEstimatedIndividualParameters2()
 names(r)
-    "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "pop1"    "pop2" 
+    "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "popPopCov"    "popIndCov" 
 }
 }

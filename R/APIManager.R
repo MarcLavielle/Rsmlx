@@ -1,15 +1,15 @@
-###: Initialize MlxConnectors API
-###: 
-###: Initialize MlxConnectors API for a given software
-###: @param software (\emph{character}) Name of the software to be loaded : "monolix"\cr
-###: @param mlxDirectory (\emph{character}) [optional] Path to installation directory of the Lixoft suite.
-###: If no path is given, the one written in the lixoft.ini file is used.
-###: @return A boolean equaling TRUE if the initialization has been successful and FALSE if not.
-###: @examples
-###: \dontrun{
-###: initializeMlxConnectors(software = "monolix", mlxDirectory = "/path/to/mlxRuntime/")
-###: }
-###: @export
+#' Initialize MlxConnectors API
+#'
+#' Initialize MlxConnectors API for a given software
+#' @param software (\emph{character}) Name of the software to be loaded : "monolix"\cr
+#' @param mlxDirectory (\emph{character}) [optional] Path to installation directory of the Lixoft suite.
+#' If no path is given, the one written in the lixoft.ini file is used.
+#' @return A boolean equaling TRUE if the initialization has been successful and FALSE if not.
+#' @examples
+#' \dontrun{
+#' initializeMlxConnectors(software = "monolix", mlxDirectory = "/path/to/mlxRuntime/")
+#' }
+#' @export
 
 initializeMlxConnectors <- function (software, mlxDirectory = "") {
   if (is.character(software) == FALSE){
@@ -183,14 +183,18 @@ initializeMlxConnectors <- function (software, mlxDirectory = "") {
   }
 }
 
-.onLoad <- function(libname,pkgname){
-  # assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
-  # assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
-}
-
-.onAttach <- function(libname,pkgname){}
-
-.onDetach <- function(libpath){}
+# .onLoad <- function(libname,pkgname){
+#   # assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
+#   # assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
+# }
+# 
+# .onAttach <- function(libname,pkgname){
+# #  packageStartupMessage("This Rsmlx package, enjoy it!")
+# #  assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
+# #  assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
+# }
+# 
+# .onDetach <- function(libpath){}
 
 #.Last.lib <- function(libpath){}
 

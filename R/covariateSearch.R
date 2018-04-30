@@ -1,23 +1,29 @@
-#' Covariate search functions
+#' Covariate model building
 #' 
-#' Search the associated covariate model to best fit the data set. Several type of covariate search is proposed
+#' Automatic search of the best covariate model. 
+#' Several methods for covariate model building are proposed
 #' \itemize{
 #' \item COSSAC: ranked SCM
 #' \item SCM: SCM method
 #' }
 #' @param project a Monolix project
-#' @param covariateToSearch [optional] defines the covariate to search. By default, all covariates are searched.
-#' @param parameterToTest [optional] defines the parameters on which the covariates are applied. By default, all parameters are used.
+#' @param covToTest [optional] list of covariates to test. By default, all covariates are tested
+#' @param paramToUse [optional] list of parameters which may be function of covariates. By default, all parameters are used.
 #' @param settings [optional] defines the settings search. This is a list of all settings for the search. 
-#' The settings are pInclusion, pElimination, useLinearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.
+#' The settings are pInclusion, pElimination, linearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.
 #' @export
-covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest = NULL, settings = NULL){
+covariateSearch <- function(project, covToTest = NULL, paramToUse = NULL, settings = NULL){
   ###################################################################################
   # Initialization
   ###################################################################################
+  
   if(!file.exists(project)){
-    message(paste0("ERROR: project : ", project,' does not exists'));
+    message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
+  
+ # initializeMlxConnectors(software = "monolix")
+  
+  loadProject(project)   
   
   # Check and initialize the settings 
   if(!is.null(settings)){
@@ -25,36 +31,35 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
   }
   if(is.null(settings$pInclusion)){settings$pInclusion <- 0.1 }
   if(is.null(settings$pElimination)){settings$pElimination <- 0.05 }
-  if(is.null(settings$useLinearization)){settings$useLinearization <- FALSE }
+  if(is.null(settings$linearization)){settings$linearization <- FALSE }
   if(is.null(settings$rankedSCM)){settings$rankedSCM <- TRUE }
   if(is.null(settings$criteria)){settings$criteria <- 'LRT' }
   if(is.null(settings$updateInit)){settings$updateInit <- TRUE }
   
-  loadProject(project)
   # Check if linearization is possible
-  for(indexObservationModel in 1:length(getObservationInformation()$name)){settings$useLinearization <- settings$useLinearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  for(indexObservationModel in 1:length(getObservationInformation()$name)){settings$linearization <- settings$linearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
   
-  # check the parameterToTest
+  # check the paramToUse
   projectParameters <- getIndividualParameterModel()$name
-  if(is.null(parameterToTest)){
+  if(is.null(paramToUse)){
     validParameters <- projectParameters
   }else{
-    if(!.checkCovariateSearchInput(inputName = "parameterToTest", inputValue = parameterToTest)){return(invisible(FALSE))}
-    validParameters <- intersect(projectParameters, parameterToTest)
+    if(!.checkCovariateSearchInput(inputName = "paramToUse", inputValue = paramToUse)){return(invisible(FALSE))}
+    validParameters <- intersect(projectParameters, paramToUse)
   }
   indivParam = validParameters
   
-  # Check the covariateToSearch
+  # Check the covToTest
   projectCovariates <- getCovariateInformation()$name
   if(length(projectCovariates)==0){
     message("There is no covariate to search")
     return(invisible(FALSE))
   }else{
-    if(is.null(covariateToSearch)){
+    if(is.null(covToTest)){
       validCovariates <- projectCovariates
     }else{
-      if(!.checkCovariateSearchInput(inputName = "covariateToSearch", inputValue = covariateToSearch)){return(invisible(FALSE))}
-      validCovariates <- intersect(projectCovariates, covariateToSearch)
+      if(!.checkCovariateSearchInput(inputName = "covToTest", inputValue = covToTest)){return(invisible(FALSE))}
+      validCovariates <- intersect(projectCovariates, covToTest)
     }
   }
   covariate = validCovariates
@@ -66,9 +71,9 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
   }
   projectToSaveName <- toString(sub(pattern=".mlxtran", replacement=paste0('_covSearch_', method, '.mlxtran'), project))
   saveProject(projectToSaveName);loadProject(projectToSaveName);
- 
+  
   # Define the scenario associated to the type of test and the method
-  .defineScenario(settings$useLinearization, settings$rankedSCM)
+  .defineScenario(settings$linearization, settings$rankedSCM)
   summary.file = toString(sub(pattern=".mlxtran", replacement="_summary.txt", projectToSaveName))
   
   ######################################################################################################################
@@ -77,7 +82,7 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
   summary <- c(date(),'\n'); nbRun <- 0; t_strat <- proc.time(); referenceOFV <- NULL;
   if(settings$criteria == 'BIC'){
     criteriaToDisplay <- 'BIC'
-    if(settings$useLinearization){
+    if(settings$linearization){
       indexLL <- 3
     }else{
       indexLL <- 4
@@ -287,6 +292,7 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
   summary <- c(summary, c(paste0("\n Done with ",toString(nbRun)," runs in ",toString(floor(proc.time()[3] - t_strat[3])),"s\n", date(),'\n'),"========================================================\n\n"))
   cat(summary); cat(summary, file = summary.file)
   saveProject(projectFile = projectToSaveName)
+  return(projectToSaveName)
 }  
 
 ###################################################################################
@@ -295,20 +301,20 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
 .checkCovariateSearchInput = function(inputName, inputValue){
   isValid = TRUE
   inputName = tolower(inputName)
-  if(inputName == tolower("parameterToTest")){
+  if(inputName == tolower("paramToUse")){
     if(is.vector(inputValue) == FALSE){
-      message("ERROR: Unexpected type encountered. parameterToTest must be a vector")
+      message("ERROR: Unexpected type encountered. paramToUse must be a vector")
       isValid = FALSE
     }else if(length(intersect(getIndividualParameterModel()$name, inputValue))==0){
-      message("ERROR: parameterToTest does not have valid parameter in its definition.")
+      message("ERROR: paramToUse does not have valid parameter in its definition.")
       isValid = FALSE
     }
-  }else if(inputName == tolower("covariateToSearch")){
+  }else if(inputName == tolower("covToTest")){
     if(is.vector(inputValue) == FALSE){
-      message("ERROR: Unexpected type encountered. covariateToSearch must be a vector")
+      message("ERROR: Unexpected type encountered. covToTest must be a vector")
       isValid = FALSE
     }else if(length(intersect(getCovariateInformation()$name, inputValue))==0){
-      message("ERROR: covariateToSearch have no valid covariate in its definition.")
+      message("ERROR: covToTest have no valid covariate in its definition.")
       isValid = FALSE
     }
   }else if(inputName == tolower("settings")){
@@ -349,9 +355,9 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
         isValid = FALSE
       }
     }
-  }else if(settingName == tolower("useLinearization")){
+  }else if(settingName == tolower("linearization")){
     if(is.logical(settingValue) == FALSE){
-      message("ERROR: Unexpected type encountered. useLinearization must be a boolean.")
+      message("ERROR: Unexpected type encountered. linearization must be a boolean.")
       isValid = FALSE
     }
   }else if(settingName == tolower("rankedSCM")){
@@ -509,10 +515,10 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
 #############################################################################################################################
 # Get the scenario for the run
 #############################################################################################################################
-.defineScenario <- function(useLinearization, useTests){
+.defineScenario <- function(linearization, useTests){
   # Define the scenario associated to the type of test and the method
   scenario <- getScenario()
-  if(useLinearization){
+  if(linearization){
     scenario$linearization = T
   }else{
     scenario$linearization = F 
@@ -522,7 +528,7 @@ covariateSearch <- function(project, covariateToSearch = NULL, parameterToTest =
   if(useTests){# compute both conditional distribution and mode
     scenario$tasks <- c(populationParameterEstimation = T, conditionalDistributionSampling=T, conditionalModeEstimation = T, logLikelihoodEstimation = T, plots = T);
   }else{
-    if(useLinearization){# compute only mode
+    if(linearization){# compute only mode
       scenario$tasks <- c(populationParameterEstimation = T, conditionalModeEstimation = T, logLikelihoodEstimation = T)
     }else{# compute only mode
       scenario$tasks <- c(populationParameterEstimation = T, conditionalDistributionSampling=T, logLikelihoodEstimation = T)

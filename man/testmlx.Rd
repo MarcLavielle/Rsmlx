@@ -2,28 +2,38 @@
 % Please edit documentation in R/testmlx.R
 \name{testmlx}
 \alias{testmlx}
-\title{Statistical tests}
+\title{Statistical tests for model assessment}
 \usage{
-testmlx(project, test.list = c("covariate", "randomEffect", "correlation",
+testmlx(project, tests = c("covariate", "randomEffect", "correlation",
   "residual"), plot = FALSE)
 }
 \arguments{
 \item{project}{a Monolix project}
 
-\item{test.list}{the tests to perform}
+\item{tests}{a vector of strings: the list of tests to perform 
+among c("covariate","randomEffect","correlation","residual")}
 
-\item{plot}{FALSSE/TRUE  plot the results}
+\item{plot}{{FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)}
 }
 \value{
-a list of data frames (one data frame per output).
+a list of data frames and ggplot objects if plot=TRUE
 }
 \description{
-Get the individual predictions obtained with the simulated individual parameters :
+Perform several statistical tests using the results of a Monolix run to assess the statistical
+components of the model in use.
+}
+\details{
+The tests used are:  1) F-tests (or, equivalently, correlation tests) to evaluate the effect of 
+each covariate on each parameter ("covariate"), 2) Shapiro-Wilk and symmetry tests to assess 
+the distribution of the random effects (""randomEffect"), 3) correlation tests to assess the 
+correlation structure of the random effects ("correlation"), 4) Shapiro-Wilk and symmetry 
+tests to assess the distribution of the residual errors ("residual").
+
+By default, the four tests are performed
 }
 \examples{
 \dontrun{
-r = getSimulatedPredictions()
-names(r)
-    "Cc"  "E"
+r = testmlx(project="PBPKproject.mlxtran")
+r = testmlx(project="PBPKproject.mlxtran", tests=c("covariate","correlation"), plot=TRUE)
 }
 }

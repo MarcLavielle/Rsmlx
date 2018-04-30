@@ -1,13 +1,13 @@
 #' Get estimated individual and population parameters
 #' 
 #' Get the individual individual parameters, the population parameters with the population covariates 
-#' and the population parameters with the individual covariates :
+#' and the population parameters with the individual covariates.
 #' @return a list of data frames.
 #' @examples
 #' \dontrun{
 #' r = getEstimatedIndividualParameters2()
 #' names(r)
-#'     "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "pop1"    "pop2" 
+#'     "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "popPopCov"    "popIndCov" 
 #' }
 #' @export
 getEstimatedIndividualParameters2 <- function() {
@@ -18,7 +18,7 @@ getEstimatedIndividualParameters2 <- function() {
   pop.param <- pop.param[grep("_pop",names(pop.param))]
   df <- as.data.frame(matrix(pop.param,nrow=N,ncol=length(pop.param),byrow=TRUE))
   names(df) <- gsub("_pop","",names(pop.param))
-  ind.param$pop1 <- data.frame(id=ind.param$saem["id"],df)
+  ind.param$popPopCov <- data.frame(id=ind.param$saem["id"],df)
   
   rand.eff <- getEstimatedRandomEffects()
   
@@ -33,7 +33,7 @@ getEstimatedIndividualParameters2 <- function() {
   
   ind.dist <- getIndividualParameterModel()$distribution
   var.param <- names(ind.dist)
-  ind.param$pop2 <- ind.param$pop1 
+  ind.param$popIndCov <- ind.param$popPopCov
   for (nj in var.param) {
     dj <- tolower(ind.dist[nj])
     yj <- ip[[nj]]
@@ -47,7 +47,7 @@ getEstimatedIndividualParameters2 <- function() {
     } else if (dj == "probitnormal") {
       yjc <- pnorm(qnorm(yj) - rj)
     } 
-    ind.param$pop2[nj] <- yjc
+    ind.param$popIndCov[nj] <- yjc
   }
   return(ind.param)
 }
@@ -79,10 +79,10 @@ getEstimatedPredictions <- function() {
     df[[j]][obs.info$name[j]] <- NULL
   }
   
-  f.pop1 <- computePredictions(ip$pop1)
-  for (j in 1:nout) {df[[j]]$pop1 <- f.pop1[[j]]}
-  f.pop2 <- computePredictions(ip$pop2)
-  for (j in 1:nout) {df[[j]]$pop2 <- f.pop2[[j]]}
+  f.pop1 <- computePredictions(ip$popPopCov)
+  for (j in 1:nout) {df[[j]]$popPopCov <- f.pop1[[j]]}
+  f.pop2 <- computePredictions(ip$popIndCov)
+  for (j in 1:nout) {df[[j]]$popIndCov <- f.pop2[[j]]}
   
   if (!is.null(ip$conditionalMean)) {
     f.mean <- computePredictions(ip$conditionalMean)
@@ -114,7 +114,7 @@ getEstimatedResiduals <- function() {
   
   df=getEstimatedPredictions()
   obs.info <- getObservationInformation()
-  nip <- c("pop1", "pop2", "conditionalMean", "conditionalMode")
+  nip <- c("popPopCov", "popIndCov", "conditionalMean", "conditionalMode")
   
   nout <- length(obs.info$name)
   error.model <- getContinuousObservationModel()$errorModel
@@ -276,7 +276,8 @@ error.parameter <- function(project=NULL) {
   if (is.null(project)) {
     dp <- getProjectSettings()$directory
     if (!is.null(dp))
-      project <- paste0(basename(dp),".mlxtran")
+    project <- paste0(dp,".mlxtran")
+#    project <- paste0(basename(dp),".mlxtran")
   }
   if (!file.exists(project)) 
     stop("Enter a valid project", call.=FALSE)

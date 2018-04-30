@@ -1,15 +1,24 @@
-#' Statistical tests
+#' Statistical tests for model assessment
 #'
-#' Get the individual predictions obtained with the simulated individual parameters :
+#' Perform several statistical tests using the results of a Monolix run to assess the statistical
+#' components of the model in use.
+#' 
+#' The tests used are:  1) F-tests (or, equivalently, correlation tests) to evaluate the effect of 
+#' each covariate on each parameter ("covariate"), 2) Shapiro-Wilk and symmetry tests to assess 
+#' the distribution of the random effects (""randomEffect"), 3) correlation tests to assess the 
+#' correlation structure of the random effects ("correlation"), 4) Shapiro-Wilk and symmetry 
+#' tests to assess the distribution of the residual errors ("residual").
+#' 
+#' By default, the four tests are performed
 #' @param project a Monolix project
-#' @param test.list  the tests to perform
-#' @param plot  FALSSE/TRUE  plot the results
-#' @return a list of data frames (one data frame per output).
+#' @param tests  a vector of strings: the list of tests to perform 
+#' among c("covariate","randomEffect","correlation","residual")
+#' @param plot  {FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)
+#' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples
 #' \dontrun{
-#' r = getSimulatedPredictions()
-#' names(r)
-#'     "Cc"  "E"
+#' r = testmlx(project="PBPKproject.mlxtran")
+#' r = testmlx(project="PBPKproject.mlxtran", tests=c("covariate","correlation"), plot=TRUE)
 #' }
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth
@@ -21,14 +30,15 @@
 #' @export
 
 testmlx <- function(project, 
-                    test.list=c("covariate","randomEffect","correlation","residual"), 
+                    tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
   theme_set(theme_bw())
-  if (is.null(project)) 
-    stop("A valid Monolix project is required", call.=FALSE)  
-  else 
-    loadProject(project)
+  if(!file.exists(project)){
+    message(paste0("ERROR: project '", project, "' does not exists"))
+    return(invisible(FALSE))}
+  
+  loadProject(project)   
   
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -45,13 +55,13 @@ testmlx <- function(project,
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
   
   res <- list()
-  if ("covariate" %in% test.list)
+  if ("covariate" %in% tests)
   res$covariate <- covariateTest(plot=plot)
-  if ("residual" %in% test.list)
+  if ("residual" %in% tests)
     res$residual <- residualTest(plot=plot)
-  if ("randomEffect" %in% test.list)
+  if ("randomEffect" %in% tests)
     res$randomEffect <- randomEffectTest(plot=plot)
-  if ("correlation" %in% test.list)
+  if ("correlation" %in% tests)
     res$correlation <- correlationTest(plot=plot)
   return(res)
 }
@@ -80,15 +90,15 @@ residualTest <- function(project=NULL, plot=FALSE) {
     pl <- list()
     for (i.out in (1:n.out)) {
       ri <- residual[[i.out]]$residual
-      ni <- names(residual[[i.out]])
+      ni <- paste0("residual_",names(residual)[i.out])
       pl[[i.out]] <- ggplot() + stat_ecdf(aes_string(ri), geom = "step", size=1) + 
         geom_line(data=dn, aes_string(x,"F"), colour="red", size=1) + ylab("F") + 
         xlab(ni)
     }
     do.call(grid.arrange,c(pl,ncol=2))
-    return(list(residual = residual, p.value=res.errorModel, plot=pl))
+    return(list(p.value=res.errorModel, plot=pl))
   } else
-    return(list(residual = residual, p.value=res.errorModel))
+    return(list(p.value=res.errorModel))
 }
 
 #----------------------------------------------------------

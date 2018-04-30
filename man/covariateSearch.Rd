@@ -2,23 +2,24 @@
 % Please edit documentation in R/covariateSearch.R
 \name{covariateSearch}
 \alias{covariateSearch}
-\title{Covariate search functions}
+\title{Covariate model building}
 \usage{
-covariateSearch(project, covariateToSearch = NULL, parameterToTest = NULL,
+covariateSearch(project, covToTest = NULL, paramToUse = NULL,
   settings = NULL)
 }
 \arguments{
 \item{project}{a Monolix project}
 
-\item{covariateToSearch}{[optional] defines the covariate to search. By default, all covariates are searched.}
+\item{covToTest}{[optional] list of covariates to test. By default, all covariates are tested}
 
-\item{parameterToTest}{[optional] defines the parameters on which the covariates are applied. By default, all parameters are used.}
+\item{paramToUse}{[optional] list of parameters which may be function of covariates. By default, all parameters are used.}
 
 \item{settings}{[optional] defines the settings search. This is a list of all settings for the search. 
-The settings are pInclusion, pElimination, useLinearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.}
+The settings are pInclusion, pElimination, linearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.}
 }
 \description{
-Search the associated covariate model to best fit the data set. Several type of covariate search is proposed
+Automatic search of the best covariate model. 
+Several methods for covariate model building are proposed
 \itemize{
 \item COSSAC: ranked SCM
 \item SCM: SCM method

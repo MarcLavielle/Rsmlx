@@ -2,44 +2,44 @@
 % Please edit documentation in R/buildmlx.R
 \name{buildmlx}
 \alias{buildmlx}
-\title{Build a model}
+\title{Automatic model building}
 \usage{
-buildmlx(project, final.project = NULL, max.iter = 100,
-  model = c("residualError", "covariate", "correlation"),
-  penalization = "BIC", nb.model = 1, seq = TRUE, trans.cov = "all",
-  param.cov = "all", print.out = TRUE)
+buildmlx(project, final.project = NULL, model = c("residualError",
+  "covariate", "correlation"), penalization = "BIC", max.iter = 20,
+  trans.cov = "all", param.cov = "all", seqcc = TRUE, nb.model = 1,
+  print = TRUE)
 }
 \arguments{
-\item{project}{a Monolix project}
+\item{project}{a string: the initial Monolix project}
 
-\item{final.project}{the new Monolix project}
+\item{final.project}{a string: the final Monolix project (default is the original project)}
 
-\item{max.iter}{maximum number of iterations}
+\item{model}{component of the model to optimize, default=c("residualError", "covariate", "correlation")}
 
-\item{model}{model}
+\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC", "lasso")}
 
-\item{penalization}{menalization}
+\item{max.iter}{maximum number of iterations (default=20)}
 
-\item{nb.model}{nbmodel}
+\item{trans.cov}{list of covariates to be log-transformed (default="all")}
 
-\item{seq}{seq}
+\item{param.cov}{list of parameters which could be function of covariates (default="all")}
 
-\item{trans.cov}{covariates to be transformed}
+\item{seqcc}{{TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE)}
 
-\item{param.cov}{parameters with covariates}
+\item{nb.model}{number of models to display at each iteration (default=1)}
 
-\item{print.out}{display results}
+\item{print}{{TRUE}/FALSE display the results (default=TRUE)}
 }
 \value{
-a list of data frames (one data frame per output).
+a new Monolix project with a new statistical model.
 }
 \description{
-Get the individual predictions obtained with the simulated individual parameters :
+Iterative procedure to accelerate and optimize the process of model building by identifying 
+at each step how best to improve some of the model components. This method allows to find 
+the optimal statistical model which minimizes some information criteria in very few steps.
 }
 \examples{
 \dontrun{
-r = getSimulatedPredictions()
-names(r)
-    "Cc"  "E"
+r = buildmlx("warfPK.mlxtran")
 }
 }

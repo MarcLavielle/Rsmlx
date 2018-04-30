@@ -1,35 +1,48 @@
-#' Build a model
+#' Automatic model building
 #'
-#' Get the individual predictions obtained with the simulated individual parameters :
-#' @param project a Monolix project
-#' @param final.project  the new Monolix project
-#' @param max.iter  maximum number of iterations
-#' @param model  model
-#' @param penalization  menalization
-#' @param nb.model  nbmodel
-#' @param seq  seq
-#' @param trans.cov  covariates to be transformed
-#' @param param.cov  parameters with covariates
-#' @param print.out  display results
-#' @return a list of data frames (one data frame per output).
+#' Iterative procedure to accelerate and optimize the process of model building by identifying 
+#' at each step how best to improve some of the model components. This method allows to find 
+#' the optimal statistical model which minimizes some information criteria in very few steps.
+#' @param project a string: the initial Monolix project
+#' @param final.project  a string: the final Monolix project (default is the original project)
+#' @param model  component of the model to optimize, default=c("residualError", "covariate", "correlation")
+#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
+#' @param max.iter maximum number of iterations (default=20)
+#' @param trans.cov  list of covariates to be log-transformed (default="all")
+#' @param param.cov  list of parameters which could be function of covariates (default="all")
+#' @param seqcc {TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE) 
+#' @param nb.model number of models to display at each iteration (default=1)
+#' @param print {TRUE}/FALSE display the results (default=TRUE)
+#' @return a new Monolix project with a new statistical model.
 #' @examples
 #' \dontrun{
-#' r = getSimulatedPredictions()
-#' names(r)
-#'     "Cc"  "E"
+#' r = buildmlx("warfPK.mlxtran")
 #' }
 #' @export
-buildmlx <- function(project, final.project=NULL, max.iter=100,
-                     model=c("residualError", "covariate", "correlation"), penalization="BIC",
-                     nb.model=1, seq=TRUE, trans.cov="all", param.cov="all", print.out=TRUE)
+buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
+                     penalization="BIC", max.iter=20, trans.cov="all", param.cov="all", 
+                     seqcc=TRUE, nb.model=1, print=TRUE)
 {
   
-  initializeMlxConnectors(software = "monolix")
+  if(!file.exists(project)){
+    message(paste0("ERROR: project '", project, "' does not exists"))
+    return(invisible(FALSE))}
   
-  if (is.null(project)) 
-    stop("A valid Monolix project is required", call.=FALSE)  
-  else 
-    loadProject(project)
+#  initializeMlxConnectors(software = "monolix")
+
+  if (length(penalization)==1) {
+    if (penalization=="lasso") {
+      penalization <- c(penalization, "BIC", "BIC")
+    } else {
+      penalization <- rep(penalization, 3)
+    }
+  } else if (length(penalization)==2) 
+    penalization <- c(penalization, penalization[2])
+  
+  penalization <- penalization[1:3]
+  
+  
+  loadProject(project)   
   
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -75,7 +88,7 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
   if (is.null(correlation.model))
     correlation.model <- list()
   
-  if (print.out) {
+  if (print) {
     cat("____________________________________________\n")
     cat("Initialization:\n")
     if (iop.error) {
@@ -117,7 +130,8 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
   # )
   # if (length(foo)==0)
   foo <- file.copy(file.path(res.dir,list_of_files), final.dir, recursive=TRUE)
-  foo <- file.rename(file.path(final.dir,".Internals",project),file.path(final.dir,".Internals",final.project))
+  foo <- file.rename(file.path(final.dir,".Internals",basename(project)),
+                     file.path(final.dir,".Internals",basename(final.project)))
   
   setProjectSettings(directory=final.dir)
   saveProject(final.project)
@@ -126,7 +140,7 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
   #--------------
   
   stop.test <- FALSE
-  if (seq==TRUE)
+  if (seqcc==TRUE)
     corr.test <- FALSE
   else
     corr.test <- TRUE
@@ -144,14 +158,14 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
       ll0 <- ll
     
     if (iop.error) {
-      res.error <- errorModelSelection(penalization=penalization, nb.model=nb.model)
+      res.error <- errorModelSelection(penalization=penalization[3], nb.model=nb.model)
       error.model <- getContinuousObservationModel()$errorModel
       for (k in (1:length(error.model)))
         error.model[[k]] <- as.character(res.error[[k]]$error.model[1])
     }
     
     if (iop.covariate) {
-      res.covariate <- covariateModelSelection(penalization=penalization, nb.model=nb.model,
+      res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
                                                trans.cov=trans.cov, param.cov=param.cov)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
@@ -171,7 +185,7 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
     }
     
     if (iop.correlation & corr.test) {
-      res.correlation <- correlationModelSelection(e=e, penalization=penalization,
+      res.correlation <- correlationModelSelection(e=e, penalization=penalization[2],
                                                    nb.model=nb.model, corr0=correlation.model0)
       correlation.model <- res.correlation$blocks[[1]]
       if (is.null(correlation.model))  correlation.model <- list()
@@ -192,13 +206,9 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
     
     if (!stop.test) {
       
-      if (print.out) {
+      if (print) {
         cat("____________________________________________\n")
         cat(paste0("Iteration ",iter,":\n"))
-        if (iop.error) {
-          cat("\nResidual error model:\n")
-          print(res.error)
-        }
         if (iop.covariate) {
           cat("\nCovariate model:\n")
           print(res.covariate$res)
@@ -206,6 +216,10 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
         if (iop.correlation) {
           cat("\nCorrelation model:\n")
           print(res.correlation)
+        }
+        if (iop.error) {
+          cat("\nResidual error model:\n")
+          print(res.error)
         }
       }
       
@@ -245,7 +259,7 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
       
       loadProject(final.project)
       
-      if (print.out) {
+      if (print) {
         if (iop.ll) {
           cat("\nEstimated log-likelihood:\n")
           if (stop.test)
@@ -262,13 +276,9 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
     }
   }
   
-  if (print.out) {
+  if (print) {
     cat("____________________________________________\n")
     cat("Final model:\n")
-    if (iop.error) {
-      cat("\nResidual error model:\n")
-      print(error.model)
-    }
     if (iop.covariate) {
       cat("\nCovariate model:\n")
       print(covariate.model)
@@ -276,6 +286,10 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
       print(correlation.model)
+    }
+    if (iop.error) {
+      cat("\nResidual error model:\n")
+      print(error.model)
     }
     if (iop.ll) {
       cat("\nEstimated log-likelihood:\n")
@@ -299,15 +313,14 @@ buildmlx <- function(project, final.project=NULL, max.iter=100,
       setCovariateModel(cg)
     }
   }
-  
+  browser()
   saveProject(final.project)
-  loadProject(project)
   res <- list(project=final.project)
-  if (iop.error)
-    res <- c(res, list(res.error=res.error))
   if (iop.covariate)
-    res <- c(res, list(res.covariate=res.covariate$res))
+    res <- c(res, list(covariate.model=covariate.model))
   if (iop.correlation)
-    res <- c(res, list(res.correlation=res.correlation))
+    res <- c(res, list(correlation.model=correlation.model))
+  if (iop.error)
+    res <- c(res, list(error.model=error.model))
   return(res)
 }

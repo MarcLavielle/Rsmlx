@@ -1,69 +1,163 @@
-#' Function that sample data set
+#' Non parametric bootstrapping
 #'
-#' Sample data set from a project
-#' @param project project where the data set will be sampled
-#' @param dataFolder [optional] folder where to get the data set
-#' @param settings [optional] settings of the sampling. These settings are
+#' Generate replicates of the original data using random sampling with replacement.
+#' Population parameters are then estimated from each replicate.
+#' @param project Monolix project 
+#' @param nboot number of bootstrat replicates (default= 100)
+#' @param dataFolder [optional] folder where the resampled datasets are stored
+#' @param settings a list of settings for the resampling and the results:
 #' \itemize{
-#' \item samples, the number of bootstrapped data set to generate (default value is 100)
-#' \item sample_size, the number of subjects in each bootstrap data set (default value is the  number of individuals in the original data set).
-#' \item regenerateData, boolean to regenerate or not the data sets (default value is F).
-#' \item stratify_on, categorical covariate (or tranformed categorical covariate) of the project (default is NULL). It allows to respect the proportion of these covariate in the generated data set
+#' \item \code{N} the number of individuals in each bootstrap data set 
+#' (default value is the  number of individuals in the original data set).
+#' \item \code{newResampling} boolean to resample or not the data sets (default=FALSE).
+#' \item \code{strata} categorical covariate of the project. The original distribution of this covariate
+#' is maintained in each resampled data set if strata is defined (default=NULL).
+#' \item \code{plot} boolean to choose if the distribution of the bootstraped esimates is displayed
+#' (default = TRUE)
+#' \item \code{level} level of the bootstrap confidence intervals of the population parameters
+#' (default = 0.90)
 #' }
-#'
+#' @return a data frame with the bootstrap estimates
 #' @importFrom graphics boxplot lines par plot
 #' @importFrom stats quantile
 #' @export
-generateBootstrap = function(project, settings, dataFolder = NULL){
+bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
+  
+  loadProject(project)
+  # Check and initialize the settings
+  if(is.null(settings$plot)){ plot.res <- TRUE }else{ plot.res <- settings$plot; settings$plot<- NULL}
+  if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
+  settings$nboot <- nboot
+  if(!is.null(settings)){
+    if(!.checkBootstrapInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
+  }
+  if(is.null(settings$nboot)){ settings$nboot <- 100 }
+  if(is.null(settings[['N']])){ settings[['N']] <- NA}
+  if(is.null(settings$newResampling)){ settings$newResampling <- FALSE}
+  if(is.null(settings$strata)){ settings$strata <- NA}
+  
+  
+  if(!is.null(dataFolder)){
+    dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
+    if(length(dataFiles)>0){
+      settings$nboot <- length(dataFiles)
+      settings$newResampling <- FALSE
+    }else{
+      message("WARNING: Folder ",dataFolder,' does not exist or does not contain any data set')
+      return(invisible(FALSE))
+    }
+  }
+  
+  # Prepare all the output folders
+  param <- getPopulationParameterInformation()$name[which(getPopulationParameterInformation()$method!="FIXED")]
+  exportDir <- getProjectSettings()$directory
+  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  
+  if(settings$newResampling){
+    cleanbootstrap(project)
+  }
+  cat("Generating projects with bootstrap data sets\n")
+  if(is.null(dataFolder)){
+    cat("Generating data sets too\n")
+    generateBootstrap(project=project, settings=settings)
+  }else{
+    generateBootstrap(project=project, settings=settings, dataFolder=dataFolder)
+  }
+  
+  paramResults <- array(dim = c(settings$nboot, length(param)))
+  for(indexSample in 1:settings$nboot){
+    projectBoot <-  paste0(exportDir,'/bootstrap/',projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
+    loadProject(projectBoot)
+    cat(paste0('Project ',toString(indexSample),'/',toString(settings$nboot)))
+    
+    # Check if the run was done
+    if(!file.exists(paste0(getProjectSettings()$directory,'/populationParameters.txt'))){
+      cat(' => Running SAEM \n')
+      runScenario()
+    }else{
+      cat(' => already computed \n')
+    }
+    paramResults[indexSample,] <-  getEstimatedPopulationParameters();
+  }
+  colnames(paramResults) <- names(getEstimatedPopulationParameters())
+  
+  # Plot the results
+  if (plot.res) {
+    nbFig <- length(param)
+    x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
+    par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
+    for(indexFigure in 1:nbFig){
+      res <- paramResults[,indexFigure]
+      resQ <- quantile(res,c((1-level)/2,(1+level)/2))
+      bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
+    }
+  }
+  #res.file <- paste0(exportDir,'/bootstrap/',projectName,'bootstrapResults.txt')
+  res.file <- file.path(exportDir,"bootstrap","populationParameters.txt")
+  write.table(x = paramResults, file = res.file,
+              eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
+  return(paramResults)
+}
 
+
+
+generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
+  
+  
+  if(!file.exists(project)){
+    message(paste0("ERROR: project '", project, "' does not exists"))
+    return(invisible(FALSE))}
+  
+  loadProject(project)   
+  
   # define the scenario in order to only have SAEM
-  setScenario(tasks =  c(populationParameterEstimation = T))
-
+  setScenario(tasks =  c(populationParameterEstimation = TRUE))
+  
   # Prepare all the output folders
   exportDir <- getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
-  dir.create(file.path(exportDir, 'bootstrap/'), showWarnings = FALSE, recursive = T)
-
+  dir.create(file.path(exportDir, 'bootstrap/'), showWarnings = FALSE, recursive = TRUE)
+  
   # Get the data set information
   referenceDataset <- getData()
   cov <- getCovariateInformation()
   datasetFile <- referenceDataset$dataFile
-
+  
   if(is.null(dataFolder)){
     dir.create(file.path(exportDir, 'bootstrap/data/'), showWarnings = FALSE)
-
+    
     # Load the data set
-    dataset <- read.table(file=datasetFile, header = T, sep = "", dec = ".")
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = T, sep = ",", dec = ".")}
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = T, sep = ";", dec = ".")}
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = T, sep = "\t", dec = ".")}
-
+    dataset <- read.table(file=datasetFile, header = TRUE, sep = "", dec = ".")
+    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = ",", dec = ".")}
+    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = ";", dec = ".")}
+    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = "\t", dec = ".")}
+    
     indexID <- which(referenceDataset$headerTypes=="id")
     nameID <- unique(dataset[, indexID])
     nbIndiv <- length(nameID)
-    if(is.na(settings$sample_size)){settings$sample_size = nbIndiv}
-
+    if(is.na(settings[['N']])){settings[['N']] = nbIndiv}
+    
     validID <- list()
-    if(is.na(settings$stratify_on)){
+    if(is.na(settings$strata)){
       nbCAT = 1
       indexPropCAT <- 1
-      propCAT <- rep(settings$sample_size, nbCAT)
+      propCAT <- rep(settings[['N']], nbCAT)
       validID[[indexPropCAT]] <- nameID
     }else{
-      indexCAT <- which(cov$name == settings$stratify_on)
+      indexCAT <- which(cov$name == settings$strata)
       catValues <- cov$covariate[,indexCAT+1]# +1 comes from the ID column
       nameCAT <- unique(catValues)
       nbCAT <- length(nameCAT)
-      propCAT <- rep(settings$sample_size, nbCAT)
+      propCAT <- rep(settings[['N']], nbCAT)
       validID <- list()
       for(indexPropCAT in 1:nbCAT){
         indexIdCat <- which(catValues==nameCAT[indexPropCAT])
-        propCAT[indexPropCAT] <- max(1,floor(settings$sample_size*length(indexIdCat)/nbIndiv))
+        propCAT[indexPropCAT] <- max(1,floor(settings[['N']]*length(indexIdCat)/nbIndiv))
         validID[[indexPropCAT]] <- as.character(cov$covariate[indexIdCat,1])
       }
     }
-
-    for(indexSample in 1:settings$samples){
+    
+    for(indexSample in 1:settings$nboot){
       datasetFileName <- paste0(exportDir,'/bootstrap/data/dataset_',toString(indexSample),'.csv')
       if(!file.exists(datasetFileName)){
         ##################################################################################################################
@@ -72,7 +166,7 @@ generateBootstrap = function(project, settings, dataFolder = NULL){
         # Sample the IDs
         sampleIDs <- NULL
         for(indexValidID in 1:length(validID)){
-          sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = T) )
+          sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
         }
         # get the datas
         data <- NULL
@@ -82,7 +176,7 @@ generateBootstrap = function(project, settings, dataFolder = NULL){
           dataToInsert[,indexID] <- indexSampleSize
           data <- rbind(data, dataToInsert)
         }
-
+        
         write.table(x = data, file = datasetFileName,
                     eol = '\n', quote = FALSE, dec = '.',  row.names = FALSE, col.names = TRUE )
       }
@@ -104,17 +198,17 @@ generateBootstrap = function(project, settings, dataFolder = NULL){
       saveProject(projectFile = paste0(exportDir,'/bootstrap/',projectName,'_bootstrap_',toString(indexSample),'.mlxtran'))
     }
   }
-
+  
 }
 
 ##################################################################################################################
 # Clean the bootstrap folder
 ##################################################################################################################
-cleanBootstrap <- function(project){
+cleanbootstrap <- function(project){
   # Prepare all the output folders
   exportDir <- getProjectSettings()$directory
   listProjectsToDelete <-list.files(path = paste0(exportDir,'/bootstrap/'),pattern = '*.mlxtran')
-
+  
   if(length(listProjectsToDelete)>0){
     for(indexProject in 1:length(listProjectsToDelete)){
       projectBoot <-  paste0(exportDir,'/bootstrap/',listProjectsToDelete[indexProject])
@@ -127,78 +221,6 @@ cleanBootstrap <- function(project){
   }
 }
 
-##################################################################################################################
-# Run the bootstrap
-##################################################################################################################
-runBootstrap <- function(project, dataFolder = NULL, settings = NULL){
-
-  loadProject(project)
-  # Check and initialize the settings
-  if(!is.null(settings)){
-    if(!.checkBootstrapInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
-  }
-  if(is.null(settings$samples)){ settings$samples <- 100 }
-  if(is.null(settings$sample_size)){ settings$sample_size <- NA}
-  if(is.null(settings$regenerateData)){ settings$regenerateData <- F}
-  if(is.null(settings$stratify_on)){ settings$stratify_on <- NA}
-
-  if(!is.null(dataFolder)){
-    dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
-    if(length(dataFiles)>0){
-      settings$samples <- length(dataFiles)
-      settings$regenerateData <- F
-    }else{
-      message("WARNING: Folder ",dataFolder,' does not exist or does not contain any data set')
-      return(invisible(FALSE))
-    }
-  }
-
-  # Prepare all the output folders
-  param <- getPopulationParameterInformation()$name[which(getPopulationParameterInformation()$method!="FIXED")]
-  exportDir <- getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
-
-  if(settings$regenerateData){
-    cleanBootstrap(project)
-  }
-  cat("Generating projects with bootstrap data sets\n")
-  if(is.null(dataFolder)){
-    cat("Generating data sets too\n")
-    generateBootstrap(project, settings)
-  }else{
-    generateBootstrap(project, settings, dataFolder)
-  }
-
-  paramResults <- array(dim = c(settings$samples, length(param)))
-  for(indexSample in 1:settings$samples){
-    projectBoot <-  paste0(exportDir,'/bootstrap/',projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
-    loadProject(projectBoot)
-    cat(paste0('Project ',toString(indexSample),'/',toString(settings$samples)))
-
-    # Check if the run was done
-    if(!file.exists(paste0(getProjectSettings()$directory,'/populationParameters.txt'))){
-      cat(' => Running SAEM \n')
-      runScenario()
-    }else{
-      cat(' => already computed \n')
-    }
-    paramResults[indexSample,] <-  getEstimatedPopulationParameters();
-  }
-  colnames(paramResults) <- names(getEstimatedPopulationParameters())
-
-  # Plot the results
-  nbFig <- length(param)
-  x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
-  par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
-  for(indexFigure in 1:nbFig){
-    res <- paramResults[,indexFigure]
-    resQ <- quantile(res,c(.05,.95))
-    bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n 90% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
-  }
-  write.table(x = paramResults, file = paste0(exportDir,'/bootstrap/',projectName,'bootstrapResults.txt'),
-              eol = "\n", sep = ",", col.names = T, quote = F, row.names = F)
-  return(paramResults)
-}
 
 ###################################################################################
 # Check the inputs
@@ -224,38 +246,38 @@ runBootstrap <- function(project, dataFolder = NULL, settings = NULL){
 .checkBootstrapSettings = function(settingName, settingValue){
   isValid = TRUE
   settingName = tolower(settingName)
-  if(settingName == tolower("samples")){
+  if(settingName == tolower("nboot")){
     if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. samples must be an integer.")
+      message("ERROR: Unexpected type encountered. nboot must be an integer.")
       isValid = FALSE
     }else{
       if(!(as.integer(settingValue) == settingValue)){
-        message("ERROR: Unexpected type encountered. samples must be an integer.")
+        message("ERROR: Unexpected type encountered. nboot must be an integer.")
         isValid = FALSE
       }else if(settingValue<1){
-        message("ERROR: samples must be a strictly positive integer.")
+        message("ERROR: nboot must be a strictly positive integer.")
         isValid = FALSE
       }
     }
-  }else if(settingName == tolower("sample_size")){
+  }else if(settingName == tolower("N")){
     if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. sample_size must be an integer.")
+      message("ERROR: Unexpected type encountered. N must be an integer.")
       isValid = FALSE
     }else{
       if(!(as.integer(settingValue) == settingValue)){
-        message("ERROR: Unexpected type encountered. sample_size must be an integer.")
+        message("ERROR: Unexpected type encountered. N must be an integer.")
         isValid = FALSE
       }else if(settingValue<1){
-        message("ERROR: samples must be a strictly positive integer.")
+        message("ERROR: N must be a strictly positive integer.")
         isValid = FALSE
       }
     }
-  }else if(settingName == tolower("regenerateData")){
+  }else if(settingName == tolower("newResampling")){
     if((is.logical(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. regenerateData must be an boolean")
+      message("ERROR: Unexpected type encountered. newResampling must be an boolean")
       isValid = FALSE
     }
-  }else if(settingName == tolower("stratify_on")){
+  }else if(settingName == tolower("strata")){
     if(is.vector(settingValue) == FALSE){
       message("ERROR: Unexpected type encountered. covariateToSearch must be a vector")
       isValid = FALSE
