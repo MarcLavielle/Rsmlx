@@ -6,29 +6,38 @@
 \usage{
 buildmlx(project, final.project = NULL, model = c("residualError",
   "covariate", "correlation"), penalization = "BIC", max.iter = 20,
-  trans.cov = "all", param.cov = "all", seqcc = TRUE, nb.model = 1,
-  print = TRUE)
+  covToTransform = "none", paramToUse = "all", linearization = TRUE,
+  seqcc = TRUE, nb.model = 1, print = TRUE, direction = "full",
+  steps = 1000, p.min = 0.2)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
 
-\item{final.project}{a string: the final Monolix project (default is the original project)}
+\item{final.project}{a string: the final Monolix project (default adds "_built" to the original project)}
 
 \item{model}{component of the model to optimize, default=c("residualError", "covariate", "correlation")}
 
-\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC", "lasso")}
+\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC")}
 
 \item{max.iter}{maximum number of iterations (default=20)}
 
-\item{trans.cov}{list of covariates to be log-transformed (default="all")}
+\item{covToTransform}{list of covariates to be log-transformed (default="none")}
 
-\item{param.cov}{list of parameters which could be function of covariates (default="all")}
+\item{paramToUse}{list of parameters which could be function of covariates (default="all")}
+
+\item{linearization}{{TRUE}/FALSE whether the computation of the likelihood is based on a linearization of the model (default=TRUE)}
 
 \item{seqcc}{{TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE)}
 
 \item{nb.model}{number of models to display at each iteration (default=1)}
 
 \item{print}{{TRUE}/FALSE display the results (default=TRUE)}
+
+\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")}
+
+\item{steps}{number of iteration for stepAIC/BIC (default=1000)}
+
+\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=0.2)}
 }
 \value{
 a new Monolix project with a new statistical model.

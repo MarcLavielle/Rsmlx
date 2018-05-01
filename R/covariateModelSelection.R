@@ -1,4 +1,5 @@
-covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="all", param.cov="all") {
+covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform="none", direction="both", 
+                                    paramToUse="all", steps=1000, p.min=0.2, lambda="cv", settings=NULL) {
   
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
@@ -9,8 +10,8 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="a
   
   ind.dist <- getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
-  if (identical(param.cov,"all"))
-    param.cov <- param.names
+  if (identical(paramToUse,"all"))
+    paramToUse <- param.names
   n.param <- length(param.names)
   #sim.parameters <- sp.df[c("rep","id",param.names)]
   sim.parameters <- getSimulatedIndividualParameters()
@@ -21,18 +22,18 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="a
   j.trans <- grep("transformed",cov.types)
   j.cont <- grep("continuous",cov.types)
   cont.cov <- cov.names[j.cont]
-  if (identical(trans.cov,"all"))
-    trans.cov = cov.names[j.cont]
-  else if (identical(trans.cov,"none"))
-    trans.cov=NULL
-  tcov.names <- unique(c(cov.names[j.trans], setdiff(cont.cov,trans.cov)))
+  if (identical(covToTransform,"all"))
+    covToTransform = cov.names[j.cont]
+  else if (identical(covToTransform,"none"))
+    covToTransform=NULL
+  tcov.names <- unique(c(cov.names[j.trans], setdiff(cont.cov,covToTransform)))
   cov.types <- gsub("transformed","",cov.types)
   covariates <- sp.df[c("rep","id",cov.names)]
   cov.cat <- cov.names[cov.types == "categorical"]
   covariates[cov.cat] <-  lapply(covariates[cov.cat],as.factor)
   
   indvar <- getIndividualParameterModel()$variability$id
-  indvar[setdiff(param.names, param.cov)] <- FALSE
+  indvar[setdiff(param.names, paramToUse)] <- FALSE
   
   r <- res <- list()
   for (j in (1:n.param)) {
@@ -52,7 +53,8 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="a
         names(yj) <- paste0("probit.",nj)
       } 
       
-      r[[j]] <- lm.all(yj,covariates,tcov.names,penalization=penalization,nb.model=nb.model)
+      r[[j]] <- lm.all(yj,covariates,tcov.names,penalization=penalization,nb.model=nb.model, 
+                       lambda=lambda,direction=direction,steps=steps, p.min=p.min, settings=settings)
       res[[j]] <- r[[j]]$res
     } else {
       r[[j]] <- list(model="fixed")
@@ -97,7 +99,8 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, trans.cov="a
 
 #-----------------------------------
 
-lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.model) {
+lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.model,
+                   lambda='cv',direction='both',steps = 1000, p.min=0.2, settings = NULL) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
     nrep <- nrow(x)/N
@@ -105,7 +108,19 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     N <-  nrow(x)
     nrep <- 1
   }
+  yc <- colMeans(matrix(y[[1]], nrow=nrep))
   x$id <- x$rep <- NULL
+  xc <- x[seq(1,nrow(x),by=nrep),]
+  pjc <- NULL
+  lm0 <- lm(yc ~1)
+  for (nc in names(x)) {
+    lmc <- lm(yc ~ xc[[nc]])
+    pjc <- c(pjc, signif(anova(lm0, lmc)$`Pr(>F)`[2],4))
+  }
+  list.c <- which(pjc<p.min)
+  
+  x <- x[,list.c,drop=FALSE]
+  
   nx <- ncol(x)
   l <- x
   s <- rep("0:1", nx)
@@ -119,9 +134,128 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     s[j0.num] <- "0:2"
     l[,j0.num] <- log(x[,j0.num])
     names(l)[j0.num] <- paste0("log.",names(x)[j0.num])
-  }
-  x[,j.num] <- scale(x[j.num], scale=FALSE)
-  l[,j.num] <- scale(l[j.num], scale=FALSE)
+    x[,j.num] <- scale(x[j.num], scale=TRUE)
+    l[,j.num] <- scale(l[j.num], scale=TRUE)
+  } else
+    j0.num <- vector(length=0)
+  
+  if(penalization == 'lasso') {
+    stop("Lasso not implemented yet...", cat.=FALSE)
+    # create a data frame with all possible covariates (all transformations)
+    # l_data = data.frame(y=y[[1]])
+    # # not use non transformed covariates
+    # j0.num = j0.num[!names(j0.num) %in% tr.names]
+    # 
+    # l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
+    # 
+    # # apply glmnet lasso
+    # llk0 = tryCatch( {
+    #   # cross validation if lambda is cv (chosen value otherwise), after turn data frame into matrix
+    #   if (lambda =='cv'){
+    #     text1 = 'cv.glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1])'
+    #     if (!is.null(settings)){
+    #       text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+    #       lmk = eval(parse( text = paste(text1,',',text2,')') ))
+    #     }
+    #     else lmk = eval(parse( text = paste(text1,')') ))
+    #     coef(lmk,s='lambda.1se')
+    #   }
+    #   else {
+    #     text1 = 'glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1]), lambda = lambda'
+    #     if (!is.null(settings)){
+    #       text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+    #       lmk = eval(parse( text = paste(text1,',',text2,')') ))
+    #     }
+    #     else lmk = eval(parse( text = paste(text1,')') ))
+    #     coef(lmk)
+    #   }
+    # }
+    # , error=function(e) {
+    #   print('error in lasso regression')
+    #   return(-Inf)        }      
+    # )
+    # ## after tryCatch
+    # 
+    # # Fit a lm using non zero coefs
+    # 
+    # text1 = paste( c(1, names(llk0[row.names(llk0) != '(Intercept)' & llk0[,1]!=0,]) ), collapse = '+')
+    # eval(parse( text = paste('llk=lm(y~',text1,',data=l_data)') ))
+    # 
+    # # Which covariates are used
+    # G = x[1,]
+    # for (i in names(G)){
+    #   
+    #   if (i %in% names(coef(llk)) ) G[1,i]=1 else G[1,i]=0
+    #   if (paste0('log.',i) %in% names(coef(llk)) ) G[1,i]=G[1,i]+2
+    #   # = 3 if both log and non-log are used
+    # }
+    # 
+    # ll = logLik(llk)/nrep
+    # df = length(coef(llk))-1 # except Intercept
+    # 
+    # res <- data.frame(ll=round(ll,digits=3), df=df )# , criteria=round(criteria,digits=3))
+    # res <- cbind(G, res)
+    # 
+    # return(list(model=llk, res=res))
+    
+  } 
+  
+  #############% stepAIC/stepBIC
+  if(penalization != 'lasso' & direction != 'full') {
+    # create a data frame with all possible covariates (all transformations)
+    l_data = data.frame(y=y[[1]])
+    # not use non transformed covariates
+    j0.num = j0.num[!names(j0.num) %in% tr.names]
+    
+    # not drop data frame to a vector!
+    
+    l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
+    
+    # apply stepAIC
+    llk = tryCatch( {
+      # stepAIC forward, backward, both
+      
+      model.sature=lm(y~.,l_data)
+      model.cst=lm(y~1,data=l_data) 
+      
+      if (penalization=='BIC') k = nrep*log(N)
+      else if (penalization=='AIC') k = nrep*2
+      
+      if(direction=='backward'){
+        lm.sat=stepAIC(model.sature,direction = 'backward',trace = FALSE,k=k,
+                       scope = list(upper=model.sature,lower=model.cst),steps = steps)
+      }
+      else {
+        lm.cst=stepAIC(model.cst,direction = direction,trace = FALSE,k=k,
+                       scope = list(upper=model.sature,lower=model.cst),steps = steps)
+      }
+    }
+    , error=function(e) {
+      print('Error in stepAIC')
+      return(-Inf)        }      
+    )
+    ## after tryCatch
+    
+    # Which covariates are used
+    G = x[1,]
+    for (i in names(G)){
+      
+      if (i %in% names(coef(llk)) ) G[1,i]=1 else G[1,i]=0
+      if (paste0('log.',i) %in% names(coef(llk)) ) G[1,i]=G[1,i]+2
+      # = 3 if both log and non-log are used
+    }
+    
+    ll = logLik(llk)/nrep
+    df = length(coef(llk))-1 # except Intercept
+    if(penalization=='BIC') criteria = -2*logLik(llk)/nrep + df*log(N)
+    else criteria = criteria = -2*logLik(llk)/nrep + df*2
+    
+    res <- data.frame(ll=round(ll,digits=3), df=df,  criteria=round(criteria,digits=3))
+    res <- cbind(G, res)
+    
+    return(list(model=llk, res=res))
+  } 
+  
   
   if (length(tr.names)>0){
     j.newc <- which((names(x) %in% tr.names))

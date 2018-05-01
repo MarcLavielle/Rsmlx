@@ -4,11 +4,13 @@
 \alias{covariateSearch}
 \title{Covariate model building}
 \usage{
-covariateSearch(project, covToTest = NULL, paramToUse = NULL,
-  settings = NULL)
+covariateSearch(project, final.project = NULL, covToTest = NULL,
+  paramToUse = NULL, settings = NULL)
 }
 \arguments{
 \item{project}{a Monolix project}
+
+\item{final.project}{a string: the final Monolix project (default adds method name to original project name)}
 
 \item{covToTest}{[optional] list of covariates to test. By default, all covariates are tested}
 

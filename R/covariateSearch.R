@@ -7,12 +7,13 @@
 #' \item SCM: SCM method
 #' }
 #' @param project a Monolix project
+#' @param final.project  a string: the final Monolix project (default adds method name to original project name)
 #' @param covToTest [optional] list of covariates to test. By default, all covariates are tested
 #' @param paramToUse [optional] list of parameters which may be function of covariates. By default, all parameters are used.
 #' @param settings [optional] defines the settings search. This is a list of all settings for the search. 
 #' The settings are pInclusion, pElimination, linearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.
 #' @export
-covariateSearch <- function(project, covToTest = NULL, paramToUse = NULL, settings = NULL){
+covariateSearch <- function(project, final.project=NULL, covToTest = NULL, paramToUse = NULL, settings = NULL){
   ###################################################################################
   # Initialization
   ###################################################################################
@@ -21,7 +22,7 @@ covariateSearch <- function(project, covToTest = NULL, paramToUse = NULL, settin
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
   
- # initializeMlxConnectors(software = "monolix")
+  # initializeMlxConnectors(software = "monolix")
   
   loadProject(project)   
   
@@ -69,7 +70,10 @@ covariateSearch <- function(project, covToTest = NULL, paramToUse = NULL, settin
   }else{
     method <- 'SCM'
   }
-  projectToSaveName <- toString(sub(pattern=".mlxtran", replacement=paste0('_covSearch_', method, '.mlxtran'), project))
+  if (is.null(final.project))
+    projectToSaveName <- toString(sub(pattern=".mlxtran", replacement=paste0('_covSearch_', method, '.mlxtran'), project))
+  else
+    projectToSaveName <- final.project
   saveProject(projectToSaveName);loadProject(projectToSaveName);
   
   # Define the scenario associated to the type of test and the method

@@ -28,6 +28,7 @@
 #' \item \code{print} {TRUE}/FALSE display the results (default=TRUE)
 #' }
 #' @return a list with the computed confidence intervals, the method used and the level.
+#' @importFrom stats qchisq
 #' @examples
 #' \dontrun{
 #' r=confintmlx(project) ; compute 95% c.i. for all parameters using the FIM

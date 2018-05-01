@@ -4,32 +4,43 @@
 #' at each step how best to improve some of the model components. This method allows to find 
 #' the optimal statistical model which minimizes some information criteria in very few steps.
 #' @param project a string: the initial Monolix project
-#' @param final.project  a string: the final Monolix project (default is the original project)
+#' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
 #' @param model  component of the model to optimize, default=c("residualError", "covariate", "correlation")
-#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
+#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC")
 #' @param max.iter maximum number of iterations (default=20)
-#' @param trans.cov  list of covariates to be log-transformed (default="all")
-#' @param param.cov  list of parameters which could be function of covariates (default="all")
+#' @param covToTransform  list of covariates to be log-transformed (default="none")
+#' @param paramToUse  list of parameters which could be function of covariates (default="all")
+#' @param linearization  {TRUE}/FALSE whether the computation of the likelihood is based on a linearization of the model (default=TRUE)
 #' @param seqcc {TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE) 
 #' @param nb.model number of models to display at each iteration (default=1)
 #' @param print {TRUE}/FALSE display the results (default=TRUE)
+#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
+#' @param steps number of iteration for stepAIC/BIC (default=1000)
+#' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=0.2)
 #' @return a new Monolix project with a new statistical model.
+#' @importFrom MASS stepAIC 
+#' @importFrom stats coef 
 #' @examples
 #' \dontrun{
 #' r = buildmlx("warfPK.mlxtran")
 #' }
 #' @export
 buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
-                     penalization="BIC", max.iter=20, trans.cov="all", param.cov="all", 
-                     seqcc=TRUE, nb.model=1, print=TRUE)
+                     penalization="BIC", max.iter=20, covToTransform="none", paramToUse="all", linearization=TRUE,
+                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=0.2)
+                     #lambda='cv', settings=NULL)
 {
+  
+# #' @param lambda penalization coefficient for "lasso" (default="cv")
+# #' @param settings when penalization="lasso", settings used for package glmnet 
+  
   
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
   
-#  initializeMlxConnectors(software = "monolix")
-
+  #  initializeMlxConnectors(software = "monolix")
+  
   if (length(penalization)==1) {
     if (penalization=="lasso") {
       penalization <- c(penalization, "BIC", "BIC")
@@ -71,16 +82,25 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   
   
   #----  LL & linearization
-  iop.ll <- as.vector(getScenario()$tasks['logLikelihoodEstimation'])
-  lin.ll <- getScenario()$linearization
+  # iop.ll <- as.vector(getScenario()$tasks['logLikelihoodEstimation'])
+  # lin.ll <- getScenario()$linearization
+  iop.ll <- 1
+  lin.ll <- linearization
   method.ll <- ifelse (lin.ll,"linearization","importanceSampling")
   if (iop.ll) {
     if (!(method.ll %in% launched.tasks[["logLikelihoodEstimation"]]))  {
+      if (lin.ll & !launched.tasks[["conditionalModeEstimation"]])
+        runConditionalModeEstimation()
       runLogLikelihoodEstimation(linearization = lin.ll)
       cat("Estimation of the log-likelihood of the initial model ... \n")
     }
     ll <- getEstimatedLogLikelihood()
+    ll.ini <- ll[[method.ll]][penalization[2]]
   }
+  
+  p.ini <- getPopulationParameterInformation()
+  ind.omega <- grep("omega_",p.ini[['name']])
+  omega.ini <- p.ini[ind.omega,]
   
   error.model <- getContinuousObservationModel()$errorModel
   covariate.model <- getIndividualParameterModel()$covariateModel
@@ -112,7 +132,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   #-----------------------------------------
   
   if (is.null(final.project))
-    final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_builtmlx.mlxtran")
+    final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_built.mlxtran")
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   
   res.dir <- getProjectSettings()$directory
@@ -122,13 +142,6 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       unlink(final.dir, recursive=TRUE)
   }
   dir.create(final.dir)
-  #browser()
-  # foo = tryCatch( {
-  #   file.copy(file.path(res.dir,list_of_files), final.dir, recursive=TRUE)}
-  #   , error=function(e) {
-  #     return(list())        }
-  # )
-  # if (length(foo)==0)
   foo <- file.copy(file.path(res.dir,list_of_files), final.dir, recursive=TRUE)
   foo <- file.rename(file.path(final.dir,".Internals",basename(project)),
                      file.path(final.dir,".Internals",basename(final.project)))
@@ -148,6 +161,8 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   
   cov.names0 <- cov.names <- NULL
   
+  ll.prev <- Inf
+  ll.new <- ll.ini
   while (!stop.test) {
     iter <- iter + 1
     
@@ -166,7 +181,9 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     
     if (iop.covariate) {
       res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
-                                               trans.cov=trans.cov, param.cov=param.cov)
+                                               covToTransform=covToTransform, direction=direction, 
+                                               steps=steps, p.min=p.min, paramToUse=paramToUse)
+                                              # lambda=lambda,  settings=settings)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
       cov.names <- lapply(covariate.model, function(x) {sort(names(which(x)))})
@@ -224,6 +241,10 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       }
       
       setInitialEstimatesToLastEstimates()
+      p.ini <- getPopulationParameterInformation()
+      p.ini[ind.omega,] <- omega.ini
+      setPopulationParameterInformation(p.ini)
+      
       setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
       
       if (iop.error)
@@ -245,6 +266,14 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       if (dir.exists(final.dir))
         unlink(final.dir, recursive=TRUE)
       
+      if (ll.new > ll.prev) {
+        g <- getGeneralSettings()
+        g$autochains <- FALSE
+        g$nbchains <- g$nbchains+1
+        setGeneralSettings(g)
+      }
+      ll.prev <- ll.new
+      
       saveProject(final.project)
       cat(paste0("Run scenario for model ",iter," ... \n"))
       #runScenario()
@@ -254,24 +283,27 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       runConditionalDistributionSampling()
       if (iop.ll) {
         cat("Estimation of the log-likelihood... \n")
+        if (lin.ll)
+          runConditionalModeEstimation()
         runLogLikelihoodEstimation(linearization = lin.ll)
       }
+      ll.new <- ll[[method.ll]][penalization[2]]
       
       loadProject(final.project)
       
-      if (print) {
-        if (iop.ll) {
-          cat("\nEstimated log-likelihood:\n")
-          if (stop.test)
-            ll <- ll0
-          else
-            ll <- getEstimatedLogLikelihood()
-          print(lapply(ll,round,2))
-        }
+      if (stop.test)
+        ll <- ll0
+      else
+        ll <- getEstimatedLogLikelihood()
+      
+      if (print & iop.ll) {
+        cat("\nEstimated log-likelihood:\n")
+        print(lapply(ll,round,2))
       }
       if (iter >= max.iter) {
         stop.test <- TRUE
-        cat("Maximum number of iterations reached\n")
+        if (print)
+          cat("Maximum number of iterations reached\n")
       }
     }
   }
@@ -313,7 +345,6 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       setCovariateModel(cg)
     }
   }
-  browser()
   saveProject(final.project)
   res <- list(project=final.project)
   if (iop.covariate)
