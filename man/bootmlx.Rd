@@ -2,7 +2,7 @@
 % Please edit documentation in R/bootstrap.R
 \name{bootmlx}
 \alias{bootmlx}
-\title{Non parametric bootstrapping}
+\title{Bootstrapping - case resampling}
 \usage{
 bootmlx(project, nboot = 100, dataFolder = NULL, settings = NULL)
 }

@@ -15,15 +15,15 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{final.project}{a string: the final Monolix project (default adds "_built" to the original project)}
 
-\item{model}{component of the model to optimize, default=c("residualError", "covariate", "correlation")}
+\item{model}{components of the model to optimize, default=c("residualError", "covariate", "correlation")}
 
-\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC")}
+\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC", "lasso")}
 
 \item{max.iter}{maximum number of iterations (default=20)}
 
 \item{covToTransform}{list of covariates to be log-transformed (default="none")}
 
-\item{paramToUse}{list of parameters which could be function of covariates (default="all")}
+\item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
 \item{linearization}{{TRUE}/FALSE whether the computation of the likelihood is based on a linearization of the model (default=TRUE)}
 
@@ -35,11 +35,11 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")}
 
-\item{steps}{number of iteration for stepAIC/BIC (default=1000)}
+\item{steps}{maximum number of iteration for stepAIC/BIC (default=1000)}
 
 \item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
 
-\item{lambda}{penalization coefficient for "lasso" (default="cv")}
+\item{lambda}{penalization coefficient for "lasso" (default="cv"). Either "cv" (cross-validation) or a positive real value (default="cv")}
 
 \item{settings}{when penalization="lasso", settings used for package glmnet}
 }
