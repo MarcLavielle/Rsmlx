@@ -1,4 +1,4 @@
-#' Bootstrapping - case resampling
+#' Non parametric bootstrapping
 #'
 #' Generate replicates of the original data using random sampling with replacement.
 #' Population parameters are then estimated from each replicate.
