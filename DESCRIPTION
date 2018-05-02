@@ -1,6 +1,6 @@
 Package: Rsmlx
 Type: Package
-Title: Model building
+Title: R Speaks Monolix
 Version: 0.1.0
 Author: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" )

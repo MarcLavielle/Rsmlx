@@ -6,9 +6,9 @@
 \usage{
 buildmlx(project, final.project = NULL, model = c("residualError",
   "covariate", "correlation"), penalization = "BIC", max.iter = 20,
-  covToTransform = "none", paramToUse = "all", linearization = TRUE,
+  covToTransform = "none", paramToUse = "all", linearization = FALSE,
   seqcc = TRUE, nb.model = 1, print = TRUE, direction = "full",
-  steps = 1000, p.min = 0.2, lambda = "cv", settings = NULL)
+  steps = 1000, p.min = 1, lambda = "cv", settings = NULL)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
@@ -37,7 +37,7 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{steps}{number of iteration for stepAIC/BIC (default=1000)}
 
-\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=0.2)}
+\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
 
 \item{lambda}{penalization coefficient for "lasso" (default="cv")}
 
