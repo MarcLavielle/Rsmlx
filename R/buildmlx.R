@@ -17,6 +17,8 @@
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
 #' @param steps number of iteration for stepAIC/BIC (default=1000)
 #' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=0.2)
+#' @param lambda penalization coefficient for "lasso" (default="cv")
+#' @param settings when penalization="lasso", settings used for package glmnet
 #' @return a new Monolix project with a new statistical model.
 #' @importFrom MASS stepAIC 
 #' @importFrom stats coef 
@@ -27,12 +29,10 @@
 #' @export
 buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
                      penalization="BIC", max.iter=20, covToTransform="none", paramToUse="all", linearization=TRUE,
-                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=0.2)
-                     #lambda='cv', settings=NULL)
+                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=0.2,
+                     lambda='cv', settings=NULL)
 {
   
-# #' @param lambda penalization coefficient for "lasso" (default="cv")
-# #' @param settings when penalization="lasso", settings used for package glmnet 
   
   
   if(!file.exists(project)){
@@ -182,8 +182,8 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     if (iop.covariate) {
       res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
                                                covToTransform=covToTransform, direction=direction, 
-                                               steps=steps, p.min=p.min, paramToUse=paramToUse)
-                                              # lambda=lambda,  settings=settings)
+                                               steps=steps, p.min=p.min, paramToUse=paramToUse,
+                                               lambda=lambda,  settings=settings)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
       cov.names <- lapply(covariate.model, function(x) {sort(names(which(x)))})

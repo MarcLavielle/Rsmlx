@@ -142,61 +142,61 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   if(penalization == 'lasso') {
     stop("Lasso not implemented yet...", cat.=FALSE)
     # create a data frame with all possible covariates (all transformations)
-    # l_data = data.frame(y=y[[1]])
-    # # not use non transformed covariates
-    # j0.num = j0.num[!names(j0.num) %in% tr.names]
-    # 
-    # l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
-    # 
-    # # apply glmnet lasso
-    # llk0 = tryCatch( {
-    #   # cross validation if lambda is cv (chosen value otherwise), after turn data frame into matrix
-    #   if (lambda =='cv'){
-    #     text1 = 'cv.glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1])'
-    #     if (!is.null(settings)){
-    #       text2 = paste(names(settings),settings,sep = '=',collapse = ',')
-    #       lmk = eval(parse( text = paste(text1,',',text2,')') ))
-    #     }
-    #     else lmk = eval(parse( text = paste(text1,')') ))
-    #     coef(lmk,s='lambda.1se')
-    #   }
-    #   else {
-    #     text1 = 'glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1]), lambda = lambda'
-    #     if (!is.null(settings)){
-    #       text2 = paste(names(settings),settings,sep = '=',collapse = ',')
-    #       lmk = eval(parse( text = paste(text1,',',text2,')') ))
-    #     }
-    #     else lmk = eval(parse( text = paste(text1,')') ))
-    #     coef(lmk)
-    #   }
-    # }
-    # , error=function(e) {
-    #   print('error in lasso regression')
-    #   return(-Inf)        }      
-    # )
-    # ## after tryCatch
-    # 
-    # # Fit a lm using non zero coefs
-    # 
-    # text1 = paste( c(1, names(llk0[row.names(llk0) != '(Intercept)' & llk0[,1]!=0,]) ), collapse = '+')
-    # eval(parse( text = paste('llk=lm(y~',text1,',data=l_data)') ))
-    # 
-    # # Which covariates are used
-    # G = x[1,]
-    # for (i in names(G)){
-    #   
-    #   if (i %in% names(coef(llk)) ) G[1,i]=1 else G[1,i]=0
-    #   if (paste0('log.',i) %in% names(coef(llk)) ) G[1,i]=G[1,i]+2
-    #   # = 3 if both log and non-log are used
-    # }
-    # 
-    # ll = logLik(llk)/nrep
-    # df = length(coef(llk))-1 # except Intercept
-    # 
-    # res <- data.frame(ll=round(ll,digits=3), df=df )# , criteria=round(criteria,digits=3))
-    # res <- cbind(G, res)
-    # 
-    # return(list(model=llk, res=res))
+    l_data = data.frame(y=y[[1]])
+    # not use non transformed covariates
+    j0.num = j0.num[!names(j0.num) %in% tr.names]
+    
+    l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
+    
+    # apply glmnet lasso
+    llk0 = tryCatch( {
+      # cross validation if lambda is cv (chosen value otherwise), after turn data frame into matrix
+      if (lambda =='cv'){
+        text1 = 'cv.glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1])'
+        if (!is.null(settings)){
+          text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+          lmk = eval(parse( text = paste(text1,',',text2,')') ))
+        }
+        else lmk = eval(parse( text = paste(text1,')') ))
+        coef(lmk,s='lambda.1se')
+      }
+      else {
+        text1 = 'glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1]), lambda = lambda'
+        if (!is.null(settings)){
+          text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+          lmk = eval(parse( text = paste(text1,',',text2,')') ))
+        }
+        else lmk = eval(parse( text = paste(text1,')') ))
+        coef(lmk)
+      }
+    }
+    , error=function(e) {
+      print('error in lasso regression')
+      return(-Inf)        }      
+    )
+    ## after tryCatch
+    
+    # Fit a lm using non zero coefs
+    
+    text1 = paste( c(1, names(llk0[row.names(llk0) != '(Intercept)' & llk0[,1]!=0,]) ), collapse = '+')
+    eval(parse( text = paste('llk=lm(y~',text1,',data=l_data)') ))
+    
+    # Which covariates are used
+    G = x[1,]
+    for (i in names(G)){
+      
+      if (i %in% names(coef(llk)) ) G[1,i]=1 else G[1,i]=0
+      if (paste0('log.',i) %in% names(coef(llk)) ) G[1,i]=G[1,i]+2
+      # = 3 if both log and non-log are used
+    }
+    
+    ll = logLik(llk)/nrep
+    df = length(coef(llk))-1 # except Intercept
+    
+    res <- data.frame(ll=round(ll,digits=3), df=df )# , criteria=round(criteria,digits=3))
+    res <- cbind(G, res)
+    
+    return(list(model=llk, res=res))
     
   } 
   
