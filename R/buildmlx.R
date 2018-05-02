@@ -16,7 +16,7 @@
 #' @param print {TRUE}/FALSE display the results (default=TRUE)
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
 #' @param steps number of iteration for stepAIC/BIC (default=1000)
-#' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=0.2)
+#' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)
 #' @param lambda penalization coefficient for "lasso" (default="cv")
 #' @param settings when penalization="lasso", settings used for package glmnet
 #' @return a new Monolix project with a new statistical model.
@@ -28,8 +28,8 @@
 #' }
 #' @export
 buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
-                     penalization="BIC", max.iter=20, covToTransform="none", paramToUse="all", linearization=TRUE,
-                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=0.2,
+                     penalization="BIC", max.iter=20, covToTransform="none", paramToUse="all", linearization=FALSE,
+                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=1,
                      lambda='cv', settings=NULL)
 {
   
@@ -99,7 +99,9 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   }
   
   p.ini <- getPopulationParameterInformation()
+  rownames(p.ini) <- p.ini$name
   ind.omega <- grep("omega_",p.ini[['name']])
+  omega <- p.ini$name[ind.omega]
   omega.ini <- p.ini[ind.omega,]
   
   error.model <- getContinuousObservationModel()$errorModel
@@ -197,7 +199,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       if (isTRUE(all.equal(cov.names0,cov.names)) &
           isTRUE(all.equal(error.model0,error.model))) {
         corr.test <- TRUE
-        cat("Start building correlation model too\n")
+        if (print) { cat("Start building correlation model too\n") }
       }
     }
     
@@ -217,7 +219,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
           isTRUE(all.equal(error.model0,error.model)) &
           isTRUE(all.equal(correlation.model0,correlation.model))) {
         stop.test <- TRUE
-        cat("No difference between two successive iterations\n")
+        if (print) { cat("No difference between two successive iterations\n") }
       }
     }
     
@@ -242,9 +244,10 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       
       setInitialEstimatesToLastEstimates()
       p.ini <- getPopulationParameterInformation()
-      p.ini[ind.omega,] <- omega.ini
+      rownames(p.ini) <- p.ini$name
+      p.ini[omega,] <- omega.ini
       setPopulationParameterInformation(p.ini)
-      
+
       setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
       
       if (iop.error)
@@ -275,14 +278,13 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       ll.prev <- ll.new
       
       saveProject(final.project)
-      cat(paste0("Run scenario for model ",iter," ... \n"))
-      #runScenario()
-      cat("Estimation of the population parameters... \n")
+      if (print) { cat(paste0("Run scenario for model ",iter," ... \n")) }
+      if (print) { cat("Estimation of the population parameters... \n") }
       runPopulationParameterEstimation()
-      cat("Sampling from the conditional distribution... \n")
+      if (print) { cat("Sampling from the conditional distribution... \n") }
       runConditionalDistributionSampling()
       if (iop.ll) {
-        cat("Estimation of the log-likelihood... \n")
+        if (print) { cat("Estimation of the log-likelihood... \n") }
         if (lin.ll)
           runConditionalModeEstimation()
         runLogLikelihoodEstimation(linearization = lin.ll)
@@ -306,6 +308,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
           cat("Maximum number of iterations reached\n")
       }
     }
+    saveProject(final.project)
   }
   
   if (print) {

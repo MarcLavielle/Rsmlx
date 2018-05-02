@@ -33,7 +33,6 @@ testmlx <- function(project,
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
-  theme_set(theme_bw())
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
@@ -53,6 +52,9 @@ testmlx <- function(project,
   #------------------------------
   if (!any(getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
+  
+  if (plot)
+    ggplot2::theme_set(theme_bw())
   
   res <- list()
   if ("covariate" %in% tests)
@@ -273,6 +275,7 @@ covariateTest <- function(project=NULL, plot=FALSE) {
   #covariates["id"] <- NULL
   
   d1 <- NULL
+  g=getIndividualParameterModel()$covariateModel
   for (nj in var.param) {
     dj <- tolower(ind.dist[nj])
     yj <- m.indparam[[nj]]
@@ -293,22 +296,25 @@ covariateTest <- function(project=NULL, plot=FALSE) {
     for (nc in cov.names) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      dnc <- data.frame(parameter=n.yj,covariate=nc,p.value=pjc)
+      dnc <- data.frame(parameter=n.yj,covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
       d1 <- rbind(d1,dnc)
     }
   }
+  d1 <- d1[order(d1$in.model, decreasing=TRUE),]
   
   d2 <- NULL
-  for (nj in var.randeff) {
-    yj <- m.randeff[[nj]]
+  for (ne in var.randeff) {
+    nj <- gsub("eta_","",ne)
+    yj <- m.randeff[[ne]]
     lm0 <- lm(yj ~1)
     for (nc in cov.names) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      dnc <- data.frame(parameter=nj,covariate=nc,p.value=pjc)
+      dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
       d2 <- rbind(d2,dnc)
     }
   }
+  d2 <- d2[order(d2$in.model, decreasing=TRUE),]
   
   if (plot) {
     sim.param <- getSimulatedIndividualParameters()

@@ -1,5 +1,5 @@
 covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform="none", direction="both", 
-                                    paramToUse="all", steps=1000, p.min=0.2, lambda="cv", settings=NULL) {
+                                    paramToUse="all", steps=1000, p.min=1, lambda="cv", settings=NULL) {
   
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
@@ -100,7 +100,7 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
 #-----------------------------------
 
 lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.model,
-                   lambda='cv',direction='both',steps = 1000, p.min=0.2, settings = NULL) {
+                   lambda='cv',direction='both',steps = 1000, p.min=1, settings = NULL) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
     nrep <- nrow(x)/N
@@ -118,7 +118,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     pjc <- c(pjc, signif(anova(lm0, lmc)$`Pr(>F)`[2],4))
   }
   list.c <- which(pjc<p.min)
-  
+
   x <- x[,list.c,drop=FALSE]
   
   nx <- ncol(x)
