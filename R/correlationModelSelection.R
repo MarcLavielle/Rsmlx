@@ -1,4 +1,4 @@
-correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, corr0=NULL) {
+correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, corr0=NULL, seqcc=TRUE) {
   
   p.name <- getIndividualParameterModel()$name
   if (is.null(e)) {
@@ -9,15 +9,21 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
       e$rep <- 1
     eta.names <- paste0("eta_",p.name)
     e <- e[c("rep","id",eta.names)]
-  } else {
-    e$rep <- getSimulatedRandomEffects()$rep
-  }
+  } 
+  # else {
+  #   e$rep <- getSimulatedRandomEffects()$rep
+  # }
   
   nrep <- max(e$rep)
   N <- nrow(e)/nrep
   e$rep <- e$id <- NULL
+  foo <- names(which(getIndividualParameterModel()$variability$id))
+  e.var <- paste0("eta_",foo)
+  e.var <- e.var[e.var %in% names(e)]
+  e <- e[e.var]
   e <- as.data.frame(scale(e))
   n.param <- ncol(e)
+  if (n.param>1) {
   
   if (penalization=="BIC")
     pen.bic <- log(N)
@@ -63,6 +69,7 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
   }
   bic <- -2*ll + pen.bic*df
   
+  if (seqcc==TRUE) {
   if (length(corr0)==0)
     bl=1
   else
@@ -71,11 +78,14 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
   bl <- bl-1
   bm <- sum(bl*(bl+1)/2)
   bic[df>bm] <- Inf
+  }
   obic <- order(bic)
   nb.model <- min(nb.model, length(bic))
   E <- data.frame(ll=ll, df=df, criteria=bic)
   E <- E[order(bic)[1:nb.model],]
   row.names(E) <- 1:nrow(E)
+  
+ # rct <- cortest(C,e,pen.bic,n.param,nrep)
   
   correlation.model <- list()
   for (j in 1:nb.model) {
@@ -101,6 +111,9 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
   
   
   return(list(blocks=correlation.model, res=E))
+  } else {
+    return(NULL)
+  }
 }
 
 #-------------------------------------------

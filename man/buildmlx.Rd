@@ -21,11 +21,11 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{max.iter}{maximum number of iterations (default=20)}
 
-\item{covToTransform}{list of covariates to be log-transformed (default="none")}
+\item{covToTransform}{list of (oontinuous) covariates to be log-transformed (default="none")}
 
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
-\item{linearization}{{TRUE}/FALSE whether the computation of the likelihood is based on a linearization of the model (default=TRUE)}
+\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
 \item{seqcc}{{TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE)}
 

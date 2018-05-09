@@ -1,11 +1,19 @@
 covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform="none", direction="both", 
-                                    paramToUse="all", steps=1000, p.min=1, lambda="cv", settings=NULL) {
+                                    paramToUse="all", steps=1000, p.min=1, lambda="cv", settings=NULL, sp0=NULL) {
   
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
   sp.df <- read.csv(sp.file)
   if (is.null(sp.df$rep))
     sp.df$rep <- 1
+  
+  if (!is.null(sp0)) {
+    nrep0 <- max(sp0$rep) 
+    sp.df$rep <- sp.df$rep + nrep0
+    dn <- setdiff(names(sp.df), names(sp0))
+    sp0[dn] <- sp.df[dn]
+    sp.df <- rbind(sp0, sp.df)
+  }
   nrep <- max(sp.df$rep)
   
   ind.dist <- getIndividualParameterModel()$distribution
@@ -64,7 +72,11 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
   }
   names(res) <- param.names
   e <- as.data.frame(lapply(r[indvar], function(x) {x$model$residuals}))
-  names(e) <- paste0("e_",lapply(r[indvar], function(x) {x$p.name}))
+  names(e) <- paste0("eta_",lapply(r[indvar], function(x) {x$p.name}))
+  if (!is.null(sp.df["id"]))
+    e <- cbind(sp.df["id"], e)
+  if (!is.null(sp.df["rep"]))
+    e <- cbind(sp.df["rep"], e)
   
   covariate.model <- getIndividualParameterModel()$covariateModel
   covariate <- getCovariateInformation()$covariate
@@ -94,7 +106,7 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
     }
   }
   
-  return(list(model=covariate.model, residuals=e, res=res, add.covariate=trs))
+  return(list(model=covariate.model, residuals=e, res=res, add.covariate=trs, sp=sp.df))
 }
 
 #-----------------------------------
@@ -110,7 +122,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   }
   yc <- colMeans(matrix(y[[1]], nrow=nrep))
   x$id <- x$rep <- NULL
-  xc <- x[seq(1,nrow(x),by=nrep),]
+  xc <- x[seq(1,nrow(x),by=nrep),,drop=FALSE]
   pjc <- NULL
   lm0 <- lm(yc ~1)
   for (nc in names(x)) {
@@ -118,7 +130,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     pjc <- c(pjc, signif(anova(lm0, lmc)$`Pr(>F)`[2],4))
   }
   list.c <- which(pjc<p.min)
-
+  
   x <- x[,list.c,drop=FALSE]
   
   nx <- ncol(x)
@@ -140,7 +152,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     j0.num <- vector(length=0)
   
   if(penalization == 'lasso') {
-    stop("Lasso not implemented yet...", cat.=FALSE)
+    #stop("Lasso not implemented yet...", cat.=FALSE)
     # create a data frame with all possible covariates (all transformations)
     l_data = data.frame(y=y[[1]])
     # not use non transformed covariates
@@ -294,7 +306,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   
   for (k in 1:ng) {
     xk <- data.frame(y=y[[1]])
-    Gk <- G[k,]
+    Gk <- G[k,,drop=FALSE]
     j1 <- which(Gk==1)
     if (length(j1)>0)
       xk[names(x)[j1]] <- x[j1]
@@ -308,7 +320,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
         return(-Inf)        }      
     )    
     dfk <- sum(Gk>0)
-    bick <- -2*llk + pen.bic*dfk #+ any(Gk==2)*0.001
+    bick <- -2*llk + pen.bic*dfk + any(Gk==2)*0.001
     ll <- c(ll , llk)
     df <- c(df, dfk)
     bic <- c(bic , bick)
@@ -331,16 +343,16 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   }
   res <- data.frame(ll=round(ll,digits=3), df=df, criteria=bic)
   res <- res[i0==1,]
-  G <- G[i0==1,]
+  G <- G[i0==1,,drop=FALSE]
   bic <- bic[i0==1]
   
   #ill <- which(!duplicated(ll))
   eval(parse(text=paste0(names(y)," <- y[[1]]")))
   obic <- order(bic)
   k.min <- obic[1]
-  if (mG==1) 
-    Gkmin <- G[k.min]
-  else
+  # if (mG==1) 
+  #   Gkmin <- G[k.min]
+  # else
     Gkmin <- G[k.min,]
   
   j1 <- which(Gkmin==1)
@@ -358,9 +370,17 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   eval(parse(text=paste0("lm.min <- lm(",form1,")")))
   lm.min$covsel=Gkmin
   
-  res <- cbind(G, res)
   nb.model <- min(nb.model, length(bic))
   res <- res[obic[1:nb.model],]
+  G <- G[obic[1:nb.model],,drop=FALSE]
+  j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
+  if (length(j0.num)>0){
+    G[names(l)[j0.num]] <- 0
+    i2 <- (G[names(x)[j0.num]]==2)
+    G[names(l)[j0.num]][i2] <- 1
+    G[names(x)[j0.num]][i2] <- 0
+  }
+  res <- cbind(G, res)
   row.names(res) <- 1:nrow(res)
   
   return(list(model=lm.min, res=res))

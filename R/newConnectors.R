@@ -272,6 +272,45 @@ getSimulatedResiduals <- function() {
 }
 
 #--------------------------------------------------------------------
+#' Get estimated covariance and correlation matrices
+#' 
+#' @return a list of two matrices.
+#' @examples
+#' \dontrun{
+#' r = GetEstimatedCovarianceMatrix()
+#' names(r)
+#'     "cor.matrix" "cov.matrix"
+#' }
+#' @export
+GetEstimatedCovarianceMatrix <- function() {
+  param <- getEstimatedPopulationParameters()
+  pname <- names(param)
+  i.omega <- grep("^omega_",pname)
+  if (length(i.omega)>0) {
+    oest <- 1
+    oname <- gsub("^omega_","",pname[i.omega])
+    omega <- param[i.omega]
+  } else {
+    i.omega <- grep("^omega2_",pname)
+    oname <- gsub("^omega2_","",pname[i.omega])
+    omega <- sqrt(param[i.omega])
+    oest <- 2
+  }
+  i.corr <- grep("^corr_",pname)
+  d <- length(i.omega)
+  c <- param[i.corr]
+  R <- diag(rep(1,d))
+  rownames(R) <- colnames(R) <- oname
+  for (j in 1:length(c)) {
+    cj <- names(c)[j]
+    sj <- strsplit(cj,"_")[[1]]
+    R[sj[3],sj[2]] <- R[sj[2],sj[3]] <- c[j]
+  }
+  C <- diag(omega)%*%R%*%diag(omega)
+  return(list(cor.matrix=R, cov.matrix=C))
+}
+
+#--------------------------------------------------------------------
 error.parameter <- function(project=NULL) {
   if (is.null(project)) {
     dp <- getProjectSettings()$directory
