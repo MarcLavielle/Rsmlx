@@ -83,29 +83,31 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
   js <- 0
   trs <- list()
   for (k in (1:n.param)) {
-    covariate.model[[k]][1:length(covariate.model[[k]])] <- FALSE
-    if (indvar[k]) {
-      ck <- attr(r[[k]]$model$terms,"term.labels")
-      if (length(ck)>0) {
-        for (j in (1:length(ck))) {
-          ckj <- ck[j]
-          if (identical(substr(ckj,1,4),"log.")) {
-            js <- js+1
-            ckj.name <- sub("log.","",ckj)
-            covkj <- covariate[[ckj.name]]
-            lckj <- paste0("l",ckj.name)
-            tr.str <- paste0(lckj,' = "log(',ckj.name,"/",signif(mean(covkj),digits=2),')"')
-            trs[[js]] <- paste0("addContinuousTransformedCovariate(",tr.str,")")	
-            #eval(parse(text=tr.str))
-            covariate.model[[k]][lckj] <- TRUE
-          } else {
-            covariate.model[[k]][ckj] <- TRUE
+    if (!identical(res[[k]],"none")) {
+      covariate.model[[k]][1:length(covariate.model[[k]])] <- FALSE
+      if (indvar[k]) {
+        ck <- attr(r[[k]]$model$terms,"term.labels")
+        if (length(ck)>0) {
+          for (j in (1:length(ck))) {
+            ckj <- ck[j]
+            if (identical(substr(ckj,1,4),"log.")) {
+              js <- js+1
+              ckj.name <- sub("log.","",ckj)
+              covkj <- covariate[[ckj.name]]
+              lckj <- paste0("l",ckj.name)
+              tr.str <- paste0(lckj,' = "log(',ckj.name,"/",signif(mean(covkj),digits=2),')"')
+              trs[[js]] <- paste0("addContinuousTransformedCovariate(",tr.str,")")	
+              #eval(parse(text=tr.str))
+              covariate.model[[k]][lckj] <- TRUE
+            } else {
+              covariate.model[[k]][ckj] <- TRUE
+            }
           }
         }
       }
     }
   }
-  
+  res <- formatCovariateModel(res)
   return(list(model=covariate.model, residuals=e, res=res, add.covariate=trs, sp=sp.df))
 }
 
@@ -353,7 +355,7 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   # if (mG==1) 
   #   Gkmin <- G[k.min]
   # else
-    Gkmin <- G[k.min,]
+  Gkmin <- G[k.min,]
   
   j1 <- which(Gkmin==1)
   j2 <- which(Gkmin==2)

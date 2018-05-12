@@ -33,13 +33,13 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
                      lambda='cv', settings=NULL)
 {
   
-  
   if (!grepl("\\.",project))
     project <- paste0(project,".mlxtran")
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
-  
+  loadProject(project) 
+
   #  initializeMlxConnectors(software = "monolix")
   
   if (length(penalization)==1) {
@@ -54,7 +54,6 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   penalization <- penalization[1:3]
   
   
-  loadProject(project) 
   
   r <- check(project, final.project, covToTransform, paramToUse)
   covToTransform <- r$covToTransform
@@ -69,9 +68,9 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   
   launched.tasks <- getLaunchedTasks()
   dir.create(final.dir)
-
   
-    if (!launched.tasks[["populationParameterEstimation"]]) {
+  
+  if (!launched.tasks[["populationParameterEstimation"]]) {
     lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
     if (print) cat(lineDisplay)
     runPopulationParameterEstimation()
@@ -144,7 +143,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     cat("____________________________________________\nInitialization:")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(covariate.model)
+      print(formatCovariateModel(covariate.model))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -152,7 +151,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     }
     if (iop.error) {
       cat("\nResidual error model:\n")
-      print(error.model)
+      print(formatErrorModel(error.model))
     }
     if (iop.ll) {
       cat("\nEstimated log-likelihood:\n")
@@ -163,7 +162,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   cat("____________________________________________\nInitialization:")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(covariate.model)
+    print(formatCovariateModel(covariate.model))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -171,7 +170,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   }
   if (iop.error) {
     cat("\nResidual error model:\n")
-    print(error.model)
+    print(formatErrorModel(error.model))
   }
   if (iop.ll) {
     cat("\nEstimated log-likelihood:\n")
@@ -374,7 +373,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     cat("Final model:\n")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(covariate.model)
+      print(formatCovariateModel(covariate.model))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -382,7 +381,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     }
     if (iop.error) {
       cat("\nResidual error model:\n")
-      print(error.model)
+      print(formatErrorModel(error.model))
     }
     if (iop.ll) {
       cat("\nEstimated log-likelihood:\n")
@@ -394,7 +393,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   cat("Final model:\n")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(covariate.model)
+    print(formatCovariateModel(covariate.model))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -402,7 +401,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   }
   if (iop.error) {
     cat("\nResidual error model:\n")
-    print(error.model)
+    print(formatErrorModel(error.model))
   }
   if (iop.ll) {
     cat("\nEstimated log-likelihood:\n")
@@ -491,5 +490,39 @@ check <- function(project, final.project, covToTransform, paramToUse) {
   
   
   return(list(covToTransform=covToTransform, paramToUse=paramToUse, final.project=final.project))
+}
+
+#------------------------
+
+formatCovariateModel <- function(m) {
+  i0 <- which(unlist(lapply(m,function(x) {identical(x,"none")})))
+  if (length(i0)>0)
+    m <- m[-i0]
+  param.names <- names(m)
+  cov.names <- names(m[[1]])
+  if (length(cov.names)>0) {
+    if (is.vector(m[[1]]) | (!is.null(nrow(m[[1]])) && nrow(m[[1]])==1)) {
+      m <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)
+      row.names(m) <- param.names
+      colnames(m) <- cov.names
+    } else {
+      mr <- list()
+      nr <- nrow(m[[1]])
+      for (k in 1:nr) {
+        mk <- lapply(m, function(x) x[k,])
+        mr[[k]] <- matrix(unlist(mk),ncol=length(cov.names),byrow=TRUE)
+        row.names(mr[[k]]) <- param.names
+        colnames(mr[[k]]) <- cov.names
+      }
+      #names(mr) <- paste0("model ",1:nr)
+      m <- mr
+    }
+    return(m)
+  }
+}
+
+formatErrorModel <- function(m) {
+  out.names <- names(m)
+  return(m)
 }
 
