@@ -97,7 +97,7 @@ computeBIC <- function(y.obs, y.pred, nrep, penalization, nb.model) {
   ll <- NULL
   for (k in 1:4) 
     ll <- c(ll, -0.5*sum( (y.obs-y.pred)^2/sigma2[,k] + log(2*pi*sigma2[,k]) )/nrep)
-  ll <- c(ll, -0.5*sum( (log(y.obs)-log(y.pred))^2/sigma2 + log(2*pi*sigma2) + 2*log(y.obs) )/nrep)
+  ll <- c(ll, -0.5*sum( (log(y.obs)-log(y.pred))^2/(a.expo^2) + log(2*pi*(a.expo^2)) + 2*log(y.obs) )/nrep)
   pen <- pen.bic*df
   bic <- -2*ll + pen
   

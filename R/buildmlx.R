@@ -39,7 +39,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
   loadProject(project) 
-
+  
   #  initializeMlxConnectors(software = "monolix")
   
   if (length(penalization)==1) {
@@ -120,6 +120,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   omega.ini <- p.ini[ind.omega,]
   
   error.model <- getContinuousObservationModel()$errorModel
+  obs.dist <- getContinuousObservationModel()$distribution
   covariate.model <- getIndividualParameterModel()$covariateModel
   correlation.model <- getIndividualParameterModel()$correlationBlocks$id
   if (is.null(correlation.model))
@@ -196,6 +197,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   while (!stop.test) {
     iter <- iter + 1
     
+    obs.dist0 <- obs.dist
     error.model0 <- error.model
     covariate.model0 <- covariate.model
     correlation.model0 <- correlation.model
@@ -248,6 +250,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     if (!iop.correlation | corr.test) {
       if (isTRUE(all.equal(cov.names0,cov.names)) &
           isTRUE(all.equal(error.model0,error.model)) &
+          isTRUE(all.equal(obs.dist0,obs.dist)) &
           isTRUE(all.equal(correlation.model0,correlation.model))) {
         stop.test <- TRUE
         lineDisplay <- "No difference between two successive iterations\n"
@@ -298,8 +301,20 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       
       setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
       
-      if (iop.error)
-        setErrorModel(error.model)
+      if (iop.error) {
+        emodel <- error.model
+        odist <- getContinuousObservationModel()$distribution
+        for (k in (1:length(emodel))) {
+          if (identical(emodel[[k]],"exponential")) {
+            emodel[[k]] <- "constant"
+            odist[[k]] <- "lognormal"
+          } else {
+            odist[[k]] <- "normal"
+          }
+        }
+        setErrorModel(emodel)
+        setObservationDistribution(odist)
+      }
       
       if (iop.covariate) {
         if (length(res.covariate$add.covariate) >0) {
