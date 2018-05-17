@@ -35,12 +35,23 @@ errorModelSelection <- function(project=NULL, penalization="BIC", nb.model=1) {
   }
   
   d <- getObservationInformation()
-  res.errorModel <- list()
-  for (i.out in (1:n.out)) {
-    name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
-    y.obsi <- d[[name.obsi]][[name.obsi]]
-    res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, penalization=penalization, nb.model=nb.model)
-    names(res.errorModel)[i.out] <- name.obsi
+  if (nb.model==1) {
+    res.errorModel <- NULL
+    for (i.out in (1:n.out)) {
+      name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
+      y.obsi <- d[[name.obsi]][[name.obsi]]
+      resi <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, penalization=penalization, nb.model=nb.model)
+      res.errorModel <- c(res.errorModel, as.character(resi[['error.model']]))
+      names(res.errorModel)[i.out] <- name.obsi
+    }
+  } else {
+    res.errorModel <- list()
+    for (i.out in (1:n.out)) {
+      name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
+      y.obsi <- d[[name.obsi]][[name.obsi]]
+      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, penalization=penalization, nb.model=nb.model)
+      names(res.errorModel)[i.out] <- name.obsi
+    }
   }
   return(res.errorModel)
 }

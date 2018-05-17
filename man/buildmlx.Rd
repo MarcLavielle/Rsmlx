@@ -5,10 +5,11 @@
 \title{Automatic model building}
 \usage{
 buildmlx(project, final.project = NULL, model = c("residualError",
-  "covariate", "correlation"), penalization = "BIC", max.iter = 20,
-  covToTransform = "none", paramToUse = "all", linearization = FALSE,
-  seqcc = TRUE, nb.model = 1, print = TRUE, direction = "full",
-  steps = 1000, p.min = 1, lambda = "cv", settings = NULL)
+  "covariate", "correlation"), paramToUse = "all", covToUse = "all",
+  covToTransform = "none", penalization = "BIC", direction = "full",
+  max.iter = 20, print = TRUE, nb.model = 1, linearization = FALSE,
+  seqcc = TRUE, p.min = 1, steps = 1000, lambda = "cv",
+  glmnet.settings = NULL)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
@@ -17,31 +18,33 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{model}{components of the model to optimize, default=c("residualError", "covariate", "correlation")}
 
+\item{paramToUse}{list of parameters possibly function of covariates (default="all")}
+
+\item{covToUse}{components of the covariate model that can be modified   (default="all")}
+
+\item{covToTransform}{list of (continuous) covariates to be log-transformed (default="none")}
+
 \item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC", "lasso")}
+
+\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")}
 
 \item{max.iter}{maximum number of iterations (default=20)}
 
-\item{covToTransform}{list of (oontinuous) covariates to be log-transformed (default="none")}
+\item{print}{{TRUE}/FALSE display the results (default=TRUE)}
 
-\item{paramToUse}{list of parameters possibly function of covariates (default="all")}
+\item{nb.model}{number of models to display at each iteration (default=1)}
 
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
 \item{seqcc}{{TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE)}
 
-\item{nb.model}{number of models to display at each iteration (default=1)}
-
-\item{print}{{TRUE}/FALSE display the results (default=TRUE)}
-
-\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")}
+\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
 
 \item{steps}{maximum number of iteration for stepAIC/BIC (default=1000)}
 
-\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
+\item{lambda}{penalization coefficient for "lasso". Either "cv" (cross-validation) or a positive real value (default="cv")}
 
-\item{lambda}{penalization coefficient for "lasso" (default="cv"). Either "cv" (cross-validation) or a positive real value (default="cv")}
-
-\item{settings}{when penalization="lasso", settings used for package glmnet}
+\item{glmnet.settings}{when penalization="lasso", list of settings used for package glmnet}
 }
 \value{
 a new Monolix project with a new statistical model.

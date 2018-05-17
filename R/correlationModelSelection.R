@@ -109,8 +109,11 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
     correlation.model[[j]] <- cm
   }
   
+  if (nb.model==1)
+    return(correlation.model[[1]])
+  else
+    return(list(blocks=correlation.model, res=E))
   
-  return(list(blocks=correlation.model, res=E))
   } else {
     return(NULL)
   }

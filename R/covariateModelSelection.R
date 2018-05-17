@@ -1,6 +1,7 @@
-covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform="none", direction="both", 
-                                    paramToUse="all", steps=1000, p.min=1, lambda="cv", settings=NULL, sp0=NULL) {
-  
+covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform=NULL, covToUse="all", 
+                                    direction="both", paramToUse="all", steps=1000, p.min=1, lambda="cv", 
+                                    glmnet.settings=NULL, sp0=NULL) 
+{
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
   sp.df <- read.csv(sp.file)
@@ -32,8 +33,6 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
   cont.cov <- cov.names[j.cont]
   if (identical(covToTransform,"all"))
     covToTransform = cov.names[j.cont]
-  else if (identical(covToTransform,"none"))
-    covToTransform=NULL
   tcov.names <- unique(c(cov.names[j.trans], setdiff(cont.cov,covToTransform)))
   cov.types <- gsub("transformed","",cov.types)
   covariates <- sp.df[c("rep","id",cov.names)]
@@ -42,6 +41,11 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
   
   indvar <- getIndividualParameterModel()$variability$id
   indvar[setdiff(param.names, paramToUse)] <- FALSE
+  
+  if (identical(covToUse,"all"))
+    covToUse = cov.names
+  covFix <- setdiff(cov.names, covToUse)
+  cov.model <- getIndividualParameterModel()$covariateModel
   
   r <- res <- list()
   for (j in (1:n.param)) {
@@ -61,8 +65,16 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
         names(yj) <- paste0("probit.",nj)
       } 
       
-      r[[j]] <- lm.all(yj,covariates,tcov.names,penalization=penalization,nb.model=nb.model, 
-                       lambda=lambda,direction=direction,steps=steps, p.min=p.min, settings=settings)
+      if (!is.null(covFix)) {
+        cmj <- cov.model[[nj]][covFix]
+        cov0 <- names(which(!cmj))
+        cov1 <- names(which(cmj))
+      } else {
+        cov0 <- cov1 <- NULL
+      }
+      r[[j]] <- lm.all(yj,covariates,tcov.names,penalization=penalization,nb.model=nb.model, lambda=lambda,
+                       direction=direction,steps=steps, p.min=p.min, glmnet.settings=glmnet.settings, 
+                       cov0=cov0, cov1=cov1)
       res[[j]] <- r[[j]]$res
     } else {
       r[[j]] <- list(model="fixed")
@@ -114,7 +126,7 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
 #-----------------------------------
 
 lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.model,
-                   lambda='cv',direction='both',steps = 1000, p.min=1, settings = NULL) {
+                   lambda='cv',direction='both',steps = 1000, p.min=1, glmnet.settings = NULL, cov0=NULL, cov1=NULL) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
     nrep <- nrow(x)/N
@@ -167,8 +179,8 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
       # cross validation if lambda is cv (chosen value otherwise), after turn data frame into matrix
       if (lambda =='cv'){
         text1 = 'cv.glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1])'
-        if (!is.null(settings)){
-          text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+        if (!is.null(glmnet.settings)){
+          text2 = paste(names(glmnet.settings),glmnet.settings,sep = '=',collapse = ',')
           lmk = eval(parse( text = paste(text1,',',text2,')') ))
         }
         else lmk = eval(parse( text = paste(text1,')') ))
@@ -176,8 +188,8 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
       }
       else {
         text1 = 'glmnet(x = data.matrix(l_data[,-1]),y = data.matrix(l_data[,1]), lambda = lambda'
-        if (!is.null(settings)){
-          text2 = paste(names(settings),settings,sep = '=',collapse = ',')
+        if (!is.null(glmnet.settings)){
+          text2 = paste(names(glmnet.settings),glmnet.settings,sep = '=',collapse = ',')
           lmk = eval(parse( text = paste(text1,',',text2,')') ))
         }
         else lmk = eval(parse( text = paste(text1,')') ))
@@ -228,9 +240,18 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     # apply stepAIC
     llk = tryCatch( {
       # stepAIC forward, backward, both
-      
-      model.sature=lm(y~.,l_data)
-      model.cst=lm(y~1,data=l_data) 
+      f.sature <- "y ~ ."
+      if (length(cov0)>0)
+        f.sature <- paste0(f.sature, "-", paste(cov0,collapse="-"))
+      f.sature <- as.formula(f.sature)
+      model.sature=lm(f.sature,l_data)
+      f.cst <- "y ~ 1"
+      if (length(cov1)>0)
+        f.cst <- paste0(f.cst, "+", paste(cov1,collapse="+"))
+      f.cst <- as.formula(f.cst)
+      model.cst=lm(f.cst,l_data)
+      #  model.sature=lm(y~.,l_data)
+      # model.cst=lm(y~1,data=l_data) 
       
       if (penalization=='BIC') k = nrep*log(N)
       else if (penalization=='AIC') k = nrep*2
@@ -261,8 +282,8 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     
     ll = logLik(llk)/nrep
     df = length(coef(llk))-1 # except Intercept
-    if(penalization=='BIC') criteria = -2*logLik(llk)/nrep + df*log(N)
-    else criteria = criteria = -2*logLik(llk)/nrep + df*2
+    if(penalization=='BIC') criteria = -2*ll + df*log(N)
+    else criteria = -2*ll + df*2
     
     res <- data.frame(ll=round(ll,digits=3), df=df,  criteria=round(criteria,digits=3))
     res <- cbind(G, res)
@@ -294,9 +315,19 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
       }
     }
   }
+  names(G) <- names(x)
+  
+  if (length(cov0)>0) {
+    i0 <- which(rowSums(G[cov0])==0)
+    G <- G[i0,]
+  }
+  if (length(cov1)>0) {
+    i1 <- which(rowSums(G[cov1]==1)==length(cov1))
+    G <- G[i1,]
+  }
+  
   ng <- nrow(G)
   d  <- ncol(G)
-  names(G) <- names(x)
   
   ll <- df <- bic <- NULL
   if (penalization=="BIC")
@@ -331,7 +362,8 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
   bic <- round(bic, digits=3)
   i0 <- rep(1,ng)
   mG <- ncol(G)
-  for (k in 1:(ng-1)) {
+  
+  for (k in seq_len(ng-1)) {
     if (i0[k]==1) {
       ik <- which(bic[(k):ng]==bic[k]) + k-1
       sk <- .rowSums(G[ik,]==2, n=length(ik), m=mG)
@@ -382,7 +414,10 @@ lm.all <- function(y, x, tr.names=NULL, penalization=penalization, nb.model=nb.m
     G[names(l)[j0.num]][i2] <- 1
     G[names(x)[j0.num]][i2] <- 0
   }
-  res <- cbind(G, res)
+  res <- cbind(G==1, res)
+  if (nb.model==1)
+    res[,c("ll","df","criteria")] <- NULL
+  
   row.names(res) <- 1:nrow(res)
   
   return(list(model=lm.min, res=res))

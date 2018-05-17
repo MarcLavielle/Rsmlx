@@ -6,19 +6,20 @@
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
 #' @param model  components of the model to optimize, default=c("residualError", "covariate", "correlation")
-#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
-#' @param max.iter maximum number of iterations (default=20)
-#' @param covToTransform  list of (oontinuous) covariates to be log-transformed (default="none")
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
+#' @param covToUse  components of the covariate model that can be modified   (default="all")
+#' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
+#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
+#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
+#' @param max.iter maximum number of iterations (default=20)
+#' @param print {TRUE}/FALSE display the results (default=TRUE)
+#' @param nb.model number of models to display at each iteration (default=1)
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
 #' @param seqcc {TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE) 
-#' @param nb.model number of models to display at each iteration (default=1)
-#' @param print {TRUE}/FALSE display the results (default=TRUE)
-#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
-#' @param steps maximum number of iteration for stepAIC/BIC (default=1000)
 #' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)
-#' @param lambda penalization coefficient for "lasso" (default="cv"). Either "cv" (cross-validation) or a positive real value (default="cv")
-#' @param settings when penalization="lasso", settings used for package glmnet
+#' @param steps maximum number of iteration for stepAIC/BIC (default=1000)
+#' @param lambda penalization coefficient for "lasso". Either "cv" (cross-validation) or a positive real value (default="cv")
+#' @param glmnet.settings when penalization="lasso", list of settings used for package glmnet
 #' @return a new Monolix project with a new statistical model.
 #' @importFrom MASS stepAIC 
 #' @importFrom stats coef 
@@ -28,9 +29,11 @@
 #' }
 #' @export
 buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
-                     penalization="BIC", max.iter=20, covToTransform="none", paramToUse="all", linearization=FALSE,
-                     seqcc=TRUE, nb.model=1, print=TRUE, direction='full', steps=1000, p.min=1,
-                     lambda='cv', settings=NULL)
+                     paramToUse="all", covToUse="all", covToTransform="none", 
+                     penalization="BIC", direction='full',
+                     max.iter=20, print=TRUE, nb.model=1, linearization=FALSE, 
+                     seqcc=TRUE, p.min=1,
+                     steps=1000, lambda='cv', glmnet.settings=NULL)
 {
   
   if (!grepl("\\.",project))
@@ -55,10 +58,11 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   
   
   
-  r <- check(project, final.project, covToTransform, paramToUse)
+  r <- check(project, final.project, covToTransform, paramToUse, covToUse)
   covToTransform <- r$covToTransform
   paramToUse <- r$paramToUse
   final.project <- r$final.project
+  covToUse <- r$covToUse
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) {
     unlink(final.dir, recursive=TRUE)
@@ -206,16 +210,20 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     
     if (iop.error) {
       res.error <- errorModelSelection(penalization=penalization[3], nb.model=nb.model)
-      error.model <- getContinuousObservationModel()$errorModel
-      for (k in (1:length(error.model)))
-        error.model[[k]] <- as.character(res.error[[k]]$error.model[1])
+      if (nb.model==1)
+        error.model <- res.error
+      else {
+        error.model <- getContinuousObservationModel()$errorModel
+        for (k in (1:length(error.model)))
+          error.model[[k]] <- as.character(res.error[[k]]$error.model[1])
+      }
     }
     
     if (iop.covariate) {
       res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
-                                               covToTransform=covToTransform, direction=direction, 
+                                               covToTransform=covToTransform, covToUse=covToUse, direction=direction, 
                                                steps=steps, p.min=p.min, paramToUse=paramToUse,
-                                               lambda=lambda,  settings=settings, sp0)
+                                               lambda=lambda,  glmnet.settings=glmnet.settings, sp0=sp0)
       sp0 <- res.covariate$sp
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
@@ -460,7 +468,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
 }
 
 
-check <- function(project, final.project, covToTransform, paramToUse) {
+check <- function(project, final.project, covToTransform, paramToUse, covToUse) {
   
   if (is.null(final.project)) 
     final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_built.mlxtran")
@@ -486,11 +494,22 @@ check <- function(project, final.project, covToTransform, paramToUse) {
       warning(paste0(ncat0, " is a categorical covariate and will not be transformed..."), call.=FALSE)
       covToTransform <- setdiff(covToTransform, ncat0)
     }
-    ncat0 <- covToTransform[(!(covToTransform %in% cov.names))]
-    if (length(ncat0)>0) {
-      warning(paste0(ncat0, " is not a valid covariate and will not be used"), call.=FALSE)
-      covToTransform <- setdiff(covToTransform, ncat0)
+    ncov0 <- covToTransform[(!(covToTransform %in% cov.names))]
+    if (length(ncov0)>0) {
+      warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
+      covToTransform <- setdiff(covToTransform, ncov0)
     }
+  }
+  if (identical(covToUse,"all"))
+    covToUse = cov.names
+  else if (identical(covToUse,"none"))
+    covToUse=NULL
+  if (!is.null(covToUse)) {
+    ncov0 <- covToUse[(!(covToUse %in% cov.names))]
+  if (length(ncov0)>0) {
+    warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
+    covToUse <- setdiff(covToUse, ncov0)
+  }
   }
   
   ind.dist <- getIndividualParameterModel()$distribution
@@ -504,7 +523,7 @@ check <- function(project, final.project, covToTransform, paramToUse) {
   }
   
   
-  return(list(covToTransform=covToTransform, paramToUse=paramToUse, final.project=final.project))
+  return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToUse=covToUse, final.project=final.project))
 }
 
 #------------------------
@@ -517,7 +536,7 @@ formatCovariateModel <- function(m) {
   cov.names <- names(m[[1]])
   if (length(cov.names)>0) {
     if (is.vector(m[[1]]) | (!is.null(nrow(m[[1]])) && nrow(m[[1]])==1)) {
-      m <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)
+      m <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)*1
       row.names(m) <- param.names
       colnames(m) <- cov.names
     } else {
@@ -525,7 +544,7 @@ formatCovariateModel <- function(m) {
       nr <- nrow(m[[1]])
       for (k in 1:nr) {
         mk <- lapply(m, function(x) x[k,])
-        mr[[k]] <- matrix(unlist(mk),ncol=length(cov.names),byrow=TRUE)
+        mr[[k]] <- matrix(unlist(mk),ncol=length(cov.names),byrow=TRUE)*1
         row.names(mr[[k]]) <- param.names
         colnames(mr[[k]]) <- cov.names
       }
