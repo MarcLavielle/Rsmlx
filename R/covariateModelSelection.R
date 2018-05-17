@@ -1,4 +1,4 @@
-covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform=NULL, covToUse="all", 
+covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransform=NULL, covToTest="all", 
                                     direction="both", paramToUse="all", steps=1000, p.min=1, lambda="cv", 
                                     glmnet.settings=NULL, sp0=NULL) 
 {
@@ -42,9 +42,9 @@ covariateModelSelection <- function(penalization="BIC", nb.model=1, covToTransfo
   indvar <- getIndividualParameterModel()$variability$id
   indvar[setdiff(param.names, paramToUse)] <- FALSE
   
-  if (identical(covToUse,"all"))
-    covToUse = cov.names
-  covFix <- setdiff(cov.names, covToUse)
+  if (identical(covToTest,"all"))
+    covToTest = cov.names
+  covFix <- setdiff(cov.names, covToTest)
   cov.model <- getIndividualParameterModel()$covariateModel
   
   r <- res <- list()

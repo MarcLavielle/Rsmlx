@@ -7,7 +7,7 @@
 #' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
 #' @param model  components of the model to optimize, default=c("residualError", "covariate", "correlation")
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
-#' @param covToUse  components of the covariate model that can be modified   (default="all")
+#' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
 #' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
@@ -29,7 +29,7 @@
 #' }
 #' @export
 buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
-                     paramToUse="all", covToUse="all", covToTransform="none", 
+                     paramToUse="all", covToTest="all", covToTransform="none", 
                      penalization="BIC", direction='full',
                      max.iter=20, print=TRUE, nb.model=1, linearization=FALSE, 
                      seqcc=TRUE, p.min=1,
@@ -58,11 +58,11 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   
   
   
-  r <- check(project, final.project, covToTransform, paramToUse, covToUse)
+  r <- check(project, final.project, covToTransform, paramToUse, covToTest)
   covToTransform <- r$covToTransform
   paramToUse <- r$paramToUse
   final.project <- r$final.project
-  covToUse <- r$covToUse
+  covToTest <- r$covToTest
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) {
     unlink(final.dir, recursive=TRUE)
@@ -221,7 +221,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     
     if (iop.covariate) {
       res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
-                                               covToTransform=covToTransform, covToUse=covToUse, direction=direction, 
+                                               covToTransform=covToTransform, covToTest=covToTest, direction=direction, 
                                                steps=steps, p.min=p.min, paramToUse=paramToUse,
                                                lambda=lambda,  glmnet.settings=glmnet.settings, sp0=sp0)
       sp0 <- res.covariate$sp
@@ -468,7 +468,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
 }
 
 
-check <- function(project, final.project, covToTransform, paramToUse, covToUse) {
+check <- function(project, final.project, covToTransform, paramToUse, covToTest) {
   
   if (is.null(final.project)) 
     final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_built.mlxtran")
@@ -500,15 +500,15 @@ check <- function(project, final.project, covToTransform, paramToUse, covToUse) 
       covToTransform <- setdiff(covToTransform, ncov0)
     }
   }
-  if (identical(covToUse,"all"))
-    covToUse = cov.names
-  else if (identical(covToUse,"none"))
-    covToUse=NULL
-  if (!is.null(covToUse)) {
-    ncov0 <- covToUse[(!(covToUse %in% cov.names))]
+  if (identical(covToTest,"all"))
+    covToTest = cov.names
+  else if (identical(covToTest,"none"))
+    covToTest=NULL
+  if (!is.null(covToTest)) {
+    ncov0 <- covToTest[(!(covToTest %in% cov.names))]
   if (length(ncov0)>0) {
     warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
-    covToUse <- setdiff(covToUse, ncov0)
+    covToTest <- setdiff(covToTest, ncov0)
   }
   }
   
@@ -523,7 +523,7 @@ check <- function(project, final.project, covToTransform, paramToUse, covToUse) 
   }
   
   
-  return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToUse=covToUse, final.project=final.project))
+  return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToTest=covToTest, final.project=final.project))
 }
 
 #------------------------
