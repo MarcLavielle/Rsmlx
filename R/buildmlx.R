@@ -225,6 +225,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
                                                steps=steps, p.min=p.min, paramToUse=paramToUse,
                                                lambda=lambda,  glmnet.settings=glmnet.settings, sp0=sp0)
       sp0 <- res.covariate$sp
+      covToTransform <- setdiff(covToTransform, res.covariate$tr0)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
       cov.names <- lapply(covariate.model, function(x) {sort(names(which(x)))})
@@ -247,7 +248,8 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     if (iop.correlation & corr.test) {
       res.correlation <- correlationModelSelection(e=e, penalization=penalization[2], nb.model=nb.model, 
                                                    corr0=correlation.model0, seqcc=seqcc)
-      correlation.model <- res.correlation$blocks[[1]]
+      if (is.null(res.correlation$blocks)) correlation.model <- res.correlation
+      else  correlation.model <- res.correlation$blocks[[1]]
       if (is.null(correlation.model))  correlation.model <- list()
     } else {
       res.correlation <- getIndividualParameterModel()$correlationBlocks$id
@@ -266,8 +268,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       }
     }
     
-    if (!stop.test) {
-      
+    if (!stop.test | nb.model>1) {
       if (print) {
         cat("____________________________________________\n")
         cat(paste0("Iteration ",iter,":\n"))
@@ -300,7 +301,9 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
         print(res.error)
       }
       sink()
-      
+    }
+    
+    if (!stop.test) {
       setInitialEstimatesToLastEstimates()
       p.ini <- getPopulationParameterInformation()
       rownames(p.ini) <- p.ini$name
@@ -506,10 +509,10 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest)
     covToTest=NULL
   if (!is.null(covToTest)) {
     ncov0 <- covToTest[(!(covToTest %in% cov.names))]
-  if (length(ncov0)>0) {
-    warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
-    covToTest <- setdiff(covToTest, ncov0)
-  }
+    if (length(ncov0)>0) {
+      warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
+      covToTest <- setdiff(covToTest, ncov0)
+    }
   }
   
   ind.dist <- getIndividualParameterModel()$distribution
