@@ -5,7 +5,7 @@
 \title{Automatic model building}
 \usage{
 buildmlx(project, final.project = NULL, model = c("residualError",
-  "covariate", "correlation"), paramToUse = "all", covToUse = "all",
+  "covariate", "correlation"), paramToUse = "all", covToTest = "all",
   covToTransform = "none", penalization = "BIC", direction = "full",
   max.iter = 20, print = TRUE, nb.model = 1, linearization = FALSE,
   seqcc = TRUE, p.min = 1, steps = 1000, lambda = "cv",
@@ -20,7 +20,7 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
-\item{covToUse}{components of the covariate model that can be modified   (default="all")}
+\item{covToTest}{components of the covariate model that can be modified   (default="all")}
 
 \item{covToTransform}{list of (continuous) covariates to be log-transformed (default="none")}
 
