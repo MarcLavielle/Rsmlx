@@ -1,6 +1,3 @@
-library(glmnet)
-library(MASS)
-
 covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=NULL, covToTest="all", 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, lambda="cv", 
                                     glmnet.settings=NULL, sp0=NULL) 
