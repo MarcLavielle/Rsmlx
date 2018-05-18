@@ -21,12 +21,14 @@
 setSettings  <- function(project=NULL, new.project=NULL, level=5) {
   
   if (!is.null(project)) {
+    if (!grepl("\\.",project))
+      project <- paste0(project,".mlxtran")
     if(!file.exists(project)){
       message(paste0("ERROR: project '", project, "' does not exists"))
       return(invisible(FALSE))}
-    
-#    initializeMlxConnectors(software = "monolix")
-    loadProject(project) 
+    lp <- loadProject(project) 
+    if (!lp) 
+      return(invisible(FALSE))
     
     if (is.null(new.project)) 
       new.project <- project

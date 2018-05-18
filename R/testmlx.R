@@ -33,11 +33,14 @@ testmlx <- function(project,
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
+  if (!grepl("\\.",project))
+    project <- paste0(project,".mlxtran")
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
-  
-  loadProject(project)   
+  lp <- loadProject(project) 
+  if (!lp) 
+    return(invisible(FALSE))
   
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -58,7 +61,7 @@ testmlx <- function(project,
   
   res <- list()
   if ("covariate" %in% tests)
-  res$covariate <- covariateTest(plot=plot)
+    res$covariate <- covariateTest(plot=plot)
   if ("residual" %in% tests)
     res$residual <- residualTest(plot=plot)
   if ("randomEffect" %in% tests)
@@ -73,18 +76,23 @@ residualTest <- function(project=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
     loadProject(project)
- 
+  
+  if (is.null(getContinuousObservationModel()))  return(list())
   residual <- getSimulatedResiduals()
   n.out <- length(residual)
-  res.errorModel <- list()
+  #res.errorModel <- list()
+  res.errorModel <- NULL
   for (i.out in (1:n.out)) {
     resi <- residual[[i.out]]
     nrep <- max(resi$rep)
     resi <- matrix(resi$residual, ncol=nrep)
     ri1 <- swmlx.test(resi)
     ri2 <- vdwmlx.test(resi)
-    res.errorModel[[i.out]] <- list(normality=ri1, symmetry=ri2)
+    res.errorModel <- rbind(res.errorModel, c(normality=ri1, symmetry=ri2))
+    #res.errorModel[[i.out]] <- list(normality=ri1, symmetry=ri2)
   }
+  res.errorModel <- as.data.frame(res.errorModel)
+  rownames(res.errorModel) <- names(residual)
   
   if (plot) {
     x <- seq(-3,3,length.out=100)
@@ -121,9 +129,11 @@ randomEffectTest <- function(project=NULL, plot=FALSE) {
     refi <- matrix(sim.randeff[[nj]],ncol=nrep)
     ri1 <- swmlx.test(refi)
     ri2 <- vdwmlx.test(refi)
-    res.randeff <- rbind(res.randeff, 
-                         data.frame(randomEffect=nj,normality=ri1, symmetry=ri2))
+    #res.randeff <- rbind(res.randeff, data.frame(randomEffect=nj,normality=ri1, symmetry=ri2))
+    res.randeff <- rbind(res.randeff, c(normality=ri1, symmetry=ri2))
   }
+  res.randeff <- as.data.frame(res.randeff)
+  rownames(res.randeff) <- var.randeff
   
   if (plot) {
     x <- seq(-3,3,length.out=100)
@@ -251,6 +261,18 @@ covariateTest <- function(project=NULL, plot=FALSE) {
   if (!is.null(project)) 
     loadProject(project)
   
+  cov.info <- getCovariateInformation()
+  if (is.null(cov.info)) return(list())
+  cov.names <- cov.info$name
+  cov.types <- cov.info$type
+  j.cat <- grep("categorical",cov.types)
+  j.cont <- grep("continuous",cov.types)
+  cont.cov <- cov.names[j.cont]
+  cat.cov <- cov.names[j.cat]
+  covariates <- cov.info$covariate
+  covariates[cat.cov] <-  lapply(covariates[cat.cov],as.factor)
+  #covariates["id"] <- NULL
+  
   sim.randeff <- getSimulatedRandomEffects()
   if (is.null(sim.randeff$rep)) 
     sim.randeff$rep <- 1
@@ -262,17 +284,6 @@ covariateTest <- function(project=NULL, plot=FALSE) {
   n.param <- length(var.param)
   m.indparam <- getEstimatedIndividualParameters()$conditionalMean[var.param]
   m.randeff <- getEstimatedRandomEffects()$conditionalMean[var.randeff]
-  
-  cov.info <- getCovariateInformation()
-  cov.names <- cov.info$name
-  cov.types <- cov.info$type
-  j.cat <- grep("categorical",cov.types)
-  j.cont <- grep("continuous",cov.types)
-  cont.cov <- cov.names[j.cont]
-  cat.cov <- cov.names[j.cat]
-  covariates <- cov.info$covariate
-  covariates[cat.cov] <-  lapply(covariates[cat.cov],as.factor)
-  #covariates["id"] <- NULL
   
   d1 <- NULL
   g=getIndividualParameterModel()$covariateModel
@@ -300,7 +311,9 @@ covariateTest <- function(project=NULL, plot=FALSE) {
       d1 <- rbind(d1,dnc)
     }
   }
-  d1 <- d1[order(d1$in.model, decreasing=TRUE),]
+  foo <- d1[order(d1$parameter, d1$p.value),]
+  d1 <- foo[order(foo$in.model, decreasing=TRUE),]
+  #  d1 <- d1[order(d1$in.model, decreasing=TRUE),]
   
   d2 <- NULL
   for (ne in var.randeff) {
@@ -405,7 +418,7 @@ swmlx.test <- function(x) {
     for (k in (1:K))
       p <- c(p, shapiro.test(x[,k])$p.value)
     p <- p.adjust(sort(p), method="BH")[1]
-    p <- shapiro.test(rowMeans(x))$p.value
+    # p <- shapiro.test(rowMeans(x))$p.value
   }
   return(p)
 }

@@ -1,4 +1,4 @@
-correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, corr0=NULL, seqcc=TRUE) {
+correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0=NULL, seqcc=TRUE) {
   
   p.name <- getIndividualParameterModel()$name
   if (is.null(e)) {
@@ -25,12 +25,12 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
   n.param <- ncol(e)
   if (n.param>1) {
   
-  if (penalization=="BIC")
+  if (criterion=="BIC")
     pen.bic <- log(N)
-  else if (penalization=="AIC")
+  else if (criterion=="AIC")
     pen.bic <- 2
   else 
-    pen.bic <- penalization
+    pen.bic <- criterion
   
   C <- cov(e)
   
@@ -81,7 +81,7 @@ correlationModelSelection <- function(e=NULL, penalization="BIC", nb.model=1, co
   }
   obic <- order(bic)
   nb.model <- min(nb.model, length(bic))
-  E <- data.frame(ll=ll, df=df, criteria=bic)
+  E <- data.frame(ll=ll, df=df, criterion=bic)
   E <- E[order(bic)[1:nb.model],]
   row.names(E) <- 1:nrow(E)
   

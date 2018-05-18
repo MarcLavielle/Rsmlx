@@ -1,44 +1,72 @@
 #' Covariate model building
 #' 
 #' Automatic search of the best covariate model. 
-#' Several methods for covariate model building are proposed
+#' Two methods for covariate model building are proposed
 #' \itemize{
-#' \item COSSAC: ranked SCM
-#' \item SCM: SCM method
+#' \item SCM: stepwise covariate modeling method
+#' In the forward selection, at each step, each of the remaining (i.e not yet included) parameter-covariate relationships are added to the model in an univariate model (one model per relationship), and run. Among all models, the model that improves some criteria (LRT, BIC or AIC) most is selected and taken forward to the next step.
+#' During backward elimination, parameter-covariate relationships are removed in an univariate manner. 
+#' \item COSSAC: COnditional Sampling use for Stepwise Approach based on Correlation tests method 
+#' COSSAC makes use of the information contained in the base model run to choose which covariate to try first (instead of trying all covariates "blindly" as in SCM). 
+#' Indeed, the correlation between the individual parameters (or random effects) and the covariates hints at possibly relevant parameter-covariate relationships. If the EBEs (empirical Bayes estimates) are used, shrinkage may bias the result. 
+#' COSSAC instead uses samples from the a posteriori conditional distribution (available as "conditional distribution" task in MonolixSuite2018) to calculate the correlation between the random effects and covariates. 
+#' A p-value can be derived using the Pearson's correlation test for continuous covariate and ANOVA for categorical covariate. The p-values are used to sort all the random effect-covariate relationships. Relationships with the lowest p-value are added first, run and confirmed using a likelihood ratio test, AIC or BIC criteria. 
 #' }
 #' @param project a Monolix project
-#' @param final.project  a string: the final Monolix project (default adds method name to original project name)
-#' @param covToTest [optional] list of covariates to test. By default, all covariates are tested
-#' @param paramToUse [optional] list of parameters which may be function of covariates. By default, all parameters are used.
-#' @param settings [optional] defines the settings search. This is a list of all settings for the search. 
-#' The settings are pInclusion, pElimination, linearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.
+#' @param final.project [optional] string corresponding to the final Monolix project (default: 'runFinal.mlxtran' in covariate search output folder)
+#' @param method [optional] string correspondig to the method. It can be 'COSSAC' or 'SCM'. By default, COSSAC' is used. 
+#' @param covToTest [optional] vector of covariates to test. Cannot be used if test_relations is defined. By default, all covariates are tested. 
+#' @param covToTransform [optional] vector of covariates to transform. The transformation consists in a log transform of the covariate with centering by the mean value (ex: WT is transformed into log(WT/mean) with mean the mean WT value over the individuals of the data set). Both the transformed and untransformed covariate are tested by the algorithm. By default, no covariate is transformed.
+#' Note: 
+#' adding a non-transformed covariate on a lognormally distributed parameter results in an exponential relationship: log(V) = log(Vpop) + beta*WT + eta <=> V = Vpop * exp(beta*WT) * exp(eta)
+#' adding a log-transformed covariate on a lognormally distributed parameter results in a power law relationship: log(V) = log(Vpop) + beta*log(WT/70) + eta <=> V = Vpop * (WT/70)^beta * exp(eta)
+#' @param paramToUse [optional] vector of parameters which may be function of covariates. Cannot be used if test_relations is defined. By default, all parameters are tested.
+#' @param test_relations [optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.
+#' @param settings [optional] list of settings for the covariate search. 
+#' The settings are: 
+#' - pInclusion [positive double] threshold on the LRT p-value to accept the model with the added parameter-covariate relationship during forward selection (default = .1). Only used if criteria="LRT".
+#' - pElimination [positive double] threshold on the LRT p-value to accept the model without the removed parameter-covariate relationship during the backward elimination (default = .05). Only used if criteria="LRT".
+#' - criteriaThreshold [positive double] the threshold on the AIC or BIC difference to accept the model with added/removed parameter-covariate relationship (default = 0). Only used if criteria="BIC" or "AIC.
+#' - linearization [boolean] whether the computation of the likelihood is based on a linearization of the model (default = FALSE).
+#' - criteria [string] criteria to optimize. It can be the "BIC", "AIC", or "LRT"  (default="LRT").
+#' - direction [string] method for covariate search. It can be "backward", "forward", or "both" (default = "both").
+#' - updateInit [boolean] whether to update or not the initial parameters using the estimates of the parent model (default = FALSE)
+#' - saveRun [boolean] whether to save or not each run (default = TRUE)
 #' @export
-covariateSearch <- function(project, final.project=NULL, covToTest = NULL, paramToUse = NULL, settings = NULL){
-  ###################################################################################
-  # Initialization
-  ###################################################################################
+covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, test_relations = NULL, settings = NULL){
   
+  ###################################################################################
+  # Initial check
+  ###################################################################################
+  # Check the validity of the project
   if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exists"))
-    return(invisible(FALSE))}
-  
-  # initializeMlxConnectors(software = "monolix")
-  
-  loadProject(project)   
-  
-  # Check and initialize the settings 
-  if(!is.null(settings)){
-    if(!.checkCovariateSearchInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
+    message(paste0("ERROR: project '", project, "' does not exist"))
+    return(invisible(FALSE))
+  }else{
+    if(length(grep(pattern = '.mlxtran', x = project))<1){
+    message(paste0("ERROR: project '", project, "' should have a .mlxtran extension"))
+      return(invisible(FALSE))
+    }
   }
-  if(is.null(settings$pInclusion)){settings$pInclusion <- 0.1 }
-  if(is.null(settings$pElimination)){settings$pElimination <- 0.05 }
-  if(is.null(settings$linearization)){settings$linearization <- FALSE }
-  if(is.null(settings$rankedSCM)){settings$rankedSCM <- TRUE }
-  if(is.null(settings$criteria)){settings$criteria <- 'LRT' }
-  if(is.null(settings$updateInit)){settings$updateInit <- TRUE }
+  loadProject(project)
   
-  # Check if linearization is possible
-  for(indexObservationModel in 1:length(getObservationInformation()$name)){settings$linearization <- settings$linearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  # Check the validity of the final.project
+  if(!is.null(final.project)){
+    if(file.exists(final.project)){
+      message(paste0("ERROR: project '", final.project, "' already exists"))
+      return(invisible(FALSE))
+    }else{
+      if(length(grep(pattern = '.mlxtran', x = final.project))<1){
+        message(paste0("ERROR: project '", project, "' should have a .mlxtran extension"))
+        return(invisible(FALSE))
+      }
+    }
+  }
+  
+  if(is.null(method)){
+    method <- 'COSSAC'
+  }
+  if(!.checkCovariateSearchInput(inputName = "method", inputValue = method)){return(invisible(FALSE))}
   
   # check the paramToUse
   projectParameters <- getIndividualParameterModel()$name
@@ -50,10 +78,41 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
   }
   indivParam = validParameters
   
+  # check the covariate to transform
+  if(!is.null(covToTransform)){
+    if(!.checkCovariateSearchInput(inputName = "covToTest", inputValue = covToTransform)){return(invisible(FALSE))}
+    if(is.null(covToTest)){
+      covToTest <- getCovariateInformation()$name
+    }
+    for(index in 1:length(covToTransform)){
+      cov <- covToTransform[index]
+      eval(parse(text=paste0('indexCov <- which(names(getCovariateInformation()$type)=="',cov,'")')))
+      if(length(intersect(getCovariateInformation()$type[indexCov],"continuous"))>0){
+        eval(parse(text=paste0('meanCov <- mean(getCovariateInformation()$covariate$',cov,')')))
+        newCov <- paste0("log_",cov)
+        eval(parse(text=paste0('addContinuousTransformedCovariate(',newCov,'="log(',cov,'/',toString(meanCov),')")')))
+        cat(paste0(newCov," was added. \n" ))
+        
+        # Add it in the covariate to test
+        covToTest = c(covToTest, newCov)
+        # Add it in the relationships if any
+        if(!is.null(test_relations)){
+          for(indexCov in 1:length(test_relations)){
+            if(length(intersect(cov,test_relations[[indexCov]]))>0){
+              test_relations[[indexCov]] <- c(test_relations[[indexCov]], newCov)
+            }
+          }
+        }
+      }else{
+        warning(paste0("Covariate ",cov," can not be transformed as a continuous covariate"))        
+      }
+    }
+  }
+  
   # Check the covToTest
   projectCovariates <- getCovariateInformation()$name
   if(length(projectCovariates)==0){
-    message("There is no covariate to search")
+    message("There is no covariate to test")
     return(invisible(FALSE))
   }else{
     if(is.null(covToTest)){
@@ -65,213 +124,280 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
   }
   covariate = validCovariates
   
-  if(settings$rankedSCM){
-    method <- 'COSSAC'
-  }else{
-    method <- 'SCM'
+  # Check the test_relations
+  if(!is.null(test_relations)){
+    if(!is.null(covToTest)||!is.null(paramToUse)){
+      message(paste0("ERROR: test_relations can not be defined of either covToTest or paramToUse is not NULL"))
+      return(invisible(FALSE))
+    }
+    if(!.checkCovariateSearchInput(inputName = "test_relations", inputValue = test_relations)){return(invisible(FALSE))}
   }
-  if (is.null(final.project))
-    projectToSaveName <- toString(sub(pattern=".mlxtran", replacement=paste0('_covSearch_', method, '.mlxtran'), project))
-  else
-    projectToSaveName <- final.project
-  saveProject(projectToSaveName);loadProject(projectToSaveName);
+  
+  # Check and initialize the settings 
+  if(!is.null(settings)){
+    if(!.checkCovariateSearchInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
+  }
+  if(is.null(settings$pInclusion)){settings$pInclusion <- 0.1 }
+  if(is.null(settings$pElimination)){settings$pElimination <- 0.05 }
+  if(is.null(settings$criteria)){settings$criteria <- 'LRT' }
+  if(is.null(settings$criteriaThreshold)){settings$criteriaThreshold <- 0 }
+  if(is.null(settings$linearization)){settings$linearization <- FALSE }
+  if(is.null(settings$rankedSCM)){settings$rankedSCM <- TRUE }
+  if(is.null(settings$criteria)){settings$criteria <- 'LRT' }
+  if(is.null(settings$direction)){settings$direction <- 'both' }
+  if(is.null(settings$updateInit)){settings$updateInit <- FALSE }
+  if(is.null(settings$saveRun)){settings$saveRun <- TRUE }
+  
+  # Check if linearization is possible
+  for(indexObservationModel in 1:length(getObservationInformation()$name)){settings$linearization <- settings$linearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  
+  
+  ###################################################################################
+  # Structure initialization
+  ###################################################################################
+  # Initialization of relationshipsToTest
+  if(is.null(test_relations)){
+    relationshipsToTest <- data.frame(indivParam = rep(indivParam, times = 1, each = length(covariate)), 
+                                      covariate = rep(covariate, length(indivParam)))
+  }else{
+    relationshipsToTest <- data.frame(indivParam = names(test_relations)[1], covariate = test_relations[[1]])
+    if(length(test_relations)>1){
+      for(index in 2:length(test_relations)){
+        relationshipsToTest <-  rbind(relationshipsToTest, data.frame(indivParam = names(test_relations)[index], covariate = test_relations[[index]]))
+      }
+    }
+  }
+  
+  if(method=='COSSAC'){
+    settings$rankedSCM <- T
+  }else{
+    settings$rankedSCM <- F
+  }
+  
+  nbRun <- 0;
+  outputDirectory <- getProjectSettings()$directory
+  covariateSeachOutputFolder <- paste0(outputDirectory,'/covariateSearch_',method, '_',settings$criteria,'/')
+  dir.create(path = covariateSeachOutputFolder, showWarnings = F, recursive = T)
+  
+  if(is.null(final.project)){
+    final.project <- paste0(covariateSeachOutputFolder,'runFinal.mlxtran')
+  }
   
   # Define the scenario associated to the type of test and the method
   .defineScenario(settings$linearization, settings$rankedSCM)
-  summary.file = toString(sub(pattern=".mlxtran", replacement="_summary.txt", projectToSaveName))
   
-  ######################################################################################################################
-  # Initialization on a first run
-  ######################################################################################################################
-  summary <- c(date(),'\n'); nbRun <- 0; t_strat <- proc.time(); referenceOFV <- NULL;
+  summary.file <- paste0(covariateSeachOutputFolder,"covSearchSummary.txt")
+  if(settings$rankedSCM){additionalDisplay <- ''}else{additionalDisplay <- "+++++++++++++++++++++++\n"}
+  projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectFile = projectRun);
+  
   if(settings$criteria == 'BIC'){
     criteriaToDisplay <- 'BIC'
-    if(settings$linearization){
-      indexLL <- 3
-    }else{
-      indexLL <- 4
-    }
+    indexLL <- 4 # Index in getEstimatedLogLikelihood()[[1]] function
+    displayPvalue <- FALSE
+  }else if(settings$criteria == 'AIC'){
+    criteriaToDisplay <- 'AIC'
+    indexLL <- 3
+    displayPvalue <- FALSE
   }else{
     indexLL <- 1
     criteriaToDisplay <- '-2LL'
+    displayPvalue <- TRUE
   }
+  if(settings$linearization){
+    indexLL = max(indexLL-1,1)
+  }
+  ######################################################################################################################
+  # Initialization on a first run
+  ######################################################################################################################
+  summary <- c(date(),'\n');  t_strat <- proc.time(); referenceOFV <- NULL;
   
-  # Make a first run if needed
-  if((as.list(getLaunchedTasks())$logLikelihoodEstimation==FALSE)){
-    bScenario <- runScenario(TRUE); nbRun = nbRun+1;
-  }else{
-    bScenario <- T
-  }
+  # Make a first run
+  bScenario <- runScenario(TRUE); nbRun = nbRun+1;
   referenceOFV <- getEstimatedLogLikelihood()[[1]][indexLL]
   
   #############################################################################################################################
   # Forward inclusion step
   #############################################################################################################################
-  lineDisplay <- paste0( " ========================================================\n Forward inclusion step (reference ",criteriaToDisplay," = ",format(referenceOFV, nsmall = 1),")\n")
-  summary <- c(summary, lineDisplay); cat(lineDisplay)
   # Get all the possibilities
-  remainingCovariateStructure <- .getRemainingCovariateStructure(covariate, indivParam)
-  bFoward <- TRUE
-  while(bFoward&(length(remainingCovariateStructure$indivParam)>0)){
-    
-    initialEstimates <- getPopulationParameterInformation();
+  bForward <- length(intersect(settings$direction,c("both","forward")))
+  remainingCovariateStructure <- .getRemainingCovariateStructure(relationshipsToTest)
+  if(bForward){
+    lineDisplay <- paste0("========================================================\nForward inclusion step (reference objective function ",criteriaToDisplay," = ",format(referenceOFV, nsmall = 1),")\n")
+    summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
+  }
+  while(bForward&(length(remainingCovariateStructure$indivParam)>0)){
+    initialEstimates <- getPopulationParameterInformation(); # Keep the initial estimates of the project
     if(settings$rankedSCM){
-      # We test the remaining most probable
-      nbConfig <- 1;
+      idConfig <- which.min(x = remainingCovariateStructure$pValue); # We test the remaining most probable
     }else{
-      # We test all the possibilities
-      nbConfig <- length(remainingCovariateStructure$indivParam); 
+      idConfig <- 1:length(remainingCovariateStructure$indivParam); # We test all the possibilities
     }
-    OFvalues <- array(dim=nbConfig); estimatedPopParam <- list()
+    # Initialize the results of the current step
+    OFvalues <- array(dim=c(length(idConfig),3)); estimatedPopParam <- list()
     
     # Check if it is interesting to do the run
-    if(remainingCovariateStructure$pValue[1]<.5){
-      for(indexConfig in 1:nbConfig){
+    if(min(remainingCovariateStructure$pValue[idConfig])<.4){
+      iterConfig <- 0  
+      for(indexConfig in idConfig){
+        iterConfig <- iterConfig+1
         # get the parameter - covariate relationship
-        evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig]; 
+        evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig];
         evaluatedCovariate <- remainingCovariateStructure$covariate[indexConfig];
-        # Initialize the population parameters estimates
+        # Initialize the population parameters estimates and add the parameter - covariate relaionship
         setPopulationParameterInformation(initialEstimates);
-        # Run the scenario with te additional parameter - covariate relationship
-        OFvalues[indexConfig] <- .setCovAndRun(evaluatedParameter, evaluatedCovariate, indexLL, forwardSearch = T); nbRun = nbRun+1;
-        estimatedPopParam[[indexConfig]] <- getEstimatedPopulationParameters() 
+        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
+        # Run the scenario with the additional parameter - covariate relationship
+        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectRun);}
+        OFvalues[iterConfig,1] <- .getOFV(indexLL); nbRun = nbRun+1;
+        OFvalues[iterConfig,2] <- nbRun-1
+        OFvalues[iterConfig,3] <- .getDof(covariate = evaluatedCovariate)
+        estimatedPopParam[[iterConfig]] <- getEstimatedPopulationParameters()
+        # Get back to the initial state before decision
         eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
         
-        lineDisplay <- paste0("Evaluation of covariate ", evaluatedCovariate, ' with parameter ',evaluatedParameter,', (', criteriaToDisplay,' = ', format(OFvalues[indexConfig], nsmall = 1),') \n');cat(lineDisplay)
-        summary <- c(summary, lineDisplay);  
+        if(settings$rankedSCM == F){endofline='\n'}else{endofline=paste0('')}
+        lineDisplay <- paste0("Run ",toString(OFvalues[iterConfig,2]),": Evaluation of adding covariate ", evaluatedCovariate, ' on parameter ',evaluatedParameter,' ==> ', criteriaToDisplay,' = ', format(as.double(OFvalues[iterConfig,1]), nsmall = 1),', ',criteriaToDisplay,'-difference = ',format(as.double(referenceOFV-OFvalues[iterConfig,1]), nsmall = 1),endofline);
+        summary <- c(summary, lineDisplay);cat(lineDisplay);cat(summary, file = summary.file);  
       }
       
       # Get the best model and its associated pValue
-      indexMin <- which.min(OFvalues) 
       if(settings$criteria == "LRT"){
-        pValue <- .getPvalueLRT(referenceOFV, OFV = OFvalues[indexMin], dof = 1)
+        pValueAll <- .getPvalueLRT(referenceOFV, OFV = as.double(OFvalues[,1]), dof = as.double(OFvalues[,3]))
+        iterMin <- which.min(pValueAll)
+        indexMin <- idConfig[iterMin]
+        pValue <- pValueAll[iterMin]
       }else{
-        if(OFvalues[indexMin] < referenceOFV){
+        iterMin <- which.min(as.double(OFvalues[,1]));
+        indexMin <- idConfig[iterMin]
+        if(as.double(OFvalues[iterMin,1])<referenceOFV-settings$criteriaThreshold){
           pValue <- 0
         }else{
           pValue <- 1
         }
       }
-      if(pValue <= settings$pInclusion){
+      
+      if(pValue <= settings$pInclusion){ # If the pValue is valid wrt the inclusion criteria
+        # Add the parameter and list
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexMin]; evaluatedCovariate <- remainingCovariateStructure$covariate[indexMin]
         eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
-        referenceOFV <- OFvalues[indexMin]
-        lineDisplay <- paste0(" +++++++++++++++++++++++ \n covariate ",evaluatedCovariate, ' was included with parameter ', evaluatedParameter,' (pVal ',format(pValue, nsmall = 1),', ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n'," +++++++++++++++++++++++ \n");
-        summary <- c(summary, lineDisplay); cat(lineDisplay)
+        referenceOFV <- OFvalues[iterMin,1]
+        if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'')}else{pValueDisplay<-''}
+        lineDisplay <- paste0(pValueDisplay,' \n',"=> covariate ", evaluatedCovariate, ' was included on parameter ', evaluatedParameter,' (new ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
+        summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
         if(settings$updateInit){
-          newInitialConditions = estimatedPopParam[[indexMin]]
+          newInitialConditions = estimatedPopParam[[iterMin]]
           for(indexParam in 1:length(newInitialConditions)){
             eval(parse(text=paste0('setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
           }
         }
         # Update the pValue of the remaining pairs
-        remainingCovariateStructure <- remainingCovariateStructure[-indexMin,]
-        possibleCovariateStructure <- .getCovariateStructure(covariate, indivParam)
-        if(length(remainingCovariateStructure$indivParam)>0){
-          for(indexRemaining in 1:length(remainingCovariateStructure$indivParam)){
-            indexLine <- which((as.character(possibleCovariateStructure$indivParam)==as.character(remainingCovariateStructure$indivParam[indexRemaining]))&(as.character(possibleCovariateStructure$covariate)==as.character(remainingCovariateStructure$covariate[indexRemaining])))
-            remainingCovariateStructure$pValue[indexRemaining] <- possibleCovariateStructure$pValue[indexLine]
-          }
-          # Sort it
-          indexSort <- sort(x=remainingCovariateStructure$pValue, decreasing = F, index.return = TRUE)$ix
-          remainingCovariateStructure <- remainingCovariateStructure[indexSort,]
-        }
+        remainingCovariateStructure <- .updateRemainingPvalue(structure = remainingCovariateStructure[-indexMin,])
       }else{
         setPopulationParameterInformation(initialEstimates);
         if(settings$rankedSCM){# keep searching in the list
+          if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'')}else{pValueDisplay<-''}
+          lineDisplay <- paste0(pValueDisplay,' \n',"=> covariate ",remainingCovariateStructure$covariate[indexMin], ' was not included on parameter ', remainingCovariateStructure$indivParam[indexMin],' (ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
+          summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
           remainingCovariateStructure <- remainingCovariateStructure[-indexMin,]
         }else{ 
-          lineDisplay <- paste0("+++++++++++++++++++++++\n No additional covariate \n +++++++++++++++++++++++\n ")
-          summary <- c(summary, lineDisplay); cat(lineDisplay)
-          bFoward <- FALSE
+          lineDisplay <- paste0("\n+++++++++++++++++++++++\n No additional covariate \n+++++++++++++++++++++++\n")
+          summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
+          bForward <- FALSE
         }
       }
     }else{
-      bFoward <- FALSE
+      bForward <- FALSE
     }
   }
   
   #############################################################################################################################
   # Backward elimination step
   #############################################################################################################################
-  # Search the elimination possibilities
-  lineDisplay <- paste0( " ========================================================\n Backward elimination step (reference ",criteriaToDisplay," = ",format(referenceOFV, nsmall = 1),")\n")
-  summary <- c(summary, lineDisplay); cat(lineDisplay)
-  bBackward <- TRUE
-  remainingCovariateStructure <- .getCurrentCovariateStructure(covariate, indivParam)
+  bBackward <- length(intersect(settings$direction,c("both","backward")))
+  remainingCovariateStructure <- .getCurrentCovariateStructure(relationshipsToTest)
+  
+  if(bBackward){
+    # Search the elimination possibilities
+    lineDisplay <- paste0("========================================================\nBackward elimination step (reference ",criteriaToDisplay," = ",format(referenceOFV, nsmall = 1),")\n")
+    summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
+  }
   
   while(bBackward&(length(remainingCovariateStructure$indivParam)>0)){
-    
-    initialEstimates <- getPopulationParameterInformation();
+    initialEstimates <- getPopulationParameterInformation(); # Keep the initial estimates of the project
     if(settings$rankedSCM){
-      # We test the remaining most probable
-      nbConfig <- 1;
+      idConfig <- which.max(x = remainingCovariateStructure$pValue); # We test the remaining most probable
     }else{
-      # We test all the possibilities
-      nbConfig <- length(remainingCovariateStructure$indivParam); 
+      idConfig <- 1:length(remainingCovariateStructure$indivParam); # We test all the possibilities
     }
-    OFvalues <- array(dim=nbConfig); estimatedPopParam <- list()
+    # Initialize the results of the current step
+    OFvalues <- array(dim=c(length(idConfig),3)); estimatedPopParam <- list()
     
     # Check if it is interesting to do the run
-    if(remainingCovariateStructure$pValue[1]>.01){
-      for(indexConfig in 1:nbConfig){
+    if(max(remainingCovariateStructure$pValue[idConfig])>.01){
+      iterConfig <- 0  
+      for(indexConfig in idConfig){
+        iterConfig <- iterConfig+1
         # get the parameter - covariate relationship
-        evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig]; 
+        evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig];
         evaluatedCovariate <- remainingCovariateStructure$covariate[indexConfig];
-        # Initialize the population parameters estimates
+        # Initialize the population parameters estimates and add the parameter - covariate relaionship
         setPopulationParameterInformation(initialEstimates);
-        # Run the scenario with te additional parameter - covariate relationship
-        OFvalues[indexConfig] <- .setCovAndRun(evaluatedParameter, evaluatedCovariate, indexLL, forwardSearch = F); nbRun = nbRun+1;
-        estimatedPopParam[[indexConfig]] <- getEstimatedPopulationParameters() 
+        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
+        # Run the scenario with the additional parameter - covariate relationship
+        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectRun);}
+        OFvalues[iterConfig,1] <- .getOFV(indexLL); nbRun = nbRun+1;
+        OFvalues[iterConfig,2] <- nbRun-1
+        OFvalues[iterConfig,3] <- -.getDof(covariate = evaluatedCovariate)
+        estimatedPopParam[[iterConfig]] <- getEstimatedPopulationParameters()
+        # Get back to the initial state before decision
         eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
-        
-        lineDisplay <- paste0("Evaluation of covariate ", evaluatedCovariate, ' not on parameter ',evaluatedParameter,', (', criteriaToDisplay,' = ', format(OFvalues[indexConfig], nsmall = 1),') \n');cat(lineDisplay)
-        summary <- c(summary, lineDisplay);  
+        if(settings$rankedSCM == F){endofline='\n'}else{endofline=''}
+        lineDisplay <- paste0("Run ",toString(OFvalues[iterConfig,2]),": Evaluation of removing covariate ", evaluatedCovariate, ' from parameter ',evaluatedParameter,' ==> ', criteriaToDisplay,' = ', format(as.double(OFvalues[iterConfig,1]), nsmall = 1),', ', criteriaToDisplay,'-difference = ',format(as.double(referenceOFV-OFvalues[iterConfig,1]), nsmall = 1),endofline);
+        summary <- c(summary, lineDisplay);cat(lineDisplay);cat(summary, file = summary.file);  
       }
       
       # Get the best model and its associated pValue
-      indexMin <- which.min(OFvalues) 
       if(settings$criteria == "LRT"){
-        pValue <- .getPvalueLRT(referenceOFV, OFV = OFvalues[indexMin], dof = -1)
+        pValueAll <- .getPvalueLRT(referenceOFV, OFV = as.double(OFvalues[,1]), dof = as.double(OFvalues[,3]))
+        iterMin <- which.min(pValueAll)
+        indexMin <- idConfig[iterMin]
+        pValue <- pValueAll[iterMin]
       }else{
-        if(OFvalues[indexMin] > referenceOFV){
-          pValue <- 0
-        }else{
+        iterMin <- which.min(as.double(OFvalues[,1]));
+        indexMin <- idConfig[iterMin]
+        if(as.double(OFvalues[iterMin,1])<referenceOFV+settings$criteriaThreshold){
           pValue <- 1
+        }else{
+          pValue <- 0
         }
       }
+      
       if(pValue >= settings$pElimination){
+        # Add the parameter and list
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexMin]; evaluatedCovariate <- remainingCovariateStructure$covariate[indexMin]
         eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
-        referenceOFV <- OFvalues[indexMin]
-        lineDisplay <- paste0(" +++++++++++++++++++++++ \n covariate ",evaluatedCovariate, ' was removed from parameter ', evaluatedParameter,' (pVal ',format(pValue, nsmall = 1),', ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n'," +++++++++++++++++++++++ \n");
-        summary <- c(summary, lineDisplay); cat(lineDisplay)
+        referenceOFV <- OFvalues[iterMin,1]
+        if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'\n')}else{pValueDisplay<-''}
+        lineDisplay <- paste0(pValueDisplay,"=> covariate ", evaluatedCovariate, ' was removed from parameter ', evaluatedParameter,' (new ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
+        summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
         if(settings$updateInit){
-          newInitialConditions = estimatedPopParam[[indexMin]]
+          newInitialConditions = estimatedPopParam[[iterMin]]
           for(indexParam in 1:length(newInitialConditions)){
             eval(parse(text=paste0('setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
           }
         }
         # Update the pValue of the remaining pairs
-        remainingCovariateStructure <- remainingCovariateStructure[-indexMin,]
-        possibleCovariateStructure <- .getCovariateStructure(covariate, indivParam)
-        if(length(remainingCovariateStructure$indivParam)>0){
-          for(indexRemaining in 1:length(remainingCovariateStructure$indivParam)){
-            indexLine <- which((as.character(possibleCovariateStructure$indivParam)==as.character(remainingCovariateStructure$indivParam[indexRemaining]))&(as.character(possibleCovariateStructure$covariate)==as.character(remainingCovariateStructure$covariate[indexRemaining])))
-            remainingCovariateStructure$pValue[indexRemaining] <- possibleCovariateStructure$pValue[indexLine]
-          }
-          # Sort it
-          indexSort <- sort(x=remainingCovariateStructure$pValue, decreasing = T, index.return = TRUE)$ix
-          remainingCovariateStructure <- remainingCovariateStructure[indexSort,]
-        }
+        remainingCovariateStructure <- .updateRemainingPvalue(structure = remainingCovariateStructure[-indexMin,])
       }else{
         setPopulationParameterInformation(initialEstimates);
         if(settings$rankedSCM){
-          # keep searching in the list
+          if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'\n')}else{pValueDisplay<-''}
           remainingCovariateStructure <- remainingCovariateStructure[-indexMin,]
+          lineDisplay <- paste0(pValueDisplay,"=> covariate ",evaluatedCovariate, ' was kept on parameter ', evaluatedParameter,' (ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1), ') \n',additionalDisplay);
+          summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
         }else{
-          lineDisplay <- paste0("+++++++++++++++++++++++\n No covariate to remove\n +++++++++++++++++++++++\n ")
-          summary <- c(summary, lineDisplay); cat(lineDisplay)
+          lineDisplay <- paste0("+++++++++++++++++++++++\n No covariate to remove\n +++++++++++++++++++++++\n")
+          summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
           bBackward <- FALSE
         }
       }
@@ -281,22 +407,18 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
   }
   
   # Make the summary
-  runScenario(TRUE); nbRun = nbRun+1;
-  OFValue = getEstimatedLogLikelihood()[[1]][indexLL]
-  
-  summary.file = toString(sub(pattern=".mlxtran", replacement="_summary.txt", projectToSaveName))
-  summary <- c(summary, paste0("========================================================\n FINAL MODEL (",criteriaToDisplay," = ",format(OFValue, nsmall = 1),") \n"))
-  summary <- c(summary, paste0("-> target parameters: ",toString(indivParam)," \n"," -> searched covariates: ",toString(covariate)," \n\n"))
-  backwardList <- .getCurrentCovariateStructure(covariate, indivParam)
+  saveProject(projectFile = final.project)
+  OFValue = .getOFV(indexLL); nbRun = nbRun+1;
+  summary <- c(summary, paste0("========================================================\nFINAL MODEL (",criteriaToDisplay," = ",format(OFValue, nsmall = 1),")\n"))
+  summary <- c(summary, paste0("--> target parameters: ",toString(unique(relationshipsToTest$indivParam)),"\n --> searched covariates: ",toString(unique(relationshipsToTest$covariate))," \n\n"))
+  backwardList <- .getCurrentCovariateStructure(relationshipsToTest)
   if(!is.null(backwardList$covariate)){# There are covariates 
     for(indexList in 1:length(backwardList[,1])){
       lineDisplay <- paste0('Covariate ',backwardList$covariate[indexList], ' on parameter ',backwardList$indivParam[indexList],'\n');summary <- c(summary, lineDisplay)
     }
   }
-  summary <- c(summary, c(paste0("\n Done with ",toString(nbRun)," runs in ",toString(floor(proc.time()[3] - t_strat[3])),"s\n", date(),'\n'),"========================================================\n\n"))
+  summary <- c(summary, c(paste0("\n => Done with ",toString(nbRun)," runs in ",toString(floor(proc.time()[3] - t_strat[3])),"s\n", date(),'\n'),"========================================================\n\n"))
   cat(summary); cat(summary, file = summary.file)
-  saveProject(projectFile = projectToSaveName)
-  return(projectToSaveName)
 }  
 
 ###################################################################################
@@ -309,16 +431,42 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     if(is.vector(inputValue) == FALSE){
       message("ERROR: Unexpected type encountered. paramToUse must be a vector")
       isValid = FALSE
-    }else if(length(intersect(getIndividualParameterModel()$name, inputValue))==0){
-      message("ERROR: paramToUse does not have valid parameter in its definition.")
+    }else if(prod(is.element(el = inputValue, set =getIndividualParameterModel()$name))==0){
+      message("ERROR: paramToUse has at least one non-valid parameter name in its definition.")
       isValid = FALSE
     }
   }else if(inputName == tolower("covToTest")){
     if(is.vector(inputValue) == FALSE){
       message("ERROR: Unexpected type encountered. covToTest must be a vector")
       isValid = FALSE
-    }else if(length(intersect(getCovariateInformation()$name, inputValue))==0){
-      message("ERROR: covToTest have no valid covariate in its definition.")
+    }else if(prod(is.element(el = inputValue, set = getCovariateInformation()$name))==0){
+      message("ERROR: covToTest has at least one non-valid covariate name in its definition.")
+      isValid = FALSE
+    }
+  }else if(inputName == tolower("test_relations")){
+    if(is.list(inputValue) == FALSE){
+      message("ERROR: Unexpected type encountered. test_relations must be a list")
+      isValid = FALSE
+    }else{
+      for(indexList in 1:length(inputValue)){
+        # Check the name
+        if(!is.element(el = names(inputValue)[indexList],set = getIndividualParameterModel()$name)){
+          message(paste0("ERROR: in test_relations, ", names(inputValue)[indexList], " is not a valid parameter name."))
+          isValid = FALSE
+          }
+        # Check the values
+          if(prod(is.element(el = inputValue[[indexList]],set = getCovariateInformation()$name))==0){
+            message(paste0("ERROR: in test_relations, some elements of (",toString(inputValue[[indexList]]), ") are not valid covariates."))
+            isValid = FALSE
+          }
+      }
+    } 
+  }else if(inputName == tolower("method")){
+    if(is.character(inputValue) == FALSE){
+      message("ERROR: Unexpected type encountered. method must be a string")
+      isValid = FALSE
+    }else if(prod(is.element(el = inputValue, set = c('COSSAC','SCM')))==0){
+      message("ERROR: method should be either 'COSSAC' or 'SCM'.")
       isValid = FALSE
     }
   }else if(inputName == tolower("settings")){
@@ -359,7 +507,17 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
         isValid = FALSE
       }
     }
-  }else if(settingName == tolower("linearization")){
+  }else if(settingName == tolower("criteriaThreshold")){
+    if(is.double(settingValue) == FALSE){
+      message("ERROR: Unexpected type encountered. criteriaThreshold must be a double.")
+      isValid = FALSE
+    }else{
+      if(settingValue<0){
+        message("ERROR: criteriaThreshold must be  positive.")
+        isValid = FALSE
+      }
+    }
+  }else  if(settingName == tolower("linearization")){
     if(is.logical(settingValue) == FALSE){
       message("ERROR: Unexpected type encountered. linearization must be a boolean.")
       isValid = FALSE
@@ -373,8 +531,16 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     if(is.character(settingValue) == FALSE){
       message("ERROR: Unexpected type encountered. criteria must be a string")
       isValid = FALSE
-    }else if(length(intersect(tolower(settingValue), c(tolower('BIC'), tolower('LRT'))))==0){
-      message("ERROR: method must be either 'BIC' or 'LRT'.")
+    }else if(length(intersect(tolower(settingValue), c(tolower('BIC'), tolower('LRT'), tolower('AIC'))))==0){
+      message("ERROR: criteria must be either 'AIC', BIC' or 'LRT'.")
+      isValid = FALSE
+    }
+  }else if(settingName == tolower("direction")){
+    if(is.character(settingValue) == FALSE){
+      message("ERROR: Unexpected type encountered. direction must be a string")
+      isValid = FALSE
+    }else if(length(intersect(tolower(settingValue), c(tolower('both'), tolower('forward'), tolower('backward'))))==0){
+      message("ERROR: direction must be either 'both', 'forward', or 'backward'.")
       isValid = FALSE
     }
   }else if(settingName == tolower("updateInit")){
@@ -382,26 +548,34 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
       message("ERROR: Unexpected type encountered. updateInit must be a boolean.")
       isValid = FALSE
     }
+  }else if(settingName == tolower("saveRun")){
+    if(is.logical(settingValue) == FALSE){
+      message("ERROR: Unexpected type encountered. saveRun must be a boolean.")
+      isValid = FALSE
+    }
   }else{
-    message("WARNING: ",settingName,' is not a valid setting')
+    message("ERROR: ",settingName,' is not a valid setting')
+    isValid = FALSE
   }
   return(isValid)
 }
 
 ######################################################################################################################
 # Get current covariate structure
-# The output is a data.frame with indivParam, covariate and pValue (order by wald pValue is required)
+# The output is a data.frame with indivParam, covariate and pValue
 ######################################################################################################################
-.getCurrentCovariateStructure <- function(covariate, indivParam){
+.getCurrentCovariateStructure <- function(relationshipsToTest){
   param <- cov <- pValue <-NULL
-  for(indexParam in 1:length(indivParam)){
-    hasCov <- eval(parse(text=paste0('which(getIndividualParameterModel()$covariateModel$',indivParam[indexParam],'==TRUE)')))
-    if(length(hasCov)>0){
-      covOnIndiv <- intersect(covariate, names(hasCov))
-      if(length(covOnIndiv)>0){
-        cov <- c(cov, covOnIndiv)
-        param <- c(param, rep(indivParam[indexParam],length(covOnIndiv)))
-        pValue <- c(pValue, rep(1,length(covOnIndiv)))
+  if(length(relationshipsToTest$indivParam)>0){
+    for(indexParam in 1:length(relationshipsToTest$indivParam)){
+      hasCov <- eval(parse(text=paste0('which(getIndividualParameterModel()$covariateModel$',relationshipsToTest$indivParam[indexParam],'==TRUE)')))
+      if(length(hasCov)>0){
+        covOnIndiv <- intersect(relationshipsToTest$covariate[indexParam], names(hasCov))
+        if(length(covOnIndiv)>0){
+          cov <- c(cov, covOnIndiv)
+          param <- c(param, rep(as.character(relationshipsToTest$indivParam[indexParam]),length(covOnIndiv)))
+          pValue <- c(pValue, rep(1,length(covOnIndiv)))
+        }
       }
     }
   }
@@ -420,21 +594,20 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     currentCovariateStructure <- NULL
   }else{
     indexSort <- sort(x=pValue, decreasing = TRUE, index.return = TRUE)$ix
-    currentCovariateStructure <- data.frame(indivParam = param[indexSort], covariate = cov[indexSort], pValue=pValue[indexSort])
+    currentCovariateStructure <- data.frame(indivParam = param, covariate = cov, pValue=pValue)
   }
   
   return(currentCovariateStructure)
-  
 }
 
 ######################################################################################################################
 # Get full covariate structure
-# The output is a data.frame with indivParam, covariate and pValue (order by test pValue is required)
+# The output is a data.frame with indivParam, covariate and pValue 
 ######################################################################################################################
-.getCovariateStructure <- function(covariate, indivParam){
-  dfOut <- data.frame(indivParam = rep(indivParam, times = 1, each = length(covariate)), 
-                      covariate = rep(covariate, length(indivParam)), 
-                      pValue = rep(.025, length(indivParam)*length(covariate)))
+.getCovariateStructure <- function(relationshipsToTest){
+  dfOut <- data.frame(indivParam = relationshipsToTest$indivParam, 
+                      covariate = relationshipsToTest$covariate, 
+                      pValue = rep(.025, length(relationshipsToTest$indivParam)))
   
   indexFinal <- 1:length(dfOut[,3])
   
@@ -443,10 +616,13 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     for(indexDF in 1:length(dfOut[,1])){
       indexTest <- which((as.character(testValues$eta)==paste0('eta_',dfOut$indivParam[indexDF]))&(as.character(testValues$covariate)==as.character(dfOut$covariate[indexDF])))
       if(length(indexTest)>0){
-        dfOut$pValue[indexDF] <- testValues[indexTest, 4]
+        if(testValues[indexTest, 4]=='<1e-16'){
+          dfOut$pValue[indexDF] <- 1e-16
+        }else{
+          dfOut$pValue[indexDF] <- as.double(as.character(testValues[indexTest, 4]))
+        }
       }
     }
-    indexFinal <-  sort(dfOut$pValue, index.return= T)$ix
   }
   
   return(dfOut[indexFinal,])
@@ -454,20 +630,43 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
 
 ######################################################################################################################
 # Get the remaining covariate structure
-# The output is a data.frame with indivParam, covariate and pValue (order by test pValue is required)
+# The output is a data.frame with indivParam, covariate and pValue 
 ######################################################################################################################
-.getRemainingCovariateStructure<- function(covariate, indivParam){
-  currentCovariateStructure <- .getCurrentCovariateStructure(covariate, indivParam)
-  possibleCovariateStructure <- .getCovariateStructure(covariate, indivParam)
+.getRemainingCovariateStructure<- function(relationshipsToTest){
+  currentCovariateStructure <- .getCurrentCovariateStructure(relationshipsToTest)
   
-  remainingCovariateStructure <- possibleCovariateStructure
-  if(length(currentCovariateStructure[,1])>0){
+  remainingCovariateStructure <- .getCovariateStructure(relationshipsToTest)
+  if(length(currentCovariateStructure[,1])>0){# We remove all the current covariate
     for(index in 1:length(currentCovariateStructure[,1])){
       indexLine <- which((as.character(remainingCovariateStructure$indivParam)==as.character(currentCovariateStructure$indivParam[index]))&(as.character(remainingCovariateStructure$covariate)==as.character(currentCovariateStructure$covariate[index])))
       remainingCovariateStructure <- remainingCovariateStructure[-indexLine,]
     }
   }
   return(remainingCovariateStructure)
+}
+
+######################################################################################################################
+# Update the pValue of covariate structure
+# The output is a data.frame with indivParam, covariate and pValue 
+######################################################################################################################
+.updateRemainingPvalue <- function(structure){
+  structureOut <- structure
+  
+  testValues <- .getTestsRandomEffects() 
+  if(!is.null(testValues)){
+    for(indexDF in 1:length(structureOut[,1])){
+      indexTest <- which((as.character(testValues$eta)==paste0('eta_',structureOut$indivParam[indexDF]))&(as.character(testValues$covariate)==as.character(structureOut$covariate[indexDF])))
+      if(length(indexTest)>0){
+        if(testValues[indexTest, 4]=='<1e-16'){
+          structureOut$pValue[indexDF]  <- 1e-16
+        }else{
+          structureOut$pValue[indexDF]  <- as.double(as.character(testValues[indexTest, 4]))
+        }
+      }
+    }
+  }
+  
+  return(structureOut)
 }
 
 ######################################################################################################################
@@ -507,14 +706,16 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
 ######################################################################################################################
 #' @importFrom stats pchisq
 .getPvalueLRT <- function(referenceOFV, OFV, dof){
-  if(dof>0){
-    pValue <- 1-pchisq(max(referenceOFV-OFV,.1), df=dof)
-  }else{
-    pValue <- 1-pchisq(max(-(referenceOFV-OFV),.1), df=-dof)
+  pValue = dof
+  for(index in 1:length(dof)){
+    if(dof[index]>0){
+      pValue[index] <- 1-pchisq(max(referenceOFV-OFV[index],.1), df=dof[index])
+    }else{
+      pValue[index] <- 1-pchisq(max(-(referenceOFV-OFV[index]),.1), df=-dof[index])
+    }
   }
   return(pValue)
 }
-
 
 #############################################################################################################################
 # Get the scenario for the run
@@ -535,26 +736,16 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     if(linearization){# compute only mode
       scenario$tasks <- c(populationParameterEstimation = T, conditionalModeEstimation = T, logLikelihoodEstimation = T)
     }else{# compute only mode
-      scenario$tasks <- c(populationParameterEstimation = T, conditionalDistributionSampling=T, logLikelihoodEstimation = T)
+      scenario$tasks <- c(populationParameterEstimation = T, conditionalDistributionSampling = T, logLikelihoodEstimation = T)
     }
   }
-  
   setScenario(scenario)
 }
 
 #############################################################################################################################
-# Set the covariate, run the scenario and get the pValue
+# Run the scenario and get the OFV
 #############################################################################################################################
-.setCovAndRun <- function(evaluatedParameter, evaluatedCovariate, indexLL, forwardSearch){
-  if(forwardSearch){
-    eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
-  }else{
-    eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
-  }
-  # Increase the associated omega to be able to explore the domain if it has variability
-  if(length(intersect(x = evaluatedParameter, y = names(which(getIndividualParameterModel()$variability[[1]]==TRUE))))>0){
-    eval(parse(text=paste0('setPopulationParameterInformation(omega_',evaluatedParameter,' = list(initialValue = 1))')))
-  }
+.getOFV <- function(indexLL){
   bScenario <- runScenario(TRUE);
   
   if(bScenario){# The run is ok
@@ -563,4 +754,16 @@ covariateSearch <- function(project, final.project=NULL, covToTest = NULL, param
     OFValue <- Inf
   }
   return(OFValue)
+}
+
+#############################################################################################################################
+# Get the number of degree of freedom associated to a covariate
+#############################################################################################################################
+.getDof <- function(covariate){
+  eval(parse(text=paste0('indexCov <- which(names(getCovariateInformation()$type)=="',covariate,'")')))
+  if(length(intersect(getCovariateInformation()$type[indexCov],c("categorical","categoricaltransformed")))>0){
+    eval(parse(text=paste0('dof <- length(unique(getCovariateInformation()$covariate$',covariate,'))-1')))
+  }else{
+    dof = 1
+  }
 }

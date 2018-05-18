@@ -4,19 +4,18 @@
 \alias{buildmlx}
 \title{Automatic model building}
 \usage{
-buildmlx(project, final.project = NULL, model = c("residualError",
-  "covariate", "correlation"), paramToUse = "all", covToTest = "all",
-  covToTransform = "none", penalization = "BIC", direction = "full",
-  max.iter = 20, print = TRUE, nb.model = 1, linearization = FALSE,
-  seqcc = TRUE, p.min = 1, steps = 1000, lambda = "cv",
-  glmnet.settings = NULL)
+buildmlx(project, final.project = NULL, model = "all", paramToUse = "all",
+  covToTest = "all", covToTransform = "none", criterion = "BIC",
+  direction = NULL, max.iter = 20, print = TRUE, nb.model = 1,
+  linearization = FALSE, seqcc = FALSE, p.max = 1, steps = 1000,
+  exp.iter = 2)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
 
 \item{final.project}{a string: the final Monolix project (default adds "_built" to the original project)}
 
-\item{model}{components of the model to optimize, default=c("residualError", "covariate", "correlation")}
+\item{model}{components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")}
 
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
@@ -24,9 +23,9 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{covToTransform}{list of (continuous) covariates to be log-transformed (default="none")}
 
-\item{penalization}{penalization criteria to optimize c({"BIC"}, "AIC", "lasso")}
+\item{criterion}{penalization criterion to optimize c({"BIC"}, "AIC", gamma)}
 
-\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")}
+\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
 \item{max.iter}{maximum number of iterations (default=20)}
 
@@ -36,15 +35,13 @@ buildmlx(project, final.project = NULL, model = c("residualError",
 
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
-\item{seqcc}{{TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE)}
+\item{seqcc}{TRUE/{FALSE} whether the covariate model is built before the correlation model (default=FALSE)}
 
-\item{p.min}{minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
+\item{p.max}{maximum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
 
-\item{steps}{maximum number of iteration for stepAIC/BIC (default=1000)}
+\item{steps}{maximum number of iteration for stepAIC (default=1000)}
 
-\item{lambda}{penalization coefficient for "lasso". Either "cv" (cross-validation) or a positive real value (default="cv")}
-
-\item{glmnet.settings}{when penalization="lasso", list of settings used for package glmnet}
+\item{exp.iter}{number of iterations during the exploratory phase (default=1)}
 }
 \value{
 a new Monolix project with a new statistical model.
@@ -52,7 +49,11 @@ a new Monolix project with a new statistical model.
 \description{
 Iterative procedure to accelerate and optimize the process of model building by identifying 
 at each step how best to improve some of the model components. This method allows to find 
-the optimal statistical model which minimizes some information criteria in very few steps.
+the optimal statistical model which minimizes some information criterion in very few steps.
+}
+\details{
+Penalization criterion can be either a custom penalization of the form gamma*(number of parameters),
+AIC (gamma=2) or BIC (gamma=log(N)).
 }
 \examples{
 \dontrun{

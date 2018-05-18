@@ -65,7 +65,8 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
     r.boot <- bootmlx(project, nboot=nboot, settings=list(plot=FALSE, level=level))
     c.inf <- apply(r.boot,MARGIN=2, quantile,(1-level)/2)
     c.sup <- apply(r.boot,MARGIN=2, quantile,(1+level)/2)
-    loadProject(project)   
+    lp <- loadProject(project) 
+    if (!lp) return()
     c.est <- getEstimatedPopulationParameters()
     ci <- data.frame(estimate=getEstimatedPopulationParameters(), lower=c.inf, upper=c.sup)
     return(list(confint=ci, level=level, method="bootstrap" ))
@@ -75,7 +76,14 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   if (level<=0 | level>=1)
     stop("Level of the confidence interval should be strictly between 0 and 1", call.=FALSE)
   
-  loadProject(project)
+  if (!grepl("\\.",project))
+    project <- paste0(project,".mlxtran")
+  if(!file.exists(project)){
+    message(paste0("ERROR: project '", project, "' does not exists"))
+    return(invisible(FALSE))}
+  lp <- loadProject(project) 
+  if (!lp) return(invisible(FALSE))
+
   launched.tasks <- getLaunchedTasks()
   if (!linearization) {
     if (!("stochasticApproximation" %in% launched.tasks[["standardErrorEstimation"]]) ) {

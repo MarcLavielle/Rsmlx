@@ -1,4 +1,4 @@
-errorModelSelection <- function(project=NULL, penalization="BIC", nb.model=1) {
+errorModelSelection <- function(project=NULL, criterion="BIC", nb.model=1) {
   
   if (!is.null(project))
     loadProject(project)
@@ -40,7 +40,7 @@ errorModelSelection <- function(project=NULL, penalization="BIC", nb.model=1) {
     for (i.out in (1:n.out)) {
       name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
       y.obsi <- d[[name.obsi]][[name.obsi]]
-      resi <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, penalization=penalization, nb.model=nb.model)
+      resi <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, criterion=criterion, nb.model=nb.model)
       res.errorModel <- c(res.errorModel, as.character(resi[['error.model']]))
       names(res.errorModel)[i.out] <- name.obsi
     }
@@ -49,7 +49,7 @@ errorModelSelection <- function(project=NULL, penalization="BIC", nb.model=1) {
     for (i.out in (1:n.out)) {
       name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
       y.obsi <- d[[name.obsi]][[name.obsi]]
-      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, penalization=penalization, nb.model=nb.model)
+      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, criterion=criterion, nb.model=nb.model)
       names(res.errorModel)[i.out] <- name.obsi
     }
   }
@@ -68,7 +68,7 @@ e.min2 <- function(x,y.pred,y.obs) {
   return(e)
 }
 
-computeBIC <- function(y.obs, y.pred, nrep, penalization, nb.model) {
+computeBIC <- function(y.obs, y.pred, nrep, criterion, nb.model) {
   
   y.obs <- rep(y.obs, nrep)
   iy <- (y.pred>0 & y.obs>0)
@@ -77,12 +77,12 @@ computeBIC <- function(y.obs, y.pred, nrep, penalization, nb.model) {
   n <- length(y.obs)
   
   N <- n/nrep
-  if (penalization=="BIC")
+  if (criterion=="BIC")
     pen.bic <- log(N)
-  else if (penalization=="AIC")
+  else if (criterion=="AIC")
     pen.bic <- 2
   else 
-    pen.bic <- penalization
+    pen.bic <- criterion
   
   
   a.cons <- sqrt(mean((y.obs-y.pred)^2))
@@ -113,7 +113,7 @@ computeBIC <- function(y.obs, y.pred, nrep, penalization, nb.model) {
   bic <- -2*ll + pen
   
   E <- data.frame(error.model=c("constant", "proportional", "combined1","combined2","exponential"),
-                  ll=ll, df=df, criteria= bic)
+                  ll=ll, df=df, criterion= bic)
   nb.model <- min(nb.model, length(bic))
   E <- E[order(bic)[1:nb.model],]
   row.names(E) <- 1:nrow(E)

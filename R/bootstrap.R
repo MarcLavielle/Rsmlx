@@ -23,8 +23,15 @@
 #' @export
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   
-  loadProject(project)
-  # Check and initialize the settings
+  if (!grepl("\\.",project))
+    project <- paste0(project,".mlxtran")
+  if(!file.exists(project)){
+    message(paste0("ERROR: project '", project, "' does not exists"))
+    return(invisible(FALSE))}
+  lp <- loadProject(project) 
+  if (!lp) return(invisible(FALSE))
+
+    # Check and initialize the settings
   if(is.null(settings$plot)){ plot.res <- TRUE }else{ plot.res <- settings$plot; settings$plot<- NULL}
   if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
   settings$nboot <- nboot

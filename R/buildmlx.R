@@ -2,24 +2,26 @@
 #'
 #' Iterative procedure to accelerate and optimize the process of model building by identifying 
 #' at each step how best to improve some of the model components. This method allows to find 
-#' the optimal statistical model which minimizes some information criteria in very few steps.
+#' the optimal statistical model which minimizes some information criterion in very few steps.
+#' 
+#' Penalization criterion can be either a custom penalization of the form gamma*(number of parameters),
+#' AIC (gamma=2) or BIC (gamma=log(N)).
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
-#' @param model  components of the model to optimize, default=c("residualError", "covariate", "correlation")
+#' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
-#' @param penalization  penalization criteria to optimize c({"BIC"}, "AIC", "lasso")
-#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full")
+#' @param criterion  penalization criterion to optimize c({"BIC"}, "AIC", gamma)
+#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
 #' @param max.iter maximum number of iterations (default=20)
+#' @param exp.iter  number of iterations during the exploratory phase (default=1)
 #' @param print {TRUE}/FALSE display the results (default=TRUE)
 #' @param nb.model number of models to display at each iteration (default=1)
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
-#' @param seqcc {TRUE}/FALSE whether the covariate model is built before the correlation model (default=TRUE) 
-#' @param p.min minimum p-value (for the correlation test) for keeping a covariate in a model  (default=1)
-#' @param steps maximum number of iteration for stepAIC/BIC (default=1000)
-#' @param lambda penalization coefficient for "lasso". Either "cv" (cross-validation) or a positive real value (default="cv")
-#' @param glmnet.settings when penalization="lasso", list of settings used for package glmnet
+#' @param seqcc TRUE/{FALSE} whether the covariate model is built before the correlation model (default=FALSE) 
+#' @param p.max maximum p-value (for the correlation test) for keeping a covariate in a model  (default=1)
+#' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @return a new Monolix project with a new statistical model.
 #' @importFrom MASS stepAIC 
 #' @importFrom stats coef 
@@ -28,12 +30,12 @@
 #' r = buildmlx("warfPK.mlxtran")
 #' }
 #' @export
-buildmlx <- function(project, final.project=NULL, model=c("residualError", "covariate", "correlation"), 
+buildmlx <- function(project, final.project=NULL, model="all", 
                      paramToUse="all", covToTest="all", covToTransform="none", 
-                     penalization="BIC", direction='full',
+                     criterion="BIC", direction=NULL,
                      max.iter=20, print=TRUE, nb.model=1, linearization=FALSE, 
-                     seqcc=TRUE, p.min=1,
-                     steps=1000, lambda='cv', glmnet.settings=NULL)
+                     seqcc=FALSE, p.max=1, steps=1000, exp.iter=2)
+  #lambda='cv', glmnet.settings=NULL)
 {
   
   if (!grepl("\\.",project))
@@ -41,38 +43,54 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exists"))
     return(invisible(FALSE))}
-  loadProject(project) 
+  lp <- loadProject(project) 
+  if (!lp) return(invisible(FALSE))
   
+  if (length(getIndividualParameterModel()$variability)>1)
+    stop("Multiple levels of variability are not supported in this version of buildmlx", .call=FALSE)
   #  initializeMlxConnectors(software = "monolix")
   
-  if (length(penalization)==1) {
-    if (penalization=="lasso") {
-      penalization <- c(penalization, "BIC", "BIC")
-    } else {
-      penalization <- rep(penalization, 3)
-    }
-  } else if (length(penalization)==2) 
-    penalization <- c(penalization, penalization[2])
+  # if (length(criterion)==1) {
+  #   if (criterion=="lasso") {
+  #     criterion <- c(criterion, "BIC", "BIC")
+  #   } else {
+  #     criterion <- rep(criterion, 3)
+  #   }
+  # } else if (length(criterion)==2) 
+  #   criterion <- c(criterion, criterion[2])
+  # 
+  # criterion <- criterion[1:3]
+  # 
   
-  penalization <- penalization[1:3]
-  
-  
-  
-  r <- check(project, final.project, covToTransform, paramToUse, covToTest)
+  r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction)
   covToTransform <- r$covToTransform
   paramToUse <- r$paramToUse
   final.project <- r$final.project
   covToTest <- r$covToTest
+  model <- r$model
+  direction <- r$direction
+  
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) {
     unlink(final.dir, recursive=TRUE)
   }
   
-  summary.file = "buildmlx.txt"
+  Sys.sleep(0.1)
+  project.dir <- getProjectSettings()$directory
+  if (!dir.exists(project.dir))
+    dir.create(project.dir)
+  buildmlx.dir <- file.path(getProjectSettings()$directory,"buildmlx")
+  Sys.sleep(0.1)
+  if (dir.exists(buildmlx.dir))
+    unlink(buildmlx.dir, recursive=TRUE)
+  
+  Sys.sleep(0.1)
+  dir.create(buildmlx.dir)
+  summary.file = file.path(buildmlx.dir,"summary.txt")
   
   launched.tasks <- getLaunchedTasks()
+  Sys.sleep(0.1)
   dir.create(final.dir)
-  
   
   if (!launched.tasks[["populationParameterEstimation"]]) {
     lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
@@ -113,8 +131,11 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       if (print) cat(lineDisplay)
       runLogLikelihoodEstimation(linearization = lin.ll)
     }
-    ll <- getEstimatedLogLikelihood()
-    ll.ini <- ll[[method.ll]][penalization[2]]
+    ll.ini <- computecriterion(criterion, method.ll)
+    ll <- getEstimatedLogLikelihood()[[method.ll]]
+    names(ll)[which(names(ll)=="standardError")] <- "s.e."
+    if (is.numeric(criterion))
+      ll['criterion'] <- ll.ini
   }
   
   p.ini <- getPopulationParameterInformation()
@@ -126,6 +147,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   error.model <- getContinuousObservationModel()$errorModel
   obs.dist <- getContinuousObservationModel()$distribution
   covariate.model <- getIndividualParameterModel()$covariateModel
+  cov.ini <- names(covariate.model[[1]])
   correlation.model <- getIndividualParameterModel()$correlationBlocks$id
   if (is.null(correlation.model))
     correlation.model <- list()
@@ -143,12 +165,21 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   saveProject(final.project)
   loadProject(final.project)
   
+  if (!is.null(r$idir)) {
+    if (print)
+      cat(paste0('\n\ndirection: = "',direction, '" will be used for the covariate search\n\n'))
+    sink(summary.file)
+    cat(paste0('\n\ndirection: = "',direction, '" will be used for the covariate search\n\n'))
+    sink()
+  }
+  
+  
   
   if (print) {
     cat("____________________________________________\nInitialization:")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(formatCovariateModel(covariate.model))
+      print(formatCovariateModel(covariate.model, cov.ini))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -159,15 +190,16 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       print(formatErrorModel(error.model))
     }
     if (iop.ll) {
-      cat("\nEstimated log-likelihood:\n")
-      print(lapply(ll,round,2))
+      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+      print(round(ll,2))
     }
   }
-  sink(summary.file)
+  if (file.exists(summary.file)) sink(summary.file, append=TRUE)
+  else sink(summary.file)
   cat("____________________________________________\nInitialization:")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(formatCovariateModel(covariate.model))
+    print(formatCovariateModel(covariate.model, cov.ini))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -178,8 +210,8 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     print(formatErrorModel(error.model))
   }
   if (iop.ll) {
-    cat("\nEstimated log-likelihood:\n")
-    print(lapply(ll,round,2))
+    cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+    print(round(ll,2))
   }
   sink()
   
@@ -209,7 +241,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       ll0 <- ll
     
     if (iop.error) {
-      res.error <- errorModelSelection(penalization=penalization[3], nb.model=nb.model)
+      res.error <- errorModelSelection(criterion=criterion, nb.model=nb.model)
       if (nb.model==1)
         error.model <- res.error
       else {
@@ -220,11 +252,12 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     }
     
     if (iop.covariate) {
-      res.covariate <- covariateModelSelection(penalization=penalization[1], nb.model=nb.model,
+      res.covariate <- covariateModelSelection(criterion=criterion, nb.model=nb.model,
                                                covToTransform=covToTransform, covToTest=covToTest, direction=direction, 
-                                               steps=steps, p.min=p.min, paramToUse=paramToUse,
+                                               steps=steps, p.max=p.max, paramToUse=paramToUse,
                                                lambda=lambda,  glmnet.settings=glmnet.settings, sp0=sp0)
-      sp0 <- res.covariate$sp
+      res.covariate$res <- sortCov(res.covariate$res, cov.ini)
+      if (iter>exp.iter) sp0 <- res.covariate$sp
       covToTransform <- setdiff(covToTransform, res.covariate$tr0)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
@@ -246,7 +279,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     }
     
     if (iop.correlation & corr.test) {
-      res.correlation <- correlationModelSelection(e=e, penalization=penalization[2], nb.model=nb.model, 
+      res.correlation <- correlationModelSelection(e=e, criterion=criterion, nb.model=nb.model, 
                                                    corr0=correlation.model0, seqcc=seqcc)
       if (is.null(res.correlation$blocks)) correlation.model <- res.correlation
       else  correlation.model <- res.correlation$blocks[[1]]
@@ -339,8 +372,6 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
         setCorrelationBlocks(correlation.model)
       
       #-------------------------------
-      if (dir.exists(final.dir))
-        unlink(final.dir, recursive=TRUE)
       
       if (ll.new > ll.prev) {
         g <- getGeneralSettings()
@@ -350,7 +381,14 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       }
       ll.prev <- ll.new
       
+      buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter))
+      buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
+      saveProject(buildmlx.project.iter)
       saveProject(final.project)
+      
+      if (dir.exists(final.dir))
+        unlink(final.dir, recursive=TRUE)
+      
       
       lineDisplay <- paste0("Run scenario for model ",iter," ... \nEstimation of the population parameters... \n")
       sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
@@ -366,23 +404,36 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
           runConditionalModeEstimation()
         runLogLikelihoodEstimation(linearization = lin.ll)
       }
-      ll.new <- ll[[method.ll]][penalization[2]]
+      ll.new <- computecriterion(criterion, method.ll)
+      
+      if (!dir.exists(buildmlx.dir.iter))
+        dir.create(buildmlx.dir.iter)
+      
+      if (dir.exists(final.dir)) 
+        list_of_files <- setdiff(c(list.files(final.dir) , ".Internals"), "buildmlx")
+      foo <- file.copy(file.path(final.dir,list_of_files), buildmlx.dir.iter, recursive=TRUE)
+      foo <- file.rename(file.path(buildmlx.dir.iter,".Internals",basename(final.project)),
+                         file.path(buildmlx.dir.iter,".Internals",basename(buildmlx.project.iter)))
       
       #loadProject(final.project)
       
       if (stop.test)
         ll <- ll0
-      else
-        ll <- getEstimatedLogLikelihood()
+      else {
+        ll <- getEstimatedLogLikelihood()[[method.ll]]
+        names(ll)[which(names(ll)=="standardError")] <- "s.e."
+        if (is.numeric(criterion))
+          ll['criterion'] <- ll.new
+      }
       
       if (iop.ll) {
         if (print) {
-          cat("\nEstimated log-likelihood:\n")
-          print(lapply(ll,round,2))
+          cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+          print(round(ll,2))
         }
         sink(summary.file, append=TRUE)
-        cat("\nEstimated log-likelihood:\n")
-        print(lapply(ll,round,2))
+        cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+        print(round(ll,2))
         sink()
       }
       if (iter >= max.iter) {
@@ -399,7 +450,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     cat("Final model:\n")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(formatCovariateModel(covariate.model))
+      print(formatCovariateModel(covariate.model, cov.ini))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -410,8 +461,8 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       print(formatErrorModel(error.model))
     }
     if (iop.ll) {
-      cat("\nEstimated log-likelihood:\n")
-      print(lapply(ll,round,2))
+      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+      print(round(ll,2))
     }
   }
   sink(summary.file, append=TRUE)
@@ -419,7 +470,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
   cat("Final model:\n")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(formatCovariateModel(covariate.model))
+    print(formatCovariateModel(covariate.model, cov.ini))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -430,11 +481,11 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
     print(formatErrorModel(error.model))
   }
   if (iop.ll) {
-    cat("\nEstimated log-likelihood:\n")
-    print(lapply(ll,round,2))
+    cat(paste0("\ncriterion (",method.ll,"):\n"))
+    print(round(ll,2))
   }
   sink()
-  
+  test.del <- FALSE
   if (iop.covariate) {
     foo <- lapply(res.covariate$model,function(x) {which(x)})
     cov.model <- unique(unlist(lapply(foo,function(x) {names(x)})))
@@ -449,14 +500,19 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
       g=getIndividualParameterModel()$covariateModel
       cg <- lapply(g, function(x) {foo <- x[ck]; x[ck]<-x[cck]; x[cck]=foo; return(x)})
       setCovariateModel(cg)
+      test.del <- TRUE
     }
   }
+  if (test.del & dir.exists(final.dir)) {
+    unlink(final.dir, recursive=TRUE)
+  }
+  
   saveProject(final.project)
-  con        = file(summary.file, open = "r")
-  lines      = readLines(con, warn=FALSE)
-  close(con)
-  summary.file = file.path(final.dir,"buildmlx.txt")
-  write(lines, file=summary.file)
+  # con        = file(summary.file, open = "r")
+  # lines      = readLines(con, warn=FALSE)
+  # close(con)
+  # summary.file = file.path(final.dir,"buildmlx.txt")
+  # write(lines, file=summary.file)
   
   res <- list(project=final.project)
   if (iop.covariate)
@@ -471,7 +527,7 @@ buildmlx <- function(project, final.project=NULL, model=c("residualError", "cova
 }
 
 
-check <- function(project, final.project, covToTransform, paramToUse, covToTest) {
+check <- function(project, final.project, covToTransform, paramToUse, covToTest, model, direction) {
   
   if (is.null(final.project)) 
     final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_built.mlxtran")
@@ -509,10 +565,7 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest)
     covToTest=NULL
   if (!is.null(covToTest)) {
     ncov0 <- covToTest[(!(covToTest %in% cov.names))]
-    if (length(ncov0)>0) {
-      warning(paste0(ncov0, " is not a valid covariate and will be ignored"), call.=FALSE)
-      covToTest <- setdiff(covToTest, ncov0)
-    }
+    if (length(ncov0)>0)  stop(paste0(ncov0, " is not a valid covariate"), call.=FALSE)
   }
   
   ind.dist <- getIndividualParameterModel()$distribution
@@ -520,18 +573,35 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest)
   if (identical(paramToUse,"all"))
     paramToUse <- param.names
   nparam0 <- paramToUse[(!(paramToUse %in% param.names))]
-  if (length(nparam0)>0) {
-    warning(paste0(nparam0, " is not a valid parameter and will be ignored"), call.=FALSE)
-    paramToUse <- setdiff(paramToUse, nparam0)
+  if (length(nparam0)>0) 
+    stop(paste0(nparam0, " is not a valid parameter"), call.=FALSE)
+  
+  model.names <- c("residualError", "covariate", "correlation")
+  if (identical(model,"all")) model <- model.names
+  mod0 <- model[(!(model %in% model.names))]
+  if (length(mod0)>0) 
+    stop(paste0(mod0, " is not a valid model component"), call.=FALSE)
+  
+  idir <- NULL
+  if ("covariate" %in% model) {
+    dir.names <- c("full", "both", "backward", "forward")
+    if (is.null(direction)) {
+      nbcov <- length(getCovariateInformation()$name)
+      direction <- ifelse(nbcov<=10,"full","both")
+      idir <- direction
+    }
+    dir0 <- direction[(!(direction %in% dir.names))]
+    if (length(dir0)>0) 
+      stop(paste0(dir0, " is not a valid direction name"), call.=FALSE)
   }
   
-  
-  return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToTest=covToTest, final.project=final.project))
+  return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToTest=covToTest, 
+              final.project=final.project, model=model, direction=direction, idir=idir))
 }
 
 #------------------------
 
-formatCovariateModel <- function(m) {
+formatCovariateModel <- function(m, cov.ini=NULL) {
   i0 <- which(unlist(lapply(m,function(x) {identical(x,"none")})))
   if (length(i0)>0)
     m <- m[-i0]
@@ -539,27 +609,55 @@ formatCovariateModel <- function(m) {
   cov.names <- names(m[[1]])
   if (length(cov.names)>0) {
     if (is.vector(m[[1]]) | (!is.null(nrow(m[[1]])) && nrow(m[[1]])==1)) {
-      m <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)*1
-      row.names(m) <- param.names
-      colnames(m) <- cov.names
+      mr <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)*1
+      row.names(mr) <- param.names
+      colnames(mr) <- cov.names
+      mr <- as.data.frame(mr[,order(colnames(mr))])
     } else {
       mr <- list()
       nr <- nrow(m[[1]])
       for (k in 1:nr) {
         mk <- lapply(m, function(x) x[k,])
-        mr[[k]] <- matrix(unlist(mk),ncol=length(cov.names),byrow=TRUE)*1
-        row.names(mr[[k]]) <- param.names
-        colnames(mr[[k]]) <- cov.names
+        mrk <- matrix(unlist(mk),ncol=length(cov.names),byrow=TRUE)*1
+        row.names(mrk) <- param.names
+        colnames(mrk) <- cov.names
+        mrk <- mrk[,order(colnames(mrk))]
+        mr[[k]] <- as.data.frame(mrk)
       }
-      #names(mr) <- paste0("model ",1:nr)
-      m <- mr
     }
-    return(m)
+    if (!is.null(cov.ini))
+      mr <- sortCov(mr, cov.ini)
+    return(mr)
   }
+}
+
+sortCov <- function(r, cov.ini) {
+  n1 <- cov.ini
+  n3 <- c("ll", "df", "criterion")
+  if (is.data.frame(r)) {
+    n2 <- setdiff(names(r), c(n1,n3))
+    rs <- r[,c(n1,n2)]
+#    rs <- r[c(cov.ini, setdiff(names(r),cov.ini))]
+  } else {
+    n2 <- setdiff(names(r[[1]]), c(n1,n3))
+    rs <- lapply(r, function(x) x[c(n1,n2,n3)])
+  }
+  return(rs)
 }
 
 formatErrorModel <- function(m) {
   out.names <- names(m)
   return(m)
+}
+
+computecriterion <- function(criterion, method.ll) {
+  ll <- getEstimatedLogLikelihood()[[method.ll]]
+  if (identical(criterion,"AIC")) cr <- ll[["AIC"]]
+  else if (identical(criterion,"BIC")) cr <- ll[["BIC"]]
+  else {
+    d <- (ll[["AIC"]] - ll[["-2LL"]])/2
+    cr <- ll[["-2LL"]]+d*criterion
+  }
+  return(cr)
 }
 

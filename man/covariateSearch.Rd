@@ -4,26 +4,50 @@
 \alias{covariateSearch}
 \title{Covariate model building}
 \usage{
-covariateSearch(project, final.project = NULL, covToTest = NULL,
-  paramToUse = NULL, settings = NULL)
+covariateSearch(project, final.project = NULL, method = NULL,
+  covToTest = NULL, covToTransform = NULL, paramToUse = NULL,
+  test_relations = NULL, settings = NULL)
 }
 \arguments{
 \item{project}{a Monolix project}
 
-\item{final.project}{a string: the final Monolix project (default adds method name to original project name)}
+\item{final.project}{[optional] string corresponding to the final Monolix project (default: 'runFinal.mlxtran' in covariate search output folder)}
 
-\item{covToTest}{[optional] list of covariates to test. By default, all covariates are tested}
+\item{method}{[optional] string correspondig to the method. It can be 'COSSAC' or 'SCM'. By default, COSSAC' is used.}
 
-\item{paramToUse}{[optional] list of parameters which may be function of covariates. By default, all parameters are used.}
+\item{covToTest}{[optional] vector of covariates to test. Cannot be used if test_relations is defined. By default, all covariates are tested.}
 
-\item{settings}{[optional] defines the settings search. This is a list of all settings for the search. 
-The settings are pInclusion, pElimination, linearization, rankedSCM, criteria, updateInit. By default, the values are .1, .05, FALSE, TRUE, 'LRT' and TRUE.}
+\item{covToTransform}{[optional] vector of covariates to transform. The transformation consists in a log transform of the covariate with centering by the mean value (ex: WT is transformed into log(WT/mean) with mean the mean WT value over the individuals of the data set). Both the transformed and untransformed covariate are tested by the algorithm. By default, no covariate is transformed.
+Note: 
+adding a non-transformed covariate on a lognormally distributed parameter results in an exponential relationship: log(V) = log(Vpop) + beta*WT + eta <=> V = Vpop * exp(beta*WT) * exp(eta)
+adding a log-transformed covariate on a lognormally distributed parameter results in a power law relationship: log(V) = log(Vpop) + beta*log(WT/70) + eta <=> V = Vpop * (WT/70)^beta * exp(eta)}
+
+\item{paramToUse}{[optional] vector of parameters which may be function of covariates. Cannot be used if test_relations is defined. By default, all parameters are tested.}
+
+\item{test_relations}{[optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.}
+
+\item{settings}{[optional] list of settings for the covariate search. 
+The settings are: 
+- pInclusion [positive double] threshold on the LRT p-value to accept the model with the added parameter-covariate relationship during forward selection (default = .1). Only used if criteria="LRT".
+- pElimination [positive double] threshold on the LRT p-value to accept the model without the removed parameter-covariate relationship during the backward elimination (default = .05). Only used if criteria="LRT".
+- criteriaThreshold [positive double] the threshold on the AIC or BIC difference to accept the model with added/removed parameter-covariate relationship (default = 0). Only used if criteria="BIC" or "AIC.
+- linearization [boolean] whether the computation of the likelihood is based on a linearization of the model (default = FALSE).
+- criteria [string] criteria to optimize. It can be the "BIC", "AIC", or "LRT"  (default="LRT").
+- direction [string] method for covariate search. It can be "backward", "forward", or "both" (default = "both").
+- updateInit [boolean] whether to update or not the initial parameters using the estimates of the parent model (default = FALSE)
+- saveRun [boolean] whether to save or not each run (default = TRUE)}
 }
 \description{
 Automatic search of the best covariate model. 
-Several methods for covariate model building are proposed
+Two methods for covariate model building are proposed
 \itemize{
-\item COSSAC: ranked SCM
-\item SCM: SCM method
+\item SCM: stepwise covariate modeling method
+In the forward selection, at each step, each of the remaining (i.e not yet included) parameter-covariate relationships are added to the model in an univariate model (one model per relationship), and run. Among all models, the model that improves some criteria (LRT, BIC or AIC) most is selected and taken forward to the next step.
+During backward elimination, parameter-covariate relationships are removed in an univariate manner. 
+\item COSSAC: COnditional Sampling use for Stepwise Approach based on Correlation tests method 
+COSSAC makes use of the information contained in the base model run to choose which covariate to try first (instead of trying all covariates "blindly" as in SCM). 
+Indeed, the correlation between the individual parameters (or random effects) and the covariates hints at possibly relevant parameter-covariate relationships. If the EBEs (empirical Bayes estimates) are used, shrinkage may bias the result. 
+COSSAC instead uses samples from the a posteriori conditional distribution (available as "conditional distribution" task in MonolixSuite2018) to calculate the correlation between the random effects and covariates. 
+A p-value can be derived using the Pearson's correlation test for continuous covariate and ANOVA for categorical covariate. The p-values are used to sort all the random effect-covariate relationships. Relationships with the lowest p-value are added first, run and confirmed using a likelihood ratio test, AIC or BIC criteria. 
 }
 }
