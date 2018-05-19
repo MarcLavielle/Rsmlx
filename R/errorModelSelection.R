@@ -7,49 +7,56 @@ errorModelSelection <- function(project=NULL, criterion="BIC", nb.model=1) {
   obs.info <- getData()
   i.contObs <- which(obs.info$observationTypes=="continuous") 
   i.contModel <- which(names(obs.model$prediction) %in% obs.info$observationNames[i.contObs])
-  
-  foo <- getSimulatedIndividualParameters()
-  
-  project.dir <- getProjectSettings()$directory
-  sim.parameters <- read.csv(file.path(project.dir,"IndividualParameters","simulatedIndividualParameters.txt"))
-  sim.parameters <- sim.parameters[,1:ncol(foo)]
-  
-  if (is.null(sim.parameters$rep)) 
-    sim.parameters$rep <- 1
-  nrep <- max(sim.parameters$rep)
-  #N <- d$N
-  
-  y.pred <- list()
   n.out <- length(i.contModel)
-  col.el <- which(!(names(sim.parameters) %in% c("rep","id")))
-  for (irep in (1:nrep)) {
-    parami <- subset(sim.parameters, rep==irep)[,col.el]
-    fi <- computePredictions(parami)
-    for (i.out in (1:n.out)) {
-      if (irep==1) {
-        y.pred[[i.out]] <-  fi[[i.out]]
-      } else {
-        y.pred[[i.out]] <- c(y.pred[[i.out]], fi[[i.out]])
-      }
-    }
-  }
+  
+  # foo <- getSimulatedIndividualParameters()
+  # 
+  # project.dir <- getProjectSettings()$directory
+  # sim.parameters <- read.csv(file.path(project.dir,"IndividualParameters","simulatedIndividualParameters.txt"))
+  # sim.parameters <- sim.parameters[,1:ncol(foo)]
+  # 
+  # if (is.null(sim.parameters$rep)) 
+  #   sim.parameters$rep <- 1
+  # nrep <- max(sim.parameters$rep)
+  # #N <- d$N
+  # 
+  # y.pred <- list()
+  # col.el <- which(!(names(sim.parameters) %in% c("rep","id")))
+  # for (irep in (1:nrep)) {
+  #   parami <- subset(sim.parameters, rep==irep)[,col.el]
+  #   fi <- computePredictions(parami)
+  #   for (i.out in (1:n.out)) {
+  #     if (irep==1) {
+  #       y.pred[[i.out]] <-  fi[[i.out]]
+  #     } else {
+  #       y.pred[[i.out]] <- c(y.pred[[i.out]], fi[[i.out]])
+  #     }
+  #   }
+  # }
+  pred <- getSimulatedPredictions()
   
   d <- getObservationInformation()
   if (nb.model==1) {
     res.errorModel <- NULL
     for (i.out in (1:n.out)) {
-      name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
+      name.predi <- obs.model$prediction[[i.contModel[i.out]]]
+      name.obsi <- names(obs.model$prediction[i.contModel[i.out]])
       y.obsi <- d[[name.obsi]][[name.obsi]]
-      resi <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, criterion=criterion, nb.model=nb.model)
+      #      resi <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, criterion=criterion, nb.model=nb.model)
+      y.predi <- pred[[name.predi]][[name.predi]]
+      resi <- computeBIC(y.obs=y.obsi,y.pred=y.predi, criterion=criterion, nb.model=nb.model)
       res.errorModel <- c(res.errorModel, as.character(resi[['error.model']]))
       names(res.errorModel)[i.out] <- name.obsi
     }
   } else {
     res.errorModel <- list()
     for (i.out in (1:n.out)) {
-      name.obsi <- names(obs.model$prediction)[i.contModel[i.out]]
+      name.predi <- obs.model$prediction[[i.contModel[i.out]]]
+      name.obsi <- names(obs.model$prediction[i.contModel[i.out]])
       y.obsi <- d[[name.obsi]][[name.obsi]]
-      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], nrep=nrep, criterion=criterion, nb.model=nb.model)
+      y.predi <- pred[[name.predi]][[name.predi]]
+      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.predi, criterion=criterion, nb.model=nb.model)
+    #  res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.pred[[i.out]], criterion=criterion, nb.model=nb.model)
       names(res.errorModel)[i.out] <- name.obsi
     }
   }
@@ -68,8 +75,9 @@ e.min2 <- function(x,y.pred,y.obs) {
   return(e)
 }
 
-computeBIC <- function(y.obs, y.pred, nrep, criterion, nb.model) {
+computeBIC <- function(y.obs, y.pred, criterion, nb.model) {
   
+  nrep <- length(y.pred)/length(y.obs)
   y.obs <- rep(y.obs, nrep)
   iy <- (y.pred>0 & y.obs>0)
   y.obs <- y.obs[iy]

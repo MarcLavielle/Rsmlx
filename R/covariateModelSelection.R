@@ -331,7 +331,15 @@ if(criterion != 'lasso' & direction != 'full') {
   else criterion = -2*ll + df*2
   
   res <- data.frame(ll=round(ll,digits=3), df=df,  criterion=round(criterion,digits=3))
-  res <- cbind(G, res)
+  j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
+  if (length(j0.num)>0){
+    G[names(l)[j0.num]] <- 0
+    i2 <- (G[names(x)[j0.num]]==2)
+    G[names(l)[j0.num]][i2] <- 1
+    G[names(x)[j0.num]][i2] <- 0
+  }
+  res <- cbind(G==1, res)
+#  res <- cbind(G, res)
   
   return(list(model=llk, res=res))
 } 

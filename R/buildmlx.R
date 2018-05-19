@@ -343,7 +343,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       p.ini[omega,] <- omega.ini
       setPopulationParameterInformation(p.ini)
       
-      setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
+    #  setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
       
       if (iop.error) {
         emodel <- error.model
@@ -396,6 +396,10 @@ buildmlx <- function(project, final.project=NULL, model="all",
       runPopulationParameterEstimation()
       lineDisplay <- "Sampling from the conditional distribution... \n"
       sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+      g=getConditionalDistributionSamplingSettings()
+      g$nbminiterations <- max(100, g$nbminiterations)
+      setConditionalDistributionSamplingSettings(g)
+
       runConditionalDistributionSampling()
       if (iop.ll) {
         lineDisplay <- "Estimation of the log-likelihood... \n"
@@ -450,7 +454,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     cat("Final model:\n")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(formatCovariateModel(covariate.model, cov.ini))
+      print(res.covariate$res)
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -470,7 +474,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   cat("Final model:\n")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(formatCovariateModel(covariate.model, cov.ini))
+    print(res.covariate$res)
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
