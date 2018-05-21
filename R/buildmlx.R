@@ -75,6 +75,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     unlink(final.dir, recursive=TRUE)
   }
   
+  ptm <- proc.time()
   Sys.sleep(0.1)
   project.dir <- getProjectSettings()$directory
   if (!dir.exists(project.dir))
@@ -343,7 +344,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       p.ini[omega,] <- omega.ini
       setPopulationParameterInformation(p.ini)
       
-    #  setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
+      #  setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
       
       if (iop.error) {
         emodel <- error.model
@@ -399,7 +400,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       g=getConditionalDistributionSamplingSettings()
       g$nbminiterations <- max(100, g$nbminiterations)
       setConditionalDistributionSamplingSettings(g)
-
+      
       runConditionalDistributionSampling()
       if (iop.ll) {
         lineDisplay <- "Estimation of the log-likelihood... \n"
@@ -526,7 +527,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (iop.error)
     res <- c(res, list(error.model=error.model))
   
-  
+  dt <- proc.time() - ptm
+  sink(summary.file, append=TRUE)
+  cat("____________________________________________\n")
+  cat(paste0("total time: ", dt["elapsed"],"s"))
+  cat("____________________________________________\n")
+  sink()
+  if (print) {
+    cat("____________________________________________\n")
+    cat(paste0("total time: ", round(dt["elapsed"], digits=1),"s\n"))
+    cat("____________________________________________\n")
+  }
   return(res)
 }
 
@@ -641,7 +652,7 @@ sortCov <- function(r, cov.ini) {
   if (is.data.frame(r)) {
     n2 <- setdiff(names(r), c(n1,n3))
     rs <- r[,c(n1,n2)]
-#    rs <- r[c(cov.ini, setdiff(names(r),cov.ini))]
+    #    rs <- r[c(cov.ini, setdiff(names(r),cov.ini))]
   } else {
     n2 <- setdiff(names(r[[1]]), c(n1,n3))
     rs <- lapply(r, function(x) x[c(n1,n2,n3)])
