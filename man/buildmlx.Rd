@@ -47,13 +47,20 @@ buildmlx(project, final.project = NULL, model = "all", paramToUse = "all",
 a new Monolix project with a new statistical model.
 }
 \description{
-Iterative procedure to accelerate and optimize the process of model building by identifying 
+buildmlx uses SAMBA (Stochastic Approximation for Model Building Algorithm), an iterative procedure to accelerate and optimize the process of model building by identifying 
 at each step how best to improve some of the model components. This method allows to find 
 the optimal statistical model which minimizes some information criterion in very few steps.
 }
 \details{
 Penalization criterion can be either a custom penalization of the form gamma*(number of parameters),
 AIC (gamma=2) or BIC (gamma=log(N)).
+
+Several strategies can be used for building the covariate model at each iteration of the algorithm: 
+\code{direction="full"} means that all the possible models are compared (default when the number of covariates
+is less than 10). Othrwise, \code{direction} is the mode of stepwise search of \code{stepAIC {MASS}}, 
+can be one of "both", "backward", or "forward", with a default of "both" when there are at least 10 covariates.
+
+See http://rsmlx.webpopix.org for more details.
 }
 \examples{
 \dontrun{

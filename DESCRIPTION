@@ -1,13 +1,15 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks Monolix
-Version: 0.1.8
+Version: 1.0.0
 Author: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" )
     person( "Jonathan", "Chauvin", role = c("aut"), email = "Jonathan.Chauvin@lixoft.com" )
     person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" )
 Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
-Description: Tools for model building and model evaluation using Monolix.
+Description: Rsmlx (R speaks Monolix) is a collection of functions for model building and model evaluation 
+    using Monolix. 
+URL: http://rsmlx.webpopix.org
 Depends: R (>= 3.0.0)
 Imports:
     MASS,

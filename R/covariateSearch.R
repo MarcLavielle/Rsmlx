@@ -15,13 +15,13 @@
 #' @param project a Monolix project
 #' @param final.project [optional] string corresponding to the final Monolix project (default: 'runFinal.mlxtran' in covariate search output folder)
 #' @param method [optional] string correspondig to the method. It can be 'COSSAC' or 'SCM'. By default, COSSAC' is used. 
-#' @param covToTest [optional] vector of covariates to test. Cannot be used if test_relations is defined. By default, all covariates are tested. 
+#' @param covToTest [optional] vector of covariates to test. Cannot be used if testRelations is defined. By default, all covariates are tested. 
 #' @param covToTransform [optional] vector of covariates to transform. The transformation consists in a log transform of the covariate with centering by the mean value (ex: WT is transformed into log(WT/mean) with mean the mean WT value over the individuals of the data set). Both the transformed and untransformed covariate are tested by the algorithm. By default, no covariate is transformed.
 #' Note: 
 #' adding a non-transformed covariate on a lognormally distributed parameter results in an exponential relationship: log(V) = log(Vpop) + beta*WT + eta <=> V = Vpop * exp(beta*WT) * exp(eta)
 #' adding a log-transformed covariate on a lognormally distributed parameter results in a power law relationship: log(V) = log(Vpop) + beta*log(WT/70) + eta <=> V = Vpop * (WT/70)^beta * exp(eta)
-#' @param paramToUse [optional] vector of parameters which may be function of covariates. Cannot be used if test_relations is defined. By default, all parameters are tested.
-#' @param test_relations [optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.
+#' @param paramToUse [optional] vector of parameters which may be function of covariates. Cannot be used if testRelations is defined. By default, all parameters are tested.
+#' @param testRelations [optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.
 #' @param settings [optional] list of settings for the covariate search. 
 #' The settings are: 
 #' - pInclusion [positive double] threshold on the LRT p-value to accept the model with the added parameter-covariate relationship during forward selection (default = .1). Only used if criteria="LRT".
@@ -33,7 +33,7 @@
 #' - updateInit [boolean] whether to update or not the initial parameters using the estimates of the parent model (default = FALSE)
 #' - saveRun [boolean] whether to save or not each run (default = TRUE)
 #' @export
-covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, test_relations = NULL, settings = NULL){
+covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, testRelations = NULL, settings = NULL){
   
   ###################################################################################
   # Initial check
@@ -79,6 +79,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   indivParam = validParameters
   
   # check the covariate to transform
+  meanCov <- NULL
   if(!is.null(covToTransform)){
     if(!.checkCovariateSearchInput(inputName = "covToTest", inputValue = covToTransform)){return(invisible(FALSE))}
     if(is.null(covToTest)){
@@ -96,10 +97,10 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
         # Add it in the covariate to test
         covToTest = c(covToTest, newCov)
         # Add it in the relationships if any
-        if(!is.null(test_relations)){
-          for(indexCov in 1:length(test_relations)){
-            if(length(intersect(cov,test_relations[[indexCov]]))>0){
-              test_relations[[indexCov]] <- c(test_relations[[indexCov]], newCov)
+        if(!is.null(testRelations)){
+          for(indexCov in 1:length(testRelations)){
+            if(length(intersect(cov,testRelations[[indexCov]]))>0){
+              testRelations[[indexCov]] <- c(testRelations[[indexCov]], newCov)
             }
           }
         }
@@ -124,13 +125,13 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   }
   covariate = validCovariates
   
-  # Check the test_relations
-  if(!is.null(test_relations)){
+  # Check the testRelations
+  if(!is.null(testRelations)){
     if(!is.null(covToTest)||!is.null(paramToUse)){
-      message(paste0("ERROR: test_relations can not be defined of either covToTest or paramToUse is not NULL"))
+      message(paste0("ERROR: testRelations can not be defined of either covToTest or paramToUse is not NULL"))
       return(invisible(FALSE))
     }
-    if(!.checkCovariateSearchInput(inputName = "test_relations", inputValue = test_relations)){return(invisible(FALSE))}
+    if(!.checkCovariateSearchInput(inputName = "testRelations", inputValue = testRelations)){return(invisible(FALSE))}
   }
   
   # Check and initialize the settings 
@@ -156,14 +157,14 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   # Structure initialization
   ###################################################################################
   # Initialization of relationshipsToTest
-  if(is.null(test_relations)){
+  if(is.null(testRelations)){
     relationshipsToTest <- data.frame(indivParam = rep(indivParam, times = 1, each = length(covariate)), 
                                       covariate = rep(covariate, length(indivParam)))
   }else{
-    relationshipsToTest <- data.frame(indivParam = names(test_relations)[1], covariate = test_relations[[1]])
-    if(length(test_relations)>1){
-      for(index in 2:length(test_relations)){
-        relationshipsToTest <-  rbind(relationshipsToTest, data.frame(indivParam = names(test_relations)[index], covariate = test_relations[[index]]))
+    relationshipsToTest <- data.frame(indivParam = names(testRelations)[1], covariate = testRelations[[1]])
+    if(length(testRelations)>1){
+      for(index in 2:length(testRelations)){
+        relationshipsToTest <-  rbind(relationshipsToTest, data.frame(indivParam = names(testRelations)[index], covariate = testRelations[[index]]))
       }
     }
   }
@@ -443,20 +444,20 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
       message("ERROR: covToTest has at least one non-valid covariate name in its definition.")
       isValid = FALSE
     }
-  }else if(inputName == tolower("test_relations")){
+  }else if(inputName == tolower("testRelations")){
     if(is.list(inputValue) == FALSE){
-      message("ERROR: Unexpected type encountered. test_relations must be a list")
+      message("ERROR: Unexpected type encountered. testRelations must be a list")
       isValid = FALSE
     }else{
       for(indexList in 1:length(inputValue)){
         # Check the name
         if(!is.element(el = names(inputValue)[indexList],set = getIndividualParameterModel()$name)){
-          message(paste0("ERROR: in test_relations, ", names(inputValue)[indexList], " is not a valid parameter name."))
+          message(paste0("ERROR: in testRelations, ", names(inputValue)[indexList], " is not a valid parameter name."))
           isValid = FALSE
           }
         # Check the values
           if(prod(is.element(el = inputValue[[indexList]],set = getCovariateInformation()$name))==0){
-            message(paste0("ERROR: in test_relations, some elements of (",toString(inputValue[[indexList]]), ") are not valid covariates."))
+            message(paste0("ERROR: in testRelations, some elements of (",toString(inputValue[[indexList]]), ") are not valid covariates."))
             isValid = FALSE
           }
       }
@@ -760,6 +761,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 # Get the number of degree of freedom associated to a covariate
 #############################################################################################################################
 .getDof <- function(covariate){
+  indexCov <- NULL
   eval(parse(text=paste0('indexCov <- which(names(getCovariateInformation()$type)=="',covariate,'")')))
   if(length(intersect(getCovariateInformation()$type[indexCov],c("categorical","categoricaltransformed")))>0){
     eval(parse(text=paste0('dof <- length(unique(getCovariateInformation()$covariate$',covariate,'))-1')))

@@ -1,6 +1,6 @@
 covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=NULL, covToTest="all", 
-                                    direction="both", paramToUse="all", steps=1000, p.max=1, lambda="cv", 
-                                    glmnet.settings=NULL, sp0=NULL) 
+                                    direction="both", paramToUse="all", steps=1000, p.max=1, 
+                                    sp0=NULL) 
 {
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
@@ -72,9 +72,8 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
       } else {
         cov0 <- cov1 <- NULL
       }
-      r[[j]] <- lm.all(yj,covariates,tcov.names,criterion=criterion,nb.model=nb.model, lambda=lambda,
-                       direction=direction,steps=steps, p.max=p.max, glmnet.settings=glmnet.settings, 
-                       cov0=cov0, cov1=cov1)
+      r[[j]] <- lm.all(yj,covariates,tcov.names,criterion=criterion,nb.model=nb.model, 
+                       direction=direction,steps=steps, p.max=p.max, cov0=cov0, cov1=cov1)
       res[[j]] <- r[[j]]$res
       names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
     } else {
@@ -129,7 +128,7 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
 #-----------------------------------
 
 lm.all <- function(y, x, tr.names=NULL, criterion=criterion, nb.model=nb.model,
-                   lambda='cv',direction='both',steps = 1000, p.max=1, glmnet.settings = NULL, cov0=NULL, cov1=NULL) {
+                   direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
     nrep <- nrow(x)/N
@@ -180,94 +179,9 @@ if (length(j.num)>0) {
 } else
   j0.num <- vector(length=0)
 
-if(criterion == 'lasso') {
-  #stop("Lasso not implemented yet...", cat.=FALSE)
-  # create a data frame with all possible covariates (all transformations)
-  l_data0 = data.frame(y=y[[1]])
-  # not use non transformed covariates
-  j0.num = j0.num[!names(j0.num) %in% tr.names]
-  
-  # Change the name of categorical covariates in x2 to avoid similar names
-  x2 <- x
-  catnames <- names(x)[sapply(x,FUN=is.factor)]
-  suffix <- paste0(rep('z', max(nchar(catnames)) ),collapse = '')
-  names(x2)[sapply(x,FUN=is.factor)] <- paste0(catnames,suffix)
-  # data with changed cat names
-  l_data = cbind.data.frame(l_data0,x2,l[,j0.num,drop=FALSE])
-  # transform categorical ones to dummies
-  x_train <- model.matrix( ~ ., l_data[,-1])[,-1]
-  
-  # apply glmnet lasso
-  llk0 = tryCatch( {
-    # cross validation if lambda is cv (chosen value otherwise), after turn data frame into matrix
-    if (lambda =='cv'){
-      text1 = 'cv.glmnet(x = x_train,y = data.matrix(l_data[,1])'
-      if (!is.null(glmnet.settings)){
-        text2 = paste(names(glmnet.settings),glmnet.settings,sep = '=',collapse = ',')
-        lmk = eval(parse( text = paste(text1,',',text2,')') ))
-      }
-      else lmk = eval(parse( text = paste(text1,')') ))
-      coef(lmk,s='lambda.1se')
-    }
-    else {
-      text1 = 'glmnet(x = x_train,y = data.matrix(l_data[,1]), lambda = lambda'
-      if (!is.null(glmnet.settings)){
-        text2 = paste(names(glmnet.settings),glmnet.settings,sep = '=',collapse = ',')
-        lmk = eval(parse( text = paste(text1,',',text2,')') ))
-      }
-      else lmk = eval(parse( text = paste(text1,')') ))
-      coef(lmk)
-    }
-  }
-  , error=function(e) {
-    print('error in lasso regression')
-    return(-Inf)        }      
-  )
-  ## after tryCatch
-  
-  nonzerocoefs = names(llk0[row.names(llk0) != '(Intercept)' & llk0[,1]!=0,])
-  usedcovariates = c()
-  for (i in names(x)){
-    #we consider 2 cases: categorical and continuous covariate
-    if (is.factor(x[,i])){
-      if ( any(grepl(pattern = paste0('^',i,suffix),x = nonzerocoefs)) ) usedcovariates <- c(usedcovariates,i)
-    }
-    else{
-      if (i %in% nonzerocoefs ) usedcovariates <- c(usedcovariates,i)
-    }
-  }
-  # data with original cat names
-  l_data = cbind.data.frame(l_data0,x,l[,j0.num,drop=FALSE])
-  
-  # Fit a lm using non zero coefs
-  text1 = paste( c(1, usedcovariates ), collapse = '+')
-  eval(parse( text = paste('llk=lm(y~',text1,',data=l_data)') ))
-  
-  # Which covariates are used (written in 1-row data frame G)
-  Gnames = names(x)
-  G <- data.frame(matrix(ncol = length(Gnames), nrow = 1))
-  colnames(G) <- Gnames
-  
-  # exact used covariates (with original names of cats), fill in G
-  usedcovariates = names(llk$model)[-1] #names(coef(llk)) 
-  for (i in names(G)){
-    if (i %in% usedcovariates ) G[1,i]=1 else G[1,i]=0
-    if (paste0('log.',i) %in% usedcovariates ) G[1,i]=G[1,i]+2  
-    # = 3 if both log and non-log are used
-  }
-  
-  ll = logLik(llk)/nrep
-  df = length(coef(llk))-1 # except Intercept
-  
-  res <- data.frame(ll=round(ll,digits=3), df=df )# , criterion=round(criterion,digits=3))
-  res <- cbind(G, res)
-  
-  return(list(model=llk, res=res))
-  
-} 
 
 #############% stepAIC/stepBIC
-if(criterion != 'lasso' & direction != 'full') {
+if (direction != 'full') {
   # create a data frame with all possible covariates (all transformations)
   l_data = data.frame(y=y[[1]])
   # not use non transformed covariates

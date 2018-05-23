@@ -10,8 +10,9 @@
 #' \item \code{N} the number of individuals in each bootstrap data set 
 #' (default value is the  number of individuals in the original data set).
 #' \item \code{newResampling} boolean to generate the data sets again if they already exist (default=FALSE).
-#' \item \code{strata} vector of categorical covariates of the project. The original distribution of these covariates
-#' is maintained in each resampled data set if strata is defined (default=NULL).
+#' \item \code{covStrat} a categorical covariate of the project. The original distribution of this covariate
+#' is maintained in each resampled data set if covStrat is defined (default=NULL). Notice that if the categorical covariate is varying 
+#' within the subject (in case of IOV), it will not be taken into account.
 #' \item \code{plot} boolean to choose if the distribution of the bootstraped esimates is displayed
 #' (default = TRUE)
 #' \item \code{level} level of the bootstrap confidence intervals of the population parameters
@@ -30,21 +31,28 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
     return(invisible(FALSE))}
   lp <- loadProject(project) 
   if (!lp) return(invisible(FALSE))
-
-    # Check and initialize the settings
-  if(is.null(settings$plot)){ plot.res <- TRUE }else{ plot.res <- settings$plot; settings$plot<- NULL}
-  if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
-  settings$nboot <- nboot
+  exportDir <- getProjectSettings()$directory
+  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  
+  # Check and initialize the settings
   if(!is.null(settings)){
     if(!.checkBootstrapInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
   }
+  # Check and initialize the settings
+  if(!.checkBootstrapInput(inputName = "nboot", inputValue = nboot)){return(invisible(FALSE))}
+  if(is.null(settings$plot)){ plot.res <- TRUE }else{ plot.res <- settings$plot; settings$plot<- NULL}
+  if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
+  settings$nboot <- nboot
   if(is.null(settings$nboot)){ settings$nboot <- 100 }
   if(is.null(settings[['N']])){ settings[['N']] <- NA}
   if(is.null(settings$newResampling)){ settings$newResampling <- FALSE}
-  if(is.null(settings$strata)){ settings$strata <- NA}
-  
+  if(is.null(settings$covStrat)){settings$covStrat <- NA}
   
   if(!is.null(dataFolder)){
+    if(!(nboot==100)){
+      message("WARNING: Both dataFolder and nBoot can not be used both at the same time")
+      return(invisible(FALSE))
+    }
     dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
     if(length(dataFiles)>0){
       settings$nboot <- length(dataFiles)
@@ -53,12 +61,12 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
       message("WARNING: Folder ",dataFolder,' does not exist or does not contain any data set')
       return(invisible(FALSE))
     }
+  }else{
+    #dataFolder <- paste0(exportDir,'/bootstrap/')
   }
   
   # Prepare all the output folders
   param <- getPopulationParameterInformation()$name[which(getPopulationParameterInformation()$method!="FIXED")]
-  exportDir <- getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   
   if(settings$newResampling){
     cleanbootstrap(project)
@@ -70,7 +78,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
     generateBootstrap(project=project, settings=settings, dataFolder=dataFolder)
   }
   
-  paramResults <- array(dim = c(settings$nboot, length(param)+1)) #+1 for column with run index
+  paramResults <- array(dim = c(settings$nboot, length(param))) 
   for(indexSample in 1:settings$nboot){
     projectBoot <-  paste0(exportDir,'/bootstrap/',projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
     loadProject(projectBoot)
@@ -83,9 +91,11 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
     }else{
       cat(' => already computed \n')
     }
-    paramResults[indexSample,] <-  c(indexSample, getEstimatedPopulationParameters());
+    paramResults[indexSample,] <-   getEstimatedPopulationParameters();
   }
-  colnames(paramResults) <- c("Run",names(getEstimatedPopulationParameters()))
+  colnames(paramResults) <- names(getEstimatedPopulationParameters())
+  paramResults <- as.data.frame(paramResults)
+  
   
   # Plot the results
   if (plot.res) {
@@ -93,9 +103,9 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
     x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
     par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
     for(indexFigure in 1:nbFig){
-      res <- paramResults[,indexFigure+1]
+      res <- paramResults[,indexFigure]
       resQ <- quantile(res,c((1-level)/2,(1+level)/2))
-      bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure+1],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
+      bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
     }
   }
   #res.file <- paste0(exportDir,'/bootstrap/',projectName,'bootstrapResults.txt')
@@ -105,10 +115,10 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   return(paramResults)
 }
 
-
-
+##################################################################################################################
+# Generate the projects and the data set
+##################################################################################################################
 generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
-  
   
   if(!file.exists(project)){
     message(paste0("ERROR: project '", project, "' does not exist"))
@@ -145,25 +155,45 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
     if(is.na(settings[['N']])){settings[['N']] = nbIndiv}
     
     validID <- list()
-    if(is.na(settings$strata)){
+    
+    if(is.na(settings$covStrat)){
       nbCAT = 1
       indexPropCAT <- 1
       propCAT <- rep(settings[['N']], nbCAT)
       validID[[indexPropCAT]] <- nameID
     }else{
-      indexCAT <- which(cov$name == settings$strata)
-      catValues <- cov$covariate[,indexCAT+1]# +1 comes from the ID column
-      nameCAT <- unique(catValues)
-      nbCAT <- length(nameCAT)
-      propCAT <- rep(settings[['N']], nbCAT)
-      validID <- list()
-      for(indexPropCAT in 1:nbCAT){
-        indexIdCat <- which(catValues==nameCAT[indexPropCAT])
-        propCAT[indexPropCAT] <- max(1,floor(settings[['N']]*length(indexIdCat)/nbIndiv))
-        validID[[indexPropCAT]] <- as.character(cov$covariate[indexIdCat,1])
+      indexCAT <- which(names(cov$covariate) == settings$covStrat)
+      
+      isCatVaryID <- F
+      for(indexIDtestCAT in 1:length(nameID)){
+        cat <- cov$covariate[which(cov$covariate[,1]==nameID[indexIDtestCAT]),indexCAT]
+        if(length(unique(cat))>1){
+          isCatVaryID <- T
+        }
+      }
+      
+      if(isCatVaryID){# The covariate vary within the subject occasion, 
+        cat(paste0("The generated data set can not preserve proportions of ",settings$covStrat," as the covariate vary in within the subject.\n"))
+        nbCAT = 1
+        indexPropCAT <- 1
+        propCAT <- rep(settings[['N']], nbCAT)
+        validID[[indexPropCAT]] <- nameID
+      }else{
+        catValues <- cov$covariate[,indexCAT]
+        nameCAT <- unique(catValues)
+        nbCAT <- length(nameCAT)
+        propCAT <- rep(settings[['N']], nbCAT)
+        validID <- list()
+        for(indexPropCAT in 1:nbCAT){
+          indexIdCat <- which(catValues==nameCAT[indexPropCAT])
+          propCAT[indexPropCAT] <- max(1,floor(settings[['N']]*length(indexIdCat)/nbIndiv))
+          validID[[indexPropCAT]] <- as.character(cov$covariate[indexIdCat,1])
+        }
       }
     }
     cat("Generating projects with bootstrap data sets...\n")
+    warningAlreadyDisplayed <- F
+    
     for(indexSample in 1:settings$nboot){
       datasetFileName <- paste0(exportDir,'/bootstrap/data/dataset_',toString(indexSample),'.csv')
       if(!file.exists(datasetFileName)){
@@ -175,14 +205,32 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
         for(indexValidID in 1:length(validID)){
           sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
         }
+        if(!(length(sampleIDs)==settings[['N']])){
+          if(!warningAlreadyDisplayed){
+            cat(paste0("The generated data set contains only ",length(sampleIDs)," individuals because otherwise categorical proportions of ",settings$covStrat," cannot be kept.\n"))
+            warningAlreadyDisplayed = TRUE
+          }
+          
+        }
         # get the datas
         data <- NULL
+        dataID <- NULL
+        indexLineFull <- NULL
+        #for(indexSampleSize in 1:length(sampleIDs)){
+        #  indexLine <- which(dataset[,indexID]==sampleIDs[indexSampleSize])
+        #  dataToInsert <- dataset[indexLine,]
+        #  dataToInsert[,indexID] <- indexSampleSize
+        #  data <- rbind(data, dataToInsert)
+        #}
+        
         for(indexSampleSize in 1:length(sampleIDs)){
           indexLine <- which(dataset[,indexID]==sampleIDs[indexSampleSize])
-          dataToInsert <- dataset[indexLine,]
-          dataToInsert[,indexID] <- indexSampleSize
-          data <- rbind(data, dataToInsert)
+          indexLineFull <- c(indexLineFull,indexLine)
+          dataID <- c(dataID, rep(indexSampleSize,length(indexLine)))
+          
         }
+        data <- dataset[indexLineFull,]
+        data[,indexID] <- dataID
         
         write.table(x = data, file = datasetFileName,
                     eol = '\n', quote = FALSE, dec = '.',  row.names = FALSE, col.names = TRUE )
@@ -215,21 +263,21 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
 ##################################################################################################################
 cleanbootstrap <- function(project){
   # Prepare all the output folders
+  cat('Clearing all previous results and projects')
+  loadProject(project)
   exportDir <- getProjectSettings()$directory
-  listProjectsToDelete <-list.files(path = paste0(exportDir,'/bootstrap/'),pattern = '*.mlxtran')
+  listProjectsToDelete <- list.files(path = paste0(exportDir,'/bootstrap/'), pattern = '*.mlxtran')
   
   if(length(listProjectsToDelete)>0){
     for(indexProject in 1:length(listProjectsToDelete)){
       projectBoot <-  paste0(exportDir,'/bootstrap/',listProjectsToDelete[indexProject])
-      loadProject(projectBoot)
-      exportDirToClean <- getProjectSettings()$directory
+      exportDirToClean <- gsub(x = projectBoot, pattern = '.mlxtran', '')
       unlink(exportDirToClean, recursive = TRUE)
       unlink(projectBoot, recursive = FALSE)
     }
-    unlink(file.path(exportDir, '/bootstrap/data/'), recursive = FALSE)
   }
+  unlink(file.path(exportDir, '/bootstrap/data/'), recursive = TRUE, force = TRUE)
 }
-
 
 ###################################################################################
 # Check the inputs
@@ -248,6 +296,15 @@ cleanbootstrap <- function(project){
         }
       }
     }
+  }else if(inputName == tolower("nboot")){
+    if(!is.double(inputValue)){
+      message("ERROR: Unexpected type encountered. nboot must be an integer")
+      isValid = FALSE
+    }else if (!(floor(inputValue)==inputValue)){
+      message("ERROR: Unexpected type encountered. nboot must be an integer")
+      isValid = FALSE
+    }
+    
   }
   return(invisible(isValid))
 }
@@ -255,20 +312,7 @@ cleanbootstrap <- function(project){
 .checkBootstrapSettings = function(settingName, settingValue){
   isValid = TRUE
   settingName = tolower(settingName)
-  if(settingName == tolower("nboot")){
-    if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. nboot must be an integer.")
-      isValid = FALSE
-    }else{
-      if(!(as.integer(settingValue) == settingValue)){
-        message("ERROR: Unexpected type encountered. nboot must be an integer.")
-        isValid = FALSE
-      }else if(settingValue<1){
-        message("ERROR: nboot must be a strictly positive integer.")
-        isValid = FALSE
-      }
-    }
-  }else if(settingName == tolower("N")){
+  if(settingName == tolower("N")){
     if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
       message("ERROR: Unexpected type encountered. N must be an integer.")
       isValid = FALSE
@@ -281,14 +325,48 @@ cleanbootstrap <- function(project){
         isValid = FALSE
       }
     }
+  }else if(settingName == tolower("nboot")){
+    if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
+      message("ERROR: Unexpected type encountered. nboot must be an integer.")
+      isValid = FALSE
+    }else{
+      if(!(as.integer(settingValue) == settingValue)){
+        message("ERROR: Unexpected type encountered. nboot must be an integer.")
+        isValid = FALSE
+      }else if(settingValue<1){
+        message("ERROR: nboot must be a strictly positive integer.")
+        isValid = FALSE
+      }
+    }
+  }else if(settingName == tolower("level")){
+    if((is.double(settingValue) == FALSE)){
+      message("ERROR: Unexpected type encountered. level must be an double")
+      isValid = FALSE
+    }else{
+      if(settingValue <= 0){
+        message("ERROR: Unexpected type encountered. level must be strictly positive")
+        isValid = FALSE
+      }else if(settingValue>=1){
+        message("ERROR: level must be strictly lower than 1.")
+        isValid = FALSE
+      }
+    }
   }else if(settingName == tolower("newResampling")){
     if((is.logical(settingValue) == FALSE)){
       message("ERROR: Unexpected type encountered. newResampling must be an boolean")
       isValid = FALSE
     }
-  }else if(settingName == tolower("strata")){
-    if(is.vector(settingValue) == FALSE){
-      message("ERROR: Unexpected type encountered. strata must be a vector")
+  }else if(settingName == tolower("plot")){
+    if((is.logical(settingValue) == FALSE)){
+      message("ERROR: Unexpected type encountered. plot must be an boolean")
+      isValid = FALSE
+    }
+  }else if(settingName == tolower("covStrat")){
+    if(is.character(settingValue) == FALSE){
+      message("ERROR: Unexpected type encountered. covStrat must be a string")
+      isValid = FALSE
+    }else if(length(settingValue) >1){
+      message("ERROR: Unexpected length. covStrat must be a single string (not a vector, nor a list)")
       isValid = FALSE
     }else{
       if(length(intersect(getCovariateInformation()$name, settingValue))==0){

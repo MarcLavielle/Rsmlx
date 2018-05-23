@@ -18,8 +18,9 @@ bootmlx(project, nboot = 100, dataFolder = NULL, settings = NULL)
 \item \code{N} the number of individuals in each bootstrap data set 
 (default value is the  number of individuals in the original data set).
 \item \code{newResampling} boolean to generate the data sets again if they already exist (default=FALSE).
-\item \code{strata} vector of categorical covariates of the project. The original distribution of these covariates
-is maintained in each resampled data set if strata is defined (default=NULL).
+\item \code{covStrat} a categorical covariate of the project. The original distribution of this covariate
+is maintained in each resampled data set if covStrat is defined (default=NULL). Notice that if the categorical covariate is varying 
+within the subject (in case of IOV), it will not be taken into account.
 \item \code{plot} boolean to choose if the distribution of the bootstraped esimates is displayed
 (default = TRUE)
 \item \code{level} level of the bootstrap confidence intervals of the population parameters

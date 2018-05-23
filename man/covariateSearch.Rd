@@ -6,7 +6,7 @@
 \usage{
 covariateSearch(project, final.project = NULL, method = NULL,
   covToTest = NULL, covToTransform = NULL, paramToUse = NULL,
-  test_relations = NULL, settings = NULL)
+  testRelations = NULL, settings = NULL)
 }
 \arguments{
 \item{project}{a Monolix project}
@@ -15,16 +15,16 @@ covariateSearch(project, final.project = NULL, method = NULL,
 
 \item{method}{[optional] string correspondig to the method. It can be 'COSSAC' or 'SCM'. By default, COSSAC' is used.}
 
-\item{covToTest}{[optional] vector of covariates to test. Cannot be used if test_relations is defined. By default, all covariates are tested.}
+\item{covToTest}{[optional] vector of covariates to test. Cannot be used if testRelations is defined. By default, all covariates are tested.}
 
 \item{covToTransform}{[optional] vector of covariates to transform. The transformation consists in a log transform of the covariate with centering by the mean value (ex: WT is transformed into log(WT/mean) with mean the mean WT value over the individuals of the data set). Both the transformed and untransformed covariate are tested by the algorithm. By default, no covariate is transformed.
 Note: 
 adding a non-transformed covariate on a lognormally distributed parameter results in an exponential relationship: log(V) = log(Vpop) + beta*WT + eta <=> V = Vpop * exp(beta*WT) * exp(eta)
 adding a log-transformed covariate on a lognormally distributed parameter results in a power law relationship: log(V) = log(Vpop) + beta*log(WT/70) + eta <=> V = Vpop * (WT/70)^beta * exp(eta)}
 
-\item{paramToUse}{[optional] vector of parameters which may be function of covariates. Cannot be used if test_relations is defined. By default, all parameters are tested.}
+\item{paramToUse}{[optional] vector of parameters which may be function of covariates. Cannot be used if testRelations is defined. By default, all parameters are tested.}
 
-\item{test_relations}{[optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.}
+\item{testRelations}{[optional] list of parameter-covariate relationships to test, ex: list(V=c("WT","SEX"),Cl=c("CRCL")). Cannot be used if covToTest or paramToUse is defined. By default, all parameter-covariate relationships are tested.}
 
 \item{settings}{[optional] list of settings for the covariate search. 
 The settings are: 
