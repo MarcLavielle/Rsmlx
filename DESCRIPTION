@@ -8,7 +8,7 @@ Author: c(
     person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" )
 Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
 Description: "R speaks Monolix" (Rsmlx) provides methods for model building and model evaluation 
-    using Monolix (http://monolix.lixoft.com). 
+    using Monolix <http://monolix.lixoft.com>. 
 URL: http://rsmlx.webpopix.org
 Depends: R (>= 3.0.0)
 Imports:

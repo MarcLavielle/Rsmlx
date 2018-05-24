@@ -64,6 +64,11 @@ See http://rsmlx.webpopix.org for more details.
 }
 \examples{
 \dontrun{
+# the 3 covariates available ("wt","age", "sex") are considered:
 r = buildmlx("warfPK.mlxtran")
+  
+# log-transformation of the continuous covariates are also considered
+# the covariate model is built for V and Cl only 
+r = buildmlx("warfPK.mlxtran", covToTransform="all", paramToUse=c("V", "Cl"))  
 }
 }
