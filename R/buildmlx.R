@@ -288,27 +288,61 @@ buildmlx <- function(project, final.project=NULL, model="all",
     if (iop.correlation & corr.test) {
       res.correlation <- correlationModelSelection(e=e, criterion=criterion, nb.model=nb.model, 
                                                    corr0=correlation.model0, seqcc=seqcc)
-      if (is.null(res.correlation$blocks)) correlation.model <- res.correlation
-      else  correlation.model <- res.correlation$blocks[[1]]
+      if (nb.model==1) correlation.model <- res.correlation
+      else  correlation.model <- res.correlation[[1]]$blocks
       if (is.null(correlation.model))  correlation.model <- list()
     } else {
       res.correlation <- getIndividualParameterModel()$correlationBlocks$id
     }
     #-------------------------------
     
-    
-    if (!iop.correlation | corr.test) {
-      if (isTRUE(all.equal(cov.names0,cov.names)) &
-          isTRUE(all.equal(error.model0,error.model)) &
-          isTRUE(all.equal(obs.dist0,obs.dist)) &
-          isTRUE(all.equal(correlation.model0,correlation.model))) {
-        stop.test <- TRUE
-        lineDisplay <- "No difference between two successive iterations\n"
-        sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+    if (max.iter>0) {
+      if (!iop.correlation | corr.test) {
+        if (isTRUE(all.equal(cov.names0,cov.names)) &
+            isTRUE(all.equal(error.model0,error.model)) &
+            isTRUE(all.equal(obs.dist0,obs.dist)) &
+            isTRUE(all.equal(correlation.model0,correlation.model))) {
+          stop.test <- TRUE
+          lineDisplay <- "No difference between two successive iterations\n"
+          sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+        }
       }
-    }
-    
-    if (!stop.test | nb.model>1) {
+      
+      if (!stop.test) {
+        if (print) {
+          cat("____________________________________________\n")
+          cat(paste0("Iteration ",iter,":\n"))
+          if (iop.covariate) {
+            cat("\nCovariate model:\n")
+            print(res.covariate$res)
+          }
+          if (iop.correlation) {
+            cat("\nCorrelation model:\n")
+            print(res.correlation)
+          }
+          if (iop.error) {
+            cat("\nResidual error model:\n")
+            print(res.error)
+          }
+        }
+        sink(summary.file, append=TRUE)
+        cat("____________________________________________\n")
+        cat(paste0("Iteration ",iter,":\n"))
+        if (iop.covariate) {
+          cat("\nCovariate model:\n")
+          print(res.covariate$res)
+        }
+        if (iop.correlation) {
+          cat("\nCorrelation model:\n")
+          print(res.correlation)
+        }
+        if (iop.error) {
+          cat("\nResidual error model:\n")
+          print(res.error)
+        }
+        sink()
+      }
+    } else if (!stop.test | (nb.model>1 & max.iter==0)) {
       if (print) {
         cat("____________________________________________\n")
         cat(paste0("Iteration ",iter,":\n"))
@@ -380,79 +414,86 @@ buildmlx <- function(project, final.project=NULL, model="all",
       
       #-------------------------------
       
-      if (ll.new > ll.prev) {
-        g <- getGeneralSettings()
-        g$autochains <- FALSE
-        g$nbchains <- g$nbchains+1
-        setGeneralSettings(g)
+      if (max.iter>0) {
+        if (ll.new > ll.prev) {
+          g <- getGeneralSettings()
+          g$autochains <- FALSE
+          g$nbchains <- g$nbchains+1
+          setGeneralSettings(g)
+        }
+        ll.prev <- ll.new
+        g=getConditionalDistributionSamplingSettings()
+        g$nbminiterations <- max(100, g$nbminiterations)
+        setConditionalDistributionSamplingSettings(g)
+        
+        
+        buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter))
+        buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
+        saveProject(buildmlx.project.iter)
       }
-      ll.prev <- ll.new
       
-      buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter))
-      buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
-      saveProject(buildmlx.project.iter)
       saveProject(final.project)
-      
       if (dir.exists(final.dir))
         unlink(final.dir, recursive=TRUE)
       
       
-      lineDisplay <- paste0("Run scenario for model ",iter," ... \nEstimation of the population parameters... \n")
-      sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
-      
-      runPopulationParameterEstimation()
-      lineDisplay <- "Sampling from the conditional distribution... \n"
-      sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
-      g=getConditionalDistributionSamplingSettings()
-      g$nbminiterations <- max(100, g$nbminiterations)
-      setConditionalDistributionSamplingSettings(g)
-      
-      runConditionalDistributionSampling()
-      if (iop.ll) {
-        lineDisplay <- "Estimation of the log-likelihood... \n"
+      if (max.iter>0) {
+        
+        lineDisplay <- paste0("Run scenario for model ",iter," ... \nEstimation of the population parameters... \n")
         sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
-        if (lin.ll)
-          runConditionalModeEstimation()
-        runLogLikelihoodEstimation(linearization = lin.ll)
-      }
-      ll.new <- computecriterion(criterion, method.ll)
-      
-      if (!dir.exists(buildmlx.dir.iter))
-        dir.create(buildmlx.dir.iter)
-      
-      if (dir.exists(final.dir)) 
-        list_of_files <- setdiff(c(list.files(final.dir) , ".Internals"), "buildmlx")
-      foo <- file.copy(file.path(final.dir,list_of_files), buildmlx.dir.iter, recursive=TRUE)
-      foo <- file.rename(file.path(buildmlx.dir.iter,".Internals",basename(final.project)),
-                         file.path(buildmlx.dir.iter,".Internals",basename(buildmlx.project.iter)))
-      
-      #loadProject(final.project)
-      
-      if (stop.test)
-        ll <- ll0
-      else {
-        ll <- getEstimatedLogLikelihood()[[method.ll]]
-        names(ll)[which(names(ll)=="standardError")] <- "s.e."
-        if (is.numeric(criterion))
-          ll['criterion'] <- ll.new
-      }
-      
-      if (iop.ll) {
-        if (print) {
+        
+        runPopulationParameterEstimation()
+        lineDisplay <- "Sampling from the conditional distribution... \n"
+        sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+        
+        runConditionalDistributionSampling()
+        if (iop.ll) {
+          lineDisplay <- "Estimation of the log-likelihood... \n"
+          sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+          if (lin.ll)
+            runConditionalModeEstimation()
+          runLogLikelihoodEstimation(linearization = lin.ll)
+        }
+        ll.new <- computecriterion(criterion, method.ll)
+        
+        if (!dir.exists(buildmlx.dir.iter))
+          dir.create(buildmlx.dir.iter)
+        
+        if (dir.exists(final.dir)) 
+          list_of_files <- setdiff(c(list.files(final.dir) , ".Internals"), "buildmlx")
+        foo <- file.copy(file.path(final.dir,list_of_files), buildmlx.dir.iter, recursive=TRUE)
+        foo <- file.rename(file.path(buildmlx.dir.iter,".Internals",basename(final.project)),
+                           file.path(buildmlx.dir.iter,".Internals",basename(buildmlx.project.iter)))
+        
+        #loadProject(final.project)
+        
+        if (stop.test)
+          ll <- ll0
+        else {
+          ll <- getEstimatedLogLikelihood()[[method.ll]]
+          names(ll)[which(names(ll)=="standardError")] <- "s.e."
+          if (is.numeric(criterion))
+            ll['criterion'] <- ll.new
+        }
+        
+        if (iop.ll) {
+          if (print) {
+            cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+            print(round(ll,2))
+          }
+          sink(summary.file, append=TRUE)
           cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
           print(round(ll,2))
+          sink()
         }
-        sink(summary.file, append=TRUE)
-        cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
-        print(round(ll,2))
-        sink()
-      }
-      if (iter >= max.iter) {
-        stop.test <- TRUE
-        lineDisplay <- "Maximum number of iterations reached\n"
-        sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+        if (iter >= max.iter) {
+          stop.test <- TRUE
+          lineDisplay <- "Maximum number of iterations reached\n"
+          sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
+        }
       }
     }
+    if (max.iter==0) stop.test <- TRUE
     saveProject(final.project)
   }
   
@@ -461,7 +502,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     cat("Final model:\n")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(res.covariate$res)
+      print(formatCovariateModel(covariate.model))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -471,7 +512,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       cat("\nResidual error model:\n")
       print(formatErrorModel(error.model))
     }
-    if (iop.ll) {
+    if (iop.ll & max.iter>0) {
       cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
       print(round(ll,2))
     }
@@ -481,7 +522,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   cat("Final model:\n")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(res.covariate$res)
+    print(formatCovariateModel(covariate.model))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -491,7 +532,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     cat("\nResidual error model:\n")
     print(formatErrorModel(error.model))
   }
-  if (iop.ll) {
+  if (iop.ll & max.iter>0) {
     cat(paste0("\ncriterion (",method.ll,"):\n"))
     print(round(ll,2))
   }
@@ -536,7 +577,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   dt <- proc.time() - ptm
   sink(summary.file, append=TRUE)
   cat("____________________________________________\n")
-  cat(paste0("total time: ", dt["elapsed"],"s"))
+  cat(paste0("total time: ", round(dt["elapsed"], digits=1),"s\n"))
   cat("____________________________________________\n")
   sink()
   if (print) {

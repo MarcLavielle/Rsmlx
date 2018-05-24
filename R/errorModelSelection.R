@@ -96,13 +96,13 @@ computeBIC <- function(y.obs, y.pred, criterion, nb.model) {
   a.cons <- sqrt(mean((y.obs-y.pred)^2))
   b.prop <- sqrt(mean(((y.obs/y.pred-1)^2)))
   
-  x.min <- nlm(e.min1,c(a.cons,0.2),y.pred,y.obs)
+  x.min <- nlm(e.min2,c(a.cons,0.2),y.pred,y.obs)
+  a.comb2 <- abs(x.min$estimate[1])
+  b.comb2 <- abs(x.min$estimate[2])
+  
+  x.min <- nlm(e.min1,c(a.comb2,b.comb2),y.pred,y.obs)
   a.comb1 <- x.min$estimate[1]
   b.comb1 <- x.min$estimate[2]
-  
-  x.min <- nlm(e.min2,c(a.cons,0.2),y.pred,y.obs)
-  a.comb2 <- x.min$estimate[1]
-  b.comb2 <- x.min$estimate[2]
   
   a.expo <- sqrt(mean((log(y.obs)-log(y.pred))^2))
   
