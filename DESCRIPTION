@@ -5,7 +5,7 @@ Version: 1.0.1
 Author: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" )
     person( "Jonathan", "Chauvin", role = c("aut"), email = "Jonathan.Chauvin@lixoft.com" )
-    person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" )
+    person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" ))
 Maintainer: Marc Lavielle <Marc.Lavielle@inria.fr>
 Description: "R speaks Monolix" (Rsmlx) provides methods for model building and model evaluation 
     using Monolix <http://monolix.lixoft.com>. 
