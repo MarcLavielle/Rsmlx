@@ -294,14 +294,14 @@ buildmlx <- function(project, final.project=NULL, model="all",
       res.correlation <- correlationModelSelection(e=e, criterion=criterion, nb.model=nb.model, 
                                                    corr0=correlation.model0, seqcc=seqcc)
       if (nb.model==1) correlation.model <- res.correlation
-      else  correlation.model <- res.correlation[[1]]$blocks
+      else  correlation.model <- res.correlation[[1]]$block
       if (is.null(correlation.model))  correlation.model <- list()
     } else {
       res.correlation <- getIndividualParameterModel()$correlationBlocks$id
     }
     #-------------------------------
     
-    if (max.iter>0) {
+    if (max.iter>0 | nb.model>1) {
       if (!iop.correlation | corr.test) {
         if (isTRUE(all.equal(cov.names0,cov.names)) &
             isTRUE(all.equal(error.model0,error.model)) &
@@ -347,40 +347,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
         }
         sink()
       }
-    } else if (!stop.test | (nb.model>1 & max.iter==0)) {
-      if (print) {
-        cat("____________________________________________\n")
-        cat(paste0("Iteration ",iter,":\n"))
-        if (iop.covariate) {
-          cat("\nCovariate model:\n")
-          print(res.covariate$res)
-        }
-        if (iop.correlation) {
-          cat("\nCorrelation model:\n")
-          print(res.correlation)
-        }
-        if (iop.error) {
-          cat("\nResidual error model:\n")
-          print(res.error)
-        }
-      }
-      sink(summary.file, append=TRUE)
-      cat("____________________________________________\n")
-      cat(paste0("Iteration ",iter,":\n"))
-      if (iop.covariate) {
-        cat("\nCovariate model:\n")
-        print(res.covariate$res)
-      }
-      if (iop.correlation) {
-        cat("\nCorrelation model:\n")
-        print(res.correlation)
-      }
-      if (iop.error) {
-        cat("\nResidual error model:\n")
-        print(res.error)
-      }
-      sink()
-    }
+    } 
     
     if (!stop.test) {
       setInitialEstimatesToLastEstimates()
@@ -502,12 +469,18 @@ buildmlx <- function(project, final.project=NULL, model="all",
     saveProject(final.project)
   }
   
+  if (iop.covariate & nb.model>1) 
+    res.covariate$res <- sortCov(res.covariate$res[[1]], cov.ini)
+  
   if (print) {
     cat("____________________________________________\n")
     cat("Final model:\n")
     if (iop.covariate) {
       cat("\nCovariate model:\n")
-      print(formatCovariateModel(covariate.model))
+      if (max.iter>0 | nb.model>1)
+        print(res.covariate$res)
+      else
+        print(formatCovariateModel(getIndividualParameterModel()$covariateModel))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -527,7 +500,10 @@ buildmlx <- function(project, final.project=NULL, model="all",
   cat("Final model:\n")
   if (iop.covariate) {
     cat("\nCovariate model:\n")
-    print(formatCovariateModel(covariate.model))
+    if (max.iter>0 | nb.model>1)
+      print(res.covariate$res)
+    else
+      print(formatCovariateModel(getIndividualParameterModel()$covariateModel))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")

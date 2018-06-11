@@ -8,33 +8,7 @@ errorModelSelection <- function(project=NULL, criterion="BIC", nb.model=1) {
   i.contObs <- which(obs.info$observationTypes=="continuous") 
   i.contModel <- which(names(obs.model$prediction) %in% obs.info$observationNames[i.contObs])
   n.out <- length(i.contModel)
-  
-  # foo <- getSimulatedIndividualParameters()
-  # 
-  # project.dir <- getProjectSettings()$directory
-  # sim.parameters <- read.csv(file.path(project.dir,"IndividualParameters","simulatedIndividualParameters.txt"))
-  # sim.parameters <- sim.parameters[,1:ncol(foo)]
-  # 
-  # if (is.null(sim.parameters$rep)) 
-  #   sim.parameters$rep <- 1
-  # nrep <- max(sim.parameters$rep)
-  # #N <- d$N
-  # 
-  # y.pred <- list()
-  # col.el <- which(!(names(sim.parameters) %in% c("rep","id")))
-  # for (irep in (1:nrep)) {
-  #   parami <- subset(sim.parameters, rep==irep)[,col.el]
-  #   fi <- computePredictions(parami)
-  #   for (i.out in (1:n.out)) {
-  #     if (irep==1) {
-  #       y.pred[[i.out]] <-  fi[[i.out]]
-  #     } else {
-  #       y.pred[[i.out]] <- c(y.pred[[i.out]], fi[[i.out]])
-  #     }
-  #   }
-  # }
   pred <- getSimulatedPredictions()
-  
   d <- getObservationInformation()
   if (nb.model==1) {
     res.errorModel <- NULL

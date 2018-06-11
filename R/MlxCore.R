@@ -50,8 +50,7 @@ computePredictions = function(individualParameters,individualIds=NULL) {
     }
   }
 
-  individualValues = as.list(individualParameters[,2:dim(individualParameters)[[2]]])
-
+  individualValues = as.list(individualParameters[,1:dim(individualParameters)[[2]]])
   arguments = list(individualValues,individualIds)
   output = .processRequest("monolix", "computeF", arguments, "asynchronous")
   
