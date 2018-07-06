@@ -21,11 +21,16 @@ not precise.  When the accuray level is equal to 9, the algorithms are slow but 
 are accurate. Default Monolix settings are obtained with level=5.
 }
 \examples{
-\dontrun{
-setSettings(project="theophylline.mlxtran", level=1)
-setSettings(project="theophylline.mlxtran", level=9)
-setSettings(project="theophylline.mlxtran", new.project="theophyllineNew.mlxtran", level=7)
+# RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin.
+# All settings of the projectare set so that algorithms used by Monolix converge as 
+# quickly as possible possible:
+setSettings(project="RsmlxDemo1.mlxtran", level=1)
 
-setSettings(level=7);  suppose that a project has been already loaded using the MlxConnectors
-}
+# A new project will be created with settings set in order to obtain the most 
+# precise results possible:
+new.project= file.path(tempdir(),"RsmlxDemoNew.mlxtran")
+setSettings(project="RsmlxDemo1.mlxtran", new.project=new.project, level=9)
+
+# See http://rsmlx.webpopix.org/userguide/setSettings/ for detailed examples of use of setSettings
+# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 }

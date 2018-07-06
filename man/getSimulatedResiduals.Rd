@@ -15,8 +15,10 @@ with the simulated individual parameters:
 }
 \examples{
 \dontrun{
-r = getSimulatedResiduals()
-names(r)
-    "y1"  "y2" 
+# Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+r = getSimulatedResiduals()  # r is a list with elements "y1" and "y2" 
+
+# See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 }
 }

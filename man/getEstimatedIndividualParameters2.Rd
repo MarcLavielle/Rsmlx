@@ -15,8 +15,13 @@ and the population parameters with the individual covariates.
 }
 \examples{
 \dontrun{
-r = getEstimatedIndividualParameters2()
-names(r)
-    "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "popPopCov"    "popIndCov" 
+# Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+r = getEstimatedIndividualParameters2() 
+
+# r is a list with elements "saem", "conditionalMean", "conditionalSD",   "conditionalMode",
+# "popPopCov" and "popIndCov"
+
+# See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 }
 }

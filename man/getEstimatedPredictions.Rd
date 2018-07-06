@@ -14,8 +14,10 @@ Get the individual predictions obtained with the estimated individual parameters
 }
 \examples{
 \dontrun{
-r = getEstimatedPredictions()
-names(r)
-    "Cc"  "E" 
+# Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+r = getEstimatedPredictions() # r is a list with elements "y1" and "y2"
+
+# See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 }
 }

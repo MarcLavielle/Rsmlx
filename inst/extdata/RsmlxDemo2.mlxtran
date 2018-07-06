@@ -1,0 +1,70 @@
+<DATAFILE>
+
+[FILEINFO]
+file = 'warfarin_data.csv'
+delimiter = comma
+header = {id, time, amt, dv, dvid, wt, sex, age}
+
+[CONTENT]
+id = {use=identifier}
+time = {use=time}
+amt = {use=amount}
+dv = {use=observation, name={y1, y2}, yname={'1', '2'}, type={continuous, continuous}}
+dvid = {use=observationtype}
+wt = {use=covariate, type=continuous}
+sex = {use=covariate, type=categorical}
+age = {use=covariate, type=continuous}
+
+<MODEL>
+
+[COVARIATE]
+input = wt
+
+EQUATION:
+lwt70 = log(wt/70)
+
+[INDIVIDUAL]
+input = {ka_pop, omega_ka, V_pop, omega_V, Cl_pop, omega_Cl, lwt70, beta_V_lwt70, beta_Cl_lwt70}
+
+DEFINITION:
+ka = {distribution=logNormal, typical=ka_pop, sd=omega_ka}
+V = {distribution=logNormal, typical=V_pop, covariate=lwt70, coefficient=beta_V_lwt70, sd=omega_V}
+Cl = {distribution=logNormal, typical=Cl_pop, covariate=lwt70, coefficient=beta_Cl_lwt70, sd=omega_Cl}
+
+[LONGITUDINAL]
+input = {a1, b1}
+
+file = 'lib:oral1_1cpt_kaVCl.txt'
+
+DEFINITION:
+y1 = {distribution=normal, prediction=Cc, errorModel=combined1(a1, b1)}
+
+<FIT>
+data = y1
+model = y1
+
+<PARAMETER>
+Cl_pop = {value=0.1, method=MLE}
+V_pop = {value=5, method=MLE}
+a1 = {value=1, method=MLE}
+b1 = {value=0.3, method=MLE}
+beta_Cl_lwt70 = {value=0, method=MLE}
+beta_V_lwt70 = {value=0, method=MLE}
+ka_pop = {value=1, method=MLE}
+omega_Cl = {value=1, method=MLE}
+omega_V = {value=0.1, method=MLE}
+omega_ka = {value=1, method=MLE}
+
+<MONOLIX>
+
+[TASKS]
+populationParameters()
+individualParameters(method = {conditionalMean, conditionalMode })
+fim(method = StochasticApproximation)
+logLikelihood(method = ImportanceSampling)
+plotResult(run = false,method = {outputplot, indfits, obspred, vpc, residualsscatter, residualsdistribution, parameterdistribution, covariatemodeldiagnosis, randomeffects, covariancemodeldiagnosis, saemresults })
+
+[SETTINGS]
+GLOBAL:
+exportpath = 'RsmlxDemo2'
+

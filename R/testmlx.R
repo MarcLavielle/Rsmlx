@@ -16,10 +16,19 @@
 #' @param plot  {FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)
 #' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples
-#' \dontrun{
-#' r = testmlx(project="PBPKproject.mlxtran")
-#' r = testmlx(project="PBPKproject.mlxtran", tests=c("covariate","correlation"), plot=TRUE)
-#' }
+#' initializeMlxConnectors(software = "monolix")
+#' 
+#' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
+#' # with parameters ka, V, Cl.
+#' 
+#' #testmlx will perform statistical tests for the different component of the statistical model:
+#' r1 <- testmlx(project="RsmlxDemo2.mlxtran")
+#' 
+#' #testmlx will perform statistical tests for the covariate model and the correlation model only.
+#' r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth
 #' @importFrom gridExtra grid.arrange
@@ -33,14 +42,10 @@ testmlx <- function(project,
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE) 
 {
-  if (!grepl("\\.",project))
-    project <- paste0(project,".mlxtran")
-  if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exists"))
-    return(invisible(FALSE))}
-  lp <- loadProject(project) 
-  if (!lp) 
-    return(invisible(FALSE))
+  r <- prcheck(project, f="test", tests=tests)
+  if (r$demo)
+    return(r$res)
+  project <- r$project
   
   launched.tasks <- getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -55,9 +60,6 @@ testmlx <- function(project,
   #------------------------------
   if (!any(getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
-  
-  if (plot)
-    ggplot2::theme_set(theme_bw())
   
   res <- list()
   if ("covariate" %in% tests)

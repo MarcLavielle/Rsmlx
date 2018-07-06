@@ -5,9 +5,14 @@
 #' @return a list of data frames.
 #' @examples
 #' \dontrun{
-#' r = getEstimatedIndividualParameters2()
-#' names(r)
-#'     "saem"  "conditionalMean" "conditionalSD"   "conditionalMode" "popPopCov"    "popIndCov" 
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = getEstimatedIndividualParameters2() 
+#' 
+#' # r is a list with elements "saem", "conditionalMean", "conditionalSD",   "conditionalMode",
+#' # "popPopCov" and "popIndCov"
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 getEstimatedIndividualParameters2 <- function() {
@@ -61,9 +66,11 @@ getEstimatedIndividualParameters2 <- function() {
 #' @return a list of data frames (one data frame per output).
 #' @examples
 #' \dontrun{
-#' r = getEstimatedPredictions()
-#' names(r)
-#'     "Cc"  "E" 
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = getEstimatedPredictions() # r is a list with elements "y1" and "y2"
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 getEstimatedPredictions <- function() {
@@ -105,9 +112,11 @@ getEstimatedPredictions <- function() {
 #' @return a list of data frames (one data frame per output).
 #' @examples
 #' \dontrun{
-#' r = getEstimatedResiduals()
-#' names(r)
-#'     "y1"  "y2" 
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = getEstimatedResiduals()  # r is a list with elements "y1" and "y2" 
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 getEstimatedResiduals <- function() {
@@ -166,9 +175,11 @@ getEstimatedResiduals <- function() {
 #' @return a list of data frames (one data frame per output).
 #' @examples
 #' \dontrun{
-#' r = getSimulatedPredictions()
-#' names(r)
-#'     "Cc"  "E" 
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = getSimulatedPredictions()  # r is a list with elements "Cc" and "E" 
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 getSimulatedPredictions <- function() {
@@ -216,9 +227,11 @@ getSimulatedPredictions <- function() {
 #' @return a list of data frames (one data frame per output).
 #' @examples
 #' \dontrun{
-#' r = getSimulatedResiduals()
-#' names(r)
-#'     "y1"  "y2" 
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = getSimulatedResiduals()  # r is a list with elements "y1" and "y2" 
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 getSimulatedResiduals <- function() {
@@ -277,9 +290,11 @@ getSimulatedResiduals <- function() {
 #' @return a list of two matrices.
 #' @examples
 #' \dontrun{
-#' r = GetEstimatedCovarianceMatrix()
-#' names(r)
-#'     "cor.matrix" "cov.matrix"
+#' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
+#' r = GetEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' }
 #' @export
 GetEstimatedCovarianceMatrix <- function() {

@@ -28,26 +28,47 @@
 #' \item \code{print} {TRUE}/FALSE display the results (default=TRUE)
 #' }
 #' @return a list with the computed confidence intervals, the method used and the level.
-#' @importFrom stats qchisq
 #' @examples
-#' \dontrun{
-#' r=confintmlx(project) ; compute 95% c.i. for all parameters using the FIM
+#' initializeMlxConnectors(software = "monolix")
 #' 
-#' r=confintmlx(project, linearization=FALSE, level=0.90) 
-#' ;compute 90 % c.i. for all parameters using the FIM estimated by stochastic approximation
+#' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
+#' # with parameters ka, V, Cl.
 #' 
-#' r=confintmlx(project, method="proflike", parameters = c("ka_pop", "omega_ka")) 
-#' ; compute c.i. for ka_pop and omega_ka using the profile likelihood method
+#' # confintmlx will compute a 90% confidence interval for all the population parameters 
+#' # using the population estimates obtained by Monolix and the Fisher Information Matrix 
+#' # estimated by linearization
+#' r1 <- confintmlx(project="RsmlxDemo2.mlxtran") 
 #' 
-#' r=confintmlx(project, method="bootstrap", Nboot=200)
-#' }
+#' # 95% confidence intervals are now computed, using the FIM estimated by Monolix using a 
+#' # stochastic approximation algorithm:
+#' r2 <- confintmlx(project="RsmlxDemo2.mlxtran", linearization=FALSE, level=0.95) 
+#' 
+#' # Confidence intervals are computed for ka_pop and omega_ka only, 
+#' # using the profile likelihood method:
+#' r <- confintmlx(project    = "RsmlxDemo2.mlxtran", 
+#'                 method     = "proflike", 
+#'                 parameters = c("ka_pop","omega_ka")) 
+#' 
+#' # Confidence intervals are computed using 200 bootstrap samples:
+#' r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/confintmlx/ for detailed examples of use of confintmlx
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' @importFrom stats qchisq
 #' @export
 confintmlx <- function(project, parameters="all", method="fim", level=0.90, 
                        linearization=TRUE, nboot=100, settings=NULL)
 {
-  if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exists"))
-    return(invisible(FALSE))}
+  r <- prcheck(project, f="conf", level=level, method=method )
+  if (r$demo)
+    return(r$res)
+  project <- r$project
+  
+  launched.tasks <- getLaunchedTasks()
+  if (!launched.tasks[["populationParameterEstimation"]]) {
+    cat("\nEstimation of the population parameters... \n")
+    runPopulationParameterEstimation()
+  }
   
   
   parameters <- unlist(parameters)
@@ -60,7 +81,7 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
     r$method <- "proflike"
     return(r)
   }
-
+  
   if (method=="bootstrap") {
     r.boot <- bootmlx(project, nboot=nboot, settings=list(plot=FALSE, level=level))
     c.inf <- apply(r.boot,MARGIN=2, quantile,(1-level)/2)
@@ -83,8 +104,14 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
     return(invisible(FALSE))}
   lp <- loadProject(project) 
   if (!lp) return(invisible(FALSE))
-
+  
   launched.tasks <- getLaunchedTasks()
+  
+  if (!launched.tasks[["populationParameterEstimation"]]) {
+    cat("\nEstimation of the population parameters... \n")
+    runPopulationParameterEstimation()
+  }
+  
   if (!linearization) {
     if (!("stochasticApproximation" %in% launched.tasks[["standardErrorEstimation"]]) ) {
       runStandardErrorEstimation(linearization=FALSE)

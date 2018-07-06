@@ -19,18 +19,35 @@
 #' (default = 0.90)
 #' }
 #' @return a data frame with the bootstrap estimates
+#' @examples
+#' initializeMlxConnectors(software = "monolix")
+#' 
+#' # RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
+#' # with parameters ka, V, Cl.
+#' 
+#' # In this example, bootmlx will generate 100 random replicates of the original data and will
+#' # use Monolix to estimate the population parameters from each of these 100 replicates:
+#' r1 <- bootmlx(project="RsmlxDemo1.mlxtran")
+#'   
+#' # 5 replicates will now be generated, with 50 individuals in each replicate:
+#' r2 <- bootmlx(project="RsmlxDemo1.mlxtran",  nboot = 5, settings = list(N = 50))
+#' 
+#' # Proportions of males and females in the original dataset will be preserved   
+#' # in each replicate:
+#' r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
+#' 
+#' # See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
+#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
 #' @importFrom graphics boxplot lines par plot
 #' @importFrom stats quantile
 #' @export
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   
-  if (!grepl("\\.",project))
-    project <- paste0(project,".mlxtran")
-  if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exists"))
-    return(invisible(FALSE))}
-  lp <- loadProject(project) 
-  if (!lp) return(invisible(FALSE))
+  r <- prcheck(project, f="boot", settings=settings)
+  if (r$demo)
+    return(r$res)
+  project <- r$project
+  
   exportDir <- getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   
@@ -78,20 +95,23 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
     generateBootstrap(project=project, settings=settings, dataFolder=dataFolder)
   }
   
-  paramResults <- array(dim = c(settings$nboot, length(param))) 
+  #paramResults <- array(dim = c(settings$nboot, length(param))) 
+  paramResults <- NULL 
   for(indexSample in 1:settings$nboot){
     projectBoot <-  paste0(exportDir,'/bootstrap/',projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
     loadProject(projectBoot)
     cat(paste0('Project ',toString(indexSample),'/',toString(settings$nboot)))
     
     # Check if the run was done
-    if(!file.exists(paste0(getProjectSettings()$directory,'/populationParameters.txt'))){
-      cat(' => Running SAEM \n')
+   # if(!file.exists(paste0(getProjectSettings()$directory,'/populationParameters.txt'))){
+      launched.tasks <- getLaunchedTasks()
+      if (!launched.tasks[["populationParameterEstimation"]]) {
+        cat(' => Running SAEM \n')
       runScenario()
     }else{
       cat(' => already computed \n')
     }
-    paramResults[indexSample,] <-   getEstimatedPopulationParameters();
+    paramResults <-  rbind(paramResults, getEstimatedPopulationParameters())
   }
   colnames(paramResults) <- names(getEstimatedPopulationParameters())
   paramResults <- as.data.frame(paramResults)
@@ -99,7 +119,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   
   # Plot the results
   if (plot.res) {
-    nbFig <- length(param)
+    nbFig <- ncol(paramResults)
     x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
     par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
     for(indexFigure in 1:nbFig){

@@ -17,7 +17,7 @@ loadProject = function(projectFile){
     .error("Unexpected type encountered. Please give a string corresponding to the path to the mlxtran-formated file to be loaded.")
     return(invisible(FALSE))
   }
-
+  
   arguments = list( normalizePath(projectFile,mustWork = FALSE) )
   output = .processRequest("monolix", "loadproject", arguments, "synchronous", type = "STATUS")
   return(invisible(output))
@@ -40,7 +40,7 @@ saveProject = function(projectFile = ""){
     .error("Unexpected type encountered. Please give a string corresponding to the path to the mlxtran-formated file to be used to save the current project.")
     return(invisible(FALSE))
   }
-
+  
   if (projectFile == "")
     output = .processRequest("monolix", "saveproject", "", "synchronous", type = "STATUS")
   else
@@ -74,24 +74,24 @@ newProject = function(modelFile, data){
     .error("Unexpected type encountered for the field \"model\". Please give a string corresponding to the path to a model file.")
     return(invisible(FALSE))
   }
-
+  
   if ( !is.list(data) || is.null(data$dataFile) || is.null(data$headerTypes) || is.null(data$observationTypes) ){
     .error("Unexpected type encountered for the field \"data\". Please give a list containing at least the data file, the header types and the observation types.")
     return(invisible(FALSE))
   }
-
+  
   if (is.character(data$dataFile) == FALSE){
     .error("Unexpected type encountered for the field \"dataFile\" from \"data\". Please give a string corresponding to the path to a data file.")
     return(invisible(FALSE))
   }
-
+  
   modelFile <- normalizePath(modelFile, mustWork = FALSE)
   data$dataFile <- normalizePath(data$dataFile, mustWork = FALSE)
   
   arguments = list(modelFile, data$dataFile)
   output = .processRequest("monolix", "createproject", arguments, "synchronous", type = "STATUS")
   if (output == FALSE) return (invisible(FALSE))
-
+  
   output = setData(data)
   return(invisible(output))
 }
@@ -113,7 +113,7 @@ setStructuralModel = function(modelFile){
     .error("Unexpected type encountered. Please give a string corresponding to the path to a model file.")
     return(invisible(FALSE))
   }
-
+  
   modelFile <- normalizePath(modelFile, mustWork = FALSE)
   output = .processRequest("monolix", "setmodel", modelFile, "synchronous", type = "STATUS")
   return(invisible(output))
@@ -168,17 +168,17 @@ setData = function(dataFile, headerTypes, observationTypes, nbSSDoses = NULL){
     if (!is.null(nbSSDoses))
       arguments$nbSSDoses = nbSSDoses
   }
-
+  
   if (is.character(arguments$dataFile) == FALSE){
     .error("Unexpected type encountered for field \"dataFile\". Please give a string.")
     return(invisible(FALSE))
   }
-
+  
   if (!is.vector(arguments$headerTypes) && !is.character(headerTypes)){
     .error("Unexpected type encountered for field \"headerTypes\". Please give a collection of strings.")
     return(invisible(FALSE))
   }
-
+  
   if (is.vector(arguments$observationTypes) || is.list(arguments$observationTypes)){
     yTypes = names(arguments$observationTypes)
     
@@ -255,3 +255,95 @@ getData = function(){
 }
 # -------------------------------------------------------------------------------- #
 # ================================================================================ #
+
+
+prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
+                    parameters=NULL, level=NULL, tests=NULL, nboot=NULL, method=NULL) {
+  #prcheck <- function(project) {
+  if (identical(substr(project,1,9),"RsmlxDemo")) {
+    RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+    rm(RsmlxDemo1.project, RsmlxDemo2.project, warfarin.data, resMonolix)
+    eval(parse(text="data(RsmlxDemo)"))
+    tmp.dir <- tempdir()
+    write(RsmlxDemo1.project, file=file.path(tmp.dir,"RsmlxDemo1.mlxtran"))
+    write(RsmlxDemo2.project, file=file.path(tmp.dir,"RsmlxDemo2.mlxtran"))
+    write.csv(warfarin.data, file=file.path(tmp.dir,"warfarin_data.csv"), quote=FALSE, row.names = FALSE)
+    project <- file.path(tmp.dir,project)
+    demo <- TRUE
+    if (!is.null(f)) {
+      if (f=="boot") {
+        if (is.null(settings))
+          res <- resMonolix$r1.boot
+        else if (!is.null(settings$N) & is.null(settings$covStrat))
+          res <- resMonolix$r2.boot
+        else
+          res <- resMonolix$r3.boot
+      } else if (f=="build") {
+        if (identical(model,"all") & identical(paramToUse,"all")) 
+          res <- resMonolix$r1.build
+        else if (identical(model,"all")) 
+          res <- resMonolix$r2.build
+        else 
+          res <- resMonolix$r3.build
+      } else if (f=="conf") {
+        if (method == "fim" & level==0.90)
+          res <- resMonolix$r1.conf
+        else if (method == "fim" & level==0.95)
+          res <- resMonolix$r2.conf
+        else if (method == "proflike")
+          res <- resMonolix$r3.conf
+        else
+          res <- resMonolix$r4.conf
+      } else if (f=="cov") {
+        if (identical(method,"COSSAC") & identical(paramToUse,"all")) 
+          res <- resMonolix$r1.cov
+        else if (identical(method,"SCM")) 
+          res <- resMonolix$r2.cov
+        else 
+          res <- resMonolix$r3.cov
+      } else if (f=="test") {
+        if (length(tests)==4) 
+          res <- resMonolix$r1.test
+        else 
+          res <- resMonolix$r2.test
+      } else if (f=="set")
+        res="foo"
+    }
+    
+  } else {
+    
+    if (!grepl("\\.",project))
+      project <- paste0(project,".mlxtran")
+    
+    if(!file.exists(project))
+      stop(paste0("Project '", project, "' does not exist"), call.=FALSE)
+    
+    lp <- loadProject(project) 
+    if (!lp) 
+      stop(paste0("Could not load project '", project, "'"), call.=FALSE)
+    
+    demo <- FALSE
+    res <- NULL
+  }
+  
+  return(list(project=project, demo=demo, res=res))
+  #  return(project)
+}
+
+# prepare.demo <- function() {
+#   setwd("F:/modelBuilding/git/Rsmlx/inst/extdata")
+#   con = file("RsmlxDemo1.mlxtran", open = "r")
+#   RsmlxDemo1.project = readLines(con, warn=FALSE)
+#   close(con)
+#   con = file("RsmlxDemo2.mlxtran", open = "r")
+#   RsmlxDemo2.project = readLines(con, warn=FALSE)
+#   close(con)
+#   warfarin.data <- read.csv(file="warfarin_data.csv")
+#   setwd("F:/modelBuilding/git/Rsmlx/data")
+#   save(RsmlxDemo1.project, RsmlxDemo2.project, warfarin.data, file="RsmlxDemo.RData" )
+# }
+
+
+
+
+
