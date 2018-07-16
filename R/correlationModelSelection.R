@@ -17,8 +17,8 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
   nrep <- max(e$rep)
   N <- nrow(e)/nrep
   e$rep <- e$id <- NULL
-  foo <- names(which(getIndividualParameterModel()$variability$id))
-  e.var <- paste0("eta_",foo)
+  e.name <- names(which(getIndividualParameterModel()$variability$id))
+  e.var <- paste0("eta_",e.name)
   e.var <- e.var[e.var %in% names(e)]
   e <- e[e.var]
   e <- as.data.frame(scale(e))
@@ -104,7 +104,7 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
         }
       if (length(cm)>0) {
         for (k in 1:length(cm))
-          cm[[k]] <- p.name[cm[[k]]]
+          cm[[k]] <- e.name[cm[[k]]]
       }
       correlation.model[[j]] <- cm
     }

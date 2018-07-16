@@ -68,6 +68,21 @@ buildmlx <- function(project, final.project=NULL, model="all",
     return(r$res)
   project <- r$project
   
+  r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction)
+  covToTransform <- r$covToTransform
+  paramToUse <- r$paramToUse
+  final.project <- r$final.project
+  covToTest <- r$covToTest
+  model <- r$model
+  direction <- r$direction
+  
+  if (print) {
+    if (!is.null(r$idir)) 
+      cat(paste0('\n\ndirection = "',direction, '" will be used for the covariate search\n\n'))
+    cat("____________________________________________\nInitialization:\n")
+  }
+  
+  
   if (length(getIndividualParameterModel()$variability)>1)
     stop("Multiple levels of variability are not supported in this version of buildmlx", call.=FALSE)
   #  initializeMlxConnectors(software = "monolix")
@@ -84,13 +99,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
   # criterion <- criterion[1:3]
   # 
   
-  r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction)
-  covToTransform <- r$covToTransform
-  paramToUse <- r$paramToUse
-  final.project <- r$final.project
-  covToTest <- r$covToTest
-  model <- r$model
-  direction <- r$direction
   
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) {
@@ -115,15 +123,11 @@ buildmlx <- function(project, final.project=NULL, model="all",
   Sys.sleep(0.1)
   dir.create(final.dir)
   
-  if (!launched.tasks[["populationParameterEstimation"]]) {
-    lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
-    if (print) cat(lineDisplay)
-    runPopulationParameterEstimation()
-  }
-  if (!launched.tasks[["conditionalDistributionSampling"]]) {
-    lineDisplay <- "Sampling of the conditional distribution using the initial model ... \n"
-    if (print) cat(lineDisplay)
-    runConditionalDistributionSampling()
+  if (!is.null(r$idir)) {
+    if (file.exists(summary.file)) sink(summary.file, append=TRUE)
+    else  sink(summary.file)
+    cat(paste0('\n\ndirection = "',direction, '" will be used for the covariate search\n\n'))
+    sink()
   }
   
   #------------------------------
@@ -141,6 +145,63 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (!any(c(iop.error, iop.covariate, iop.correlation)))
     stop("\nThere is no statistical model to build...\n", call.=FALSE)
   
+  #-------------------------------------------------
+  
+  p.ini <- getPopulationParameterInformation()
+  rownames(p.ini) <- p.ini$name
+  ind.omega <- grep("omega_",p.ini[['name']])
+  omega <- p.ini$name[ind.omega]
+  omega.ini <- p.ini[ind.omega,]
+  
+  error.model <- getContinuousObservationModel()$errorModel
+  obs.dist <- getContinuousObservationModel()$distribution
+  covariate.model <- getIndividualParameterModel()$covariateModel
+  cov.ini <- names(covariate.model[[1]])
+  correlation.model <- getIndividualParameterModel()$correlationBlocks$id
+  if (is.null(correlation.model))
+    correlation.model <- list()
+  
+  if (print) {
+    if (iop.covariate) {
+      cat("\nCovariate model:\n")
+      print(formatCovariateModel(covariate.model, cov.ini))
+    }
+    if (iop.correlation) {
+      cat("\nCorrelation model:\n")
+      print(correlation.model)
+    }
+    if (iop.error) {
+      cat("\nResidual error model:\n")
+      print(formatErrorModel(error.model))
+    }
+  }
+  if (file.exists(summary.file)) sink(summary.file, append=TRUE)
+  else sink(summary.file)
+  cat("____________________________________________\nInitialization:")
+  if (iop.covariate) {
+    cat("\nCovariate model:\n")
+    print(formatCovariateModel(covariate.model, cov.ini))
+  }
+  if (iop.correlation) {
+    cat("\nCorrelation model:\n")
+    print(correlation.model)
+  }
+  if (iop.error) {
+    cat("\nResidual error model:\n")
+    print(formatErrorModel(error.model))
+  }
+  sink()
+  
+  if (!launched.tasks[["populationParameterEstimation"]]) {
+    lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
+    if (print) cat(lineDisplay)
+    runPopulationParameterEstimation()
+  }
+  if (!launched.tasks[["conditionalDistributionSampling"]]) {
+    lineDisplay <- "Sampling of the conditional distribution using the initial model ... \n"
+    if (print) cat(lineDisplay)
+    runConditionalDistributionSampling()
+  }
   
   #----  LL & linearization
   iop.ll <- 1
@@ -159,21 +220,18 @@ buildmlx <- function(project, final.project=NULL, model="all",
     names(ll)[which(names(ll)=="standardError")] <- "s.e."
     if (is.numeric(criterion))
       ll['criterion'] <- ll.ini
+    
+    if (print) {
+      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+      print(round(ll,2))
+      cat("____________________________________________\n")
+    }
+    sink(summary.file)
+    cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+    print(round(ll,2))
+    cat("____________________________________________\n")
+    sink()
   }
-  
-  p.ini <- getPopulationParameterInformation()
-  rownames(p.ini) <- p.ini$name
-  ind.omega <- grep("omega_",p.ini[['name']])
-  omega <- p.ini$name[ind.omega]
-  omega.ini <- p.ini[ind.omega,]
-  
-  error.model <- getContinuousObservationModel()$errorModel
-  obs.dist <- getContinuousObservationModel()$distribution
-  covariate.model <- getIndividualParameterModel()$covariateModel
-  cov.ini <- names(covariate.model[[1]])
-  correlation.model <- getIndividualParameterModel()$correlationBlocks$id
-  if (is.null(correlation.model))
-    correlation.model <- list()
   
   #-----------------------------------------
   
@@ -186,58 +244,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   
   setProjectSettings(directory=final.dir)
   saveProject(final.project)
-  loadProject(final.project)
-  
-  if (!is.null(r$idir)) {
-    if (print)
-      cat(paste0('\n\ndirection: = "',direction, '" will be used for the covariate search\n\n'))
-    sink(summary.file)
-    cat(paste0('\n\ndirection: = "',direction, '" will be used for the covariate search\n\n'))
-    sink()
-  }
-  
-  
-  
-  if (print) {
-    cat("____________________________________________\nInitialization:")
-    if (iop.covariate) {
-      cat("\nCovariate model:\n")
-      print(formatCovariateModel(covariate.model, cov.ini))
-    }
-    if (iop.correlation) {
-      cat("\nCorrelation model:\n")
-      print(correlation.model)
-    }
-    if (iop.error) {
-      cat("\nResidual error model:\n")
-      print(formatErrorModel(error.model))
-    }
-    if (iop.ll) {
-      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
-      print(round(ll,2))
-    }
-  }
-  if (file.exists(summary.file)) sink(summary.file, append=TRUE)
-  else sink(summary.file)
-  cat("____________________________________________\nInitialization:")
-  if (iop.covariate) {
-    cat("\nCovariate model:\n")
-    print(formatCovariateModel(covariate.model, cov.ini))
-  }
-  if (iop.correlation) {
-    cat("\nCorrelation model:\n")
-    print(correlation.model)
-  }
-  if (iop.error) {
-    cat("\nResidual error model:\n")
-    print(formatErrorModel(error.model))
-  }
-  if (iop.ll) {
-    cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
-    print(round(ll,2))
-  }
-  sink()
-  
+  if (is.null(getEstimatedPopulationParameters()))
+    runScenario()
   
   #--------------
   
@@ -255,6 +263,14 @@ buildmlx <- function(project, final.project=NULL, model="all",
   sp0 <- NULL
   while (!stop.test) {
     iter <- iter + 1
+    if (print) {
+      cat("____________________________________________\n")
+      cat(paste0("Iteration ",iter,":\n"))
+    }
+    sink(summary.file, append=TRUE)
+    cat("____________________________________________\n")
+    cat(paste0("Iteration ",iter,":\n"))
+    sink()
     
     obs.dist0 <- obs.dist
     error.model0 <- error.model
@@ -325,8 +341,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
       
       if (!stop.test) {
         if (print) {
-          cat("____________________________________________\n")
-          cat(paste0("Iteration ",iter,":\n"))
           if (iop.covariate) {
             cat("\nCovariate model:\n")
             print(res.covariate$res)
@@ -341,8 +355,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
           }
         }
         sink(summary.file, append=TRUE)
-        cat("____________________________________________\n")
-        cat(paste0("Iteration ",iter,":\n"))
         if (iop.covariate) {
           cat("\nCovariate model:\n")
           print(res.covariate$res)
@@ -364,6 +376,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
       p.ini <- getPopulationParameterInformation()
       rownames(p.ini) <- p.ini$name
       p.ini[omega,] <- omega.ini
+      jcor <- grep("corr_",p.ini$name)
+      if (length(jcor)>0)  p.ini <- p.ini[-jcor,]
       setPopulationParameterInformation(p.ini)
       
       #  setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
@@ -549,7 +563,9 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (test.del & dir.exists(final.dir)) {
     unlink(final.dir, recursive=TRUE)
   }
-  
+  g=getScenario()
+  g$tasks[[2]]=TRUE
+  setScenario(g)
   saveProject(final.project)
   # con        = file(summary.file, open = "r")
   # lines      = readLines(con, warn=FALSE)
@@ -665,7 +681,10 @@ formatCovariateModel <- function(m, cov.ini=NULL) {
       mr <- matrix(unlist(m),ncol=length(cov.names),byrow=TRUE)*1
       row.names(mr) <- param.names
       colnames(mr) <- cov.names
-      mr <- as.data.frame(mr[,order(colnames(mr))])
+      if (length(cov.names)==1)
+        mr <- as.data.frame(mr)
+      else
+        mr <- as.data.frame(mr[,order(colnames(mr))])
     } else {
       mr <- list()
       nr <- nrow(m[[1]])
