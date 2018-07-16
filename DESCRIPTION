@@ -8,10 +8,11 @@ Authors@R: c(
     person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" ))
 Description: Provides methods for model building and model evaluation of mixed effects models using 
     'Monolix' <http://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
-    modeling that must have been installed in order to use 'Rsmlx'. Among other tasks, 'Rsmlx' performs 
+    modeling that must have been installed in order to use 'Rsmlx'. 
+    Among other tasks, 'Rsmlx' provides a powerful tool for automatic PK model building, performs 
     statistical tests for model assessment, bootstrap simulation and likelihood profiling for 
     computing confidence intervals. 'Rsmlx' also proposes several automatic covariate search methods for 
-    mixed effects models.
+    mixed effects models. 
 URL: http://rsmlx.webpopix.org
 SystemRequirements: 'Monolix' (<http://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
