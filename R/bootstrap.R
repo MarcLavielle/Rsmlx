@@ -239,7 +239,11 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
               sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
           }
         }
+<<<<<<< HEAD
         #sampleIDs <- validID[[indexValidID]][sampleIDs]
+=======
+        sampleIDs <- validID[[indexValidID]][sampleIDs]
+>>>>>>> f3942643307c5eb5fb614908a588b0daa3ba85e4
         if(!(length(sampleIDs)==settings[['N']])){
           if(!warningAlreadyDisplayed){
             cat(paste0("The generated data set contains only ",length(sampleIDs)," individuals because otherwise categorical proportions of ",settings$covStrat," cannot be kept.\n"))
