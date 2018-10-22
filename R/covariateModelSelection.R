@@ -1,10 +1,11 @@
-covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=NULL, covToTest="all", 
+covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=NULL, covFix=NULL, 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, 
-                                    sp0=NULL) 
+                                    sp0=NULL, iter=1) 
 {
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
-  sp.df <- read.csv(sp.file)
+  
+  sp.df <- read.res(sp.file)
   if (is.null(sp.df$rep))
     sp.df$rep <- 1
   
@@ -42,17 +43,12 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
   indvar <- getIndividualParameterModel()$variability$id
   indvar[setdiff(param.names, paramToUse)] <- FALSE
   
-  if (identical(covToTest,"all"))
-    covToTest = cov.names
-  covFix <- setdiff(cov.names, covToTest)
   cov.model <- getIndividualParameterModel()$covariateModel
-  
   r <- res <- list()
   for (j in (1:n.param)) {
     dj <- ind.dist[j]
     nj <- names(dj)
     if (indvar[j]) {
-      #    print(nj)
       yj <- sp.df[nj]
       if (tolower(dj) == "lognormal") {
         yj <- log(yj)
@@ -65,7 +61,7 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
         names(yj) <- paste0("probit.",nj)
       } 
       
-      if (!is.null(covFix)) {
+      if (length(covFix)>0) {
         cmj <- cov.model[[nj]][covFix]
         cov0 <- names(which(!cmj))
         cov1 <- names(which(cmj))
@@ -73,7 +69,7 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
         cov0 <- cov1 <- NULL
       }
       r[[j]] <- lm.all(yj,covariates,tcov.names,criterion=criterion,nb.model=nb.model, 
-                       direction=direction,steps=steps, p.max=p.max, cov0=cov0, cov1=cov1)
+                       direction=direction,steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
       names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
     } else {
@@ -128,7 +124,7 @@ covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=
 #-----------------------------------
 
 lm.all <- function(y, x, tr.names=NULL, criterion=criterion, nb.model=nb.model,
-                   direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL) {
+                   direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL, iter=1) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
     nrep <- nrow(x)/N
@@ -158,7 +154,6 @@ lm.all <- function(y, x, tr.names=NULL, criterion=criterion, nb.model=nb.model,
   }
   x$id <- x$rep <- NULL
   
-
 #x <- x[,list.c,drop=FALSE]
 
 nx <- ncol(x)
@@ -296,7 +291,8 @@ if (length(cov1)>0) {
 ng <- nrow(G)
 d  <- ncol(G)
 
-ll <- df <- bic <- NULL
+ll <- df <- bic <- bic.cor <- NULL
+corb <- log(iter^2/(iter^2+3))
 if (criterion=="BIC")
   pen.bic <- log(N)
 else if (criterion=="AIC")
@@ -324,9 +320,10 @@ for (k in 1:ng) {
   ll <- c(ll , llk)
   df <- c(df, dfk)
   bic <- c(bic , bick)
+  bic.cor <- c(bic.cor , bick-corb*dfk)
 }
 
-bic <- round(bic, digits=3)
+bic <- round(bic.cor, digits=3)
 i0 <- rep(1,ng)
 mG <- ncol(G)
 
@@ -356,6 +353,7 @@ k.min <- obic[1]
 # else
 Gkmin <- G[k.min,]
 
+
 j1 <- which(Gkmin==1)
 j2 <- which(Gkmin==2)
 if (length(j1)>0) {
@@ -370,6 +368,8 @@ list.x <- c("1",names(x)[j1],names(l)[j2])
 form1 <- paste0(names(y), "~",  paste(list.x, collapse = "+")) 
 eval(parse(text=paste0("lm.min <- lm(",form1,")")))
 lm.min$covsel=Gkmin
+
+#if (names(y)=="log.V2") {print(cbind(G,res)); browser()}
 
 nb.model <- min(nb.model, length(bic))
 res <- res[obic[1:nb.model],]

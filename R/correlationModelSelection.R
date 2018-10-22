@@ -4,7 +4,7 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
   if (is.null(e)) {
     project.folder <- getProjectSettings()$directory
     sp.file <- file.path(project.folder,"IndividualParameters","simulatedRandomEffects.txt")
-    e <- read.csv(sp.file)
+    e <- read.res(sp.file)
     if (is.null(e$rep)) 
       e$rep <- 1
     eta.names <- paste0("eta_",p.name)

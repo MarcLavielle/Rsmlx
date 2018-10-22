@@ -45,7 +45,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   
   r <- prcheck(project, f="boot", settings=settings)
   if (r$demo)
-    return(r$res)
+   return(r$res)
   project <- r$project
   
   exportDir <- getProjectSettings()$directory
@@ -61,7 +61,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
   settings$nboot <- nboot
   if(is.null(settings$nboot)){ settings$nboot <- 100 }
-  if(is.null(settings[['N']])){ settings[['N']] <- NA}
+  if(is.null(settings$N)){ settings$N <- NA}
   if(is.null(settings$newResampling)){ settings$newResampling <- FALSE}
   if(is.null(settings$covStrat)){settings$covStrat <- NA}
   
@@ -146,6 +146,12 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
   
   loadProject(project)   
   
+  if(is.null(settings)){
+        settings$nboot <- 100 
+        settings$N <- NA
+        settings$covStrat <- NA
+  }
+  
   # define the scenario in order to only have SAEM
   setScenario(tasks =  c(populationParameterEstimation = TRUE))
   
@@ -164,11 +170,15 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
     dir.create(file.path(exportDir, 'bootstrap/data/'), showWarnings = FALSE)
     
     # Load the data set
-    dataset <- read.table(file=datasetFile, header = TRUE, sep = "", dec = ".")
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = ",", dec = ".")}
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = ";", dec = ".")}
-    if(length(dataset[1,])==1){dataset <- read.table(file=datasetFile, header = TRUE, sep = "\t", dec = ".")}
-    
+    dataset <- NULL
+    try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ";", dec = "."), silent = TRUE);sepBoot = ';';
+    if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ",", dec = "."), silent = TRUE);sepBoot = ',';}
+    if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "\t", dec = "."), silent = TRUE);sepBoot = '\t';}
+    if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "", dec = "."), silent = TRUE);sepBoot = ' ';}
+    if(length(dataset[1,])<=1){      
+      message("WARNING: The data set can not be recognized")
+      return(invisible(FALSE))}
+  
     indexID <- which(referenceDataset$headerTypes=="id")
     nameID <- unique(dataset[, indexID])
     nbIndiv <- length(nameID)
@@ -193,7 +203,7 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
       }
       
       if(isCatVaryID){# The covariate vary within the subject occasion, 
-        cat(paste0("The generated data set can not preserve proportions of ",settings$covStrat," as the covariate vary in within the subject.\n"))
+        cat(paste0("The generated data set can not preserve proportions of ", settings$covStrat," as the covariate vary in within the subject.\n"))
         nbCAT = 1
         indexPropCAT <- 1
         propCAT <- rep(settings[['N']], nbCAT)
@@ -223,8 +233,13 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
         # Sample the IDs
         sampleIDs <- NULL
         for(indexValidID in 1:length(validID)){
-          sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
+          if(length(validID[[indexValidID]])==1){
+              sampleIDs <- c(sampleIDs,  rep(x = validID[[indexValidID]], times = propCAT[indexValidID]) )
+          }else{
+              sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
+          }
         }
+        sampleIDs <- validID[[indexValidID]][sampleIDs]
         if(!(length(sampleIDs)==settings[['N']])){
           if(!warningAlreadyDisplayed){
             cat(paste0("The generated data set contains only ",length(sampleIDs)," individuals because otherwise categorical proportions of ",settings$covStrat," cannot be kept.\n"))
@@ -236,23 +251,16 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
         data <- NULL
         dataID <- NULL
         indexLineFull <- NULL
-        #for(indexSampleSize in 1:length(sampleIDs)){
-        #  indexLine <- which(dataset[,indexID]==sampleIDs[indexSampleSize])
-        #  dataToInsert <- dataset[indexLine,]
-        #  dataToInsert[,indexID] <- indexSampleSize
-        #  data <- rbind(data, dataToInsert)
-        #}
         
         for(indexSampleSize in 1:length(sampleIDs)){
           indexLine <- which(dataset[,indexID]==sampleIDs[indexSampleSize])
           indexLineFull <- c(indexLineFull,indexLine)
           dataID <- c(dataID, rep(indexSampleSize,length(indexLine)))
-          
         }
         data <- dataset[indexLineFull,]
         data[,indexID] <- dataID
         
-        write.table(x = data, file = datasetFileName,
+        write.table(x = data, file = datasetFileName, sep = sepBoot,
                     eol = '\n', quote = FALSE, dec = '.',  row.names = FALSE, col.names = TRUE )
       }
       ##################################################################################################################

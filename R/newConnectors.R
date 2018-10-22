@@ -44,7 +44,7 @@ getEstimatedIndividualParameters2 <- function() {
     yj <- ip[[nj]]
     rj <- re[[paste0("eta_",nj)]]
     if (dj == "normal") {
-      yjc <- exp(log(yj)-rj)
+      yjc <- yj-rj
     } else if (dj == "lognormal") {
       yjc <- exp(log(yj)-rj)
     } else if (dj == "logitnormal") {
