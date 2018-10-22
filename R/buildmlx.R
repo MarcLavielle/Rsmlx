@@ -216,6 +216,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       runLogLikelihoodEstimation(linearization = lin.ll)
     }
     ll.ini <- computecriterion(criterion, method.ll)
+    list.criterion <- ll.ini
     ll <- getEstimatedLogLikelihood()[[method.ll]]
     names(ll)[which(names(ll)=="standardError")] <- "s.e."
     if (is.numeric(criterion))
@@ -258,6 +259,12 @@ buildmlx <- function(project, final.project=NULL, model="all",
   
   cov.names0 <- cov.names <- NULL
   
+  if (identical(covToTest,"all"))
+    covFix = NULL
+  else
+  covFix <- setdiff(getCovariateInformation()$name, covToTest)
+  
+  
   ll.prev <- Inf
   ll.new <- ll.ini
   sp0 <- NULL
@@ -291,14 +298,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
     }
     
     if (iop.covariate) {
+      pmax.iter <- ifelse(iter <= 1, 1, p.max) 
       res.covariate <- covariateModelSelection(criterion=criterion, nb.model=nb.model,
-                                               covToTransform=covToTransform, covToTest=covToTest, direction=direction, 
-                                               steps=steps, p.max=p.max, paramToUse=paramToUse, sp0=sp0)
+                                               covToTransform=covToTransform, covFix=covFix, direction=direction, 
+                                               steps=steps, p.max=pmax.iter, paramToUse=paramToUse, sp0=sp0, iter=iter)
       res.covariate$res <- sortCov(res.covariate$res, cov.ini)
       if (iter>exp.iter) sp0 <- res.covariate$sp
       covToTransform <- setdiff(covToTransform, res.covariate$tr0)
       covariate.model <- res.covariate$model
       e <- res.covariate$residuals
+      
+      
       cov.names <- lapply(covariate.model, function(x) {sort(names(which(x)))})
       cov.names0 <- lapply(covariate.model0, function(x) {sort(names(which(x)))})
     } else {
@@ -451,6 +461,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
           runLogLikelihoodEstimation(linearization = lin.ll)
         }
         ll.new <- computecriterion(criterion, method.ll)
+        list.criterion <- c(list.criterion, ll.new)
         
         if (!dir.exists(buildmlx.dir.iter))
           dir.create(buildmlx.dir.iter)
@@ -519,6 +530,13 @@ buildmlx <- function(project, final.project=NULL, model="all",
       print(round(ll,2))
     }
   }
+  
+  # iter.opt <- which.min(list.criterion) - 1
+  # buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter.opt))
+  # buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
+  # loadProject(buildmlx.project.iter)
+  # saveProject(final.project)
+  
   sink(summary.file, append=TRUE)
   cat("____________________________________________\n")
   cat("Final model:\n")
