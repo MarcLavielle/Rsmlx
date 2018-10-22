@@ -205,13 +205,15 @@ pop.opt <- function(p0) {
   gy <- g[[gn]]
   N <- length(unique(gy[['id']]))
   y <- gy[[gn]]
-  p.ind <- as.data.frame(t(p0)[rep(1,N),])
+  if (N>1)
+    p.ind <- as.data.frame(t(p0)[rep(1,N),])
+  else
+    p.ind <- p0
   a <- max(-min(y) + 0.5, 0.5)
   r <- optim(log(p0), err, y=y, p.ind=p.ind, N=N, a=a)
   return(exp(r$par))
 }
 
-#-------------------------------------------------
 
 #-------------------------------------------------
 compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
@@ -251,5 +253,16 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
 }
 
 
+#-------------------------------------------------
+read.res <- function(file) {
+  d <- read.csv(file, sep=",")
+  if (ncol(d)==1)
+    d <- read.csv(file, sep=";")
+  if (ncol(d)==1)
+    d <- read.csv(file, sep=" ")
+  if (ncol(d)==1)
+    d <- read.csv(file, sep="\t")
+  return(d)
+}
 
 
