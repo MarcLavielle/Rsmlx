@@ -43,11 +43,12 @@
 #' @export
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, settings = NULL){
   
-  r <- prcheck(project, f="boot", settings=settings)
-  if (r$demo)
-   return(r$res)
-  project <- r$project
+  #r <- prcheck(project, f="boot", settings=settings)
+  #if (r$demo)
+  #  return(r$res)
+  #project <- r$project
   
+  loadProject(project)
   exportDir <- getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   
@@ -236,10 +237,11 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
           if(length(validID[[indexValidID]])==1){
               sampleIDs <- c(sampleIDs,  rep(x = validID[[indexValidID]], times = propCAT[indexValidID]) )
           }else{
-              sampleIDs <- c(sampleIDs,  sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE) )
+              samples <- NULL
+              samples <- sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE)
+              sampleIDs <- c(sampleIDs, as.character(samples))
           }
         }
-        #sampleIDs <- validID[[indexValidID]][sampleIDs]
         if(!(length(sampleIDs)==settings[['N']])){
           if(!warningAlreadyDisplayed){
             cat(paste0("The generated data set contains only ",length(sampleIDs)," individuals because otherwise categorical proportions of ",settings$covStrat," cannot be kept.\n"))
@@ -259,7 +261,6 @@ generateBootstrap = function(project, dataFolder=NULL, settings=NULL){
         }
         data <- dataset[indexLineFull,]
         data[,indexID] <- dataID
-        
         write.table(x = data, file = datasetFileName, sep = sepBoot,
                     eol = '\n', quote = FALSE, dec = '.',  row.names = FALSE, col.names = TRUE )
       }
