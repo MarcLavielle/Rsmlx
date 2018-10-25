@@ -1,5 +1,5 @@
 #' Initialize MlxConnectors API
-#'
+#' 
 #' Initialize MlxConnectors API for a given software
 #' @param software (\emph{character}) Name of the software to be loaded : "monolix"\cr
 #' @param mlxDirectory (\emph{character}) [optional] Path to installation directory of the Lixoft suite.
@@ -10,7 +10,6 @@
 #' initializeMlxConnectors(software = "monolix", mlxDirectory = "/path/to/mlxRuntime/")
 #' }
 #' @export
-
 initializeMlxConnectors <- function (software, mlxDirectory = "") {
   if (is.character(software) == FALSE){
     .error("Unexpected type encountered for the \"software\" field. Please give a string corresponding to the name of the Lixoft software to be used.")
@@ -76,6 +75,9 @@ initializeMlxConnectors <- function (software, mlxDirectory = "") {
   # initialize session :
   arguments = list(software = software, libpath = get("MLXCONNECTORS_LIB_PATH", envir = MlxEnvironment))
   output = .processRequest("session", "initialize", arguments, "synchronous", type = "STATUS")
+  
+  if (!output) # unload library if initialization failed
+    .unloadMlxConnectorsLibrary()
   
   return(invisible(output))
 }
@@ -183,23 +185,19 @@ initializeMlxConnectors <- function (software, mlxDirectory = "") {
   }
 }
 
-# .onLoad <- function(libname,pkgname){
-#   # assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
-#   # assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
-# }
-# 
-# .onAttach <- function(libname,pkgname){
-# #  packageStartupMessage("This Rsmlx package, enjoy it!")
-# #  assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
-# #  assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
-# }
-# 
-# .onDetach <- function(libpath){}
+.onLoad <- function(libname,pkgname){
+  # assign("MLXCONNECTORS_PKG_NAME", pkgname, envir = MlxEnvironment)
+  # assign("MLXCONNECTORS_PKG_DIR", libname, envir = MlxEnvironment)
+}
 
-#.Last.lib <- function(libpath){}
+.onAttach <- function(libname,pkgname){}
 
-###: Get information about MlxEnvironment object
-###: @export
+.onDetach <- function(libpath){}
+
+.Last.lib <- function(libpath){}
+
+#' Get information about MlxEnvironment object
+#' @export
 getMlxEnvInfo <- function(){
   r <- list(ls.str(envir = MlxEnvironment), parent.env(MlxEnvironment))
   return(r)

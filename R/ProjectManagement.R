@@ -80,19 +80,14 @@ newProject = function(modelFile, data){
     return(invisible(FALSE))
   }
   
-  if (is.character(data$dataFile) == FALSE){
-    .error("Unexpected type encountered for the field \"dataFile\" from \"data\". Please give a string corresponding to the path to a data file.")
+  if (!.checkData(data))
     return(invisible(FALSE))
-  }
   
   modelFile <- normalizePath(modelFile, mustWork = FALSE)
   data$dataFile <- normalizePath(data$dataFile, mustWork = FALSE)
   
-  arguments = list(modelFile, data$dataFile)
+  arguments = list(modelFile, data)
   output = .processRequest("monolix", "createproject", arguments, "synchronous", type = "STATUS")
-  if (output == FALSE) return (invisible(FALSE))
-  
-  output = setData(data)
   return(invisible(output))
 }
 # -------------------------------------------------------------------------------- #
@@ -137,23 +132,74 @@ getStructuralModel = function(){
 # -------------------------------------------------------------------------------- #
 
 # Data --------------------------------------------------------------------------- #
-###: Set project data
-###:
-###: Set project data giving a data file and specifying headers and observations types.
-###: @param dataFile (\emph{character}): Path to the data file. Can be absolute or relative to the current working directory.
-###: @param headerTypes (\emph{array<character>}): A collection of header types. 
-###: The possible header types are: "id", "time", "observation", "amount", "contcov", "catcov", "occ", "evid", "mdv", "obsid", "cens", "limit", "regressor","admid", "rate", "tinf", "ss", "ii", "addl", "date"
-###: Notice that these are not the types displayed in the interface, these one are shortcuts.
-###: @param observationTypes (\emph{list}): A list giving the type of each observation present in the data file. If there is only one y-type, the corresponding observation name can be omitted.
-###: The possible observation types are "continuous", "discrete", and "event"
-###: @param nbSSDoses [optional](\emph{int}): Number of doses (if there is a SS column).
-###: @examples
-###: \dontrun{
-###: setData(dataFile = "/path/to/data/file.txt", headerTypes = c("IGNORE","OBSERVATION"), observationTypes = "continuous")
-###: setData(dataFile = "/path/to/data/file.txt", headerTypes = c("IGNORE","OBSERVATION","YTYPE"), observationTypes = list(Concentration = "continuous", Level = "discrete"))
-###: }
-###: @seealso \code{\link{getData}}
-###: @export
+.checkData = function(data){
+  
+  if (is.character(data$dataFile) == FALSE){
+    .error("Unexpected type encountered for field \"dataFile\". Please give a string.")
+    return(invisible(FALSE))
+  }
+  
+  if (!is.vector(data$headerTypes) && !is.character(headerTypes)){
+    .error("Unexpected type encountered for field \"headerTypes\". Please give a collection of strings.")
+    return(invisible(FALSE))
+  }
+  
+  if (is.vector(data$observationTypes) || is.list(data$observationTypes)){
+    yTypes = names(data$observationTypes)
+    
+    if (is.null(yTypes) && length(yTypes) == 1){
+      if (!is.character(data$observationTypes[[1]])){
+        .error(paste0("Unexpected type encountered at position ",i,". Please give a string corresponding to the wanted observation type name of the preceding y-type."))
+        return(invisible(FALSE))
+      }
+      data$observationTypes = data$observationTypes[[1]]
+    }
+    else if (length(data$observationTypes) > 1){
+      for (i in 1:length(data$observationTypes)){
+        if (yTypes[i] == ""){
+          .error(paste0("No y-type name found at position ",i,"."))
+          return(invisible(FALSE))
+        }
+        else if (is.character(data$observationTypes[[yTypes[i]]]) == FALSE){
+          .error(paste0("Unexpected type encountered at position ",i,". Please give a string corresponding to the wanted observation type name of the preceding y-type."))
+          return(invisible(FALSE))
+        }
+      }
+    }
+  }
+  else if (!is.character(data$observationTypes) || length(data$observationTypes) != 1){
+    .error("Unexpected type encountered for field \"observationTypes\". Please give a list of string indexed by observation model names.")
+    return(invisible(FALSE))
+  }
+  
+  if (!is.null(data$nbSSDoses)){
+    if (.isInteger(data$nbSSDoses) == FALSE){
+      .error("Unexpected type encountered for field \"nbSSDoses\". Please give an integer.")
+      return(invisible(FALSE))
+    }
+  }
+  
+  return(invisible(TRUE))
+  
+}
+
+###' Set project data
+###'
+###' Set project data giving a data file and specifying headers and observations types.
+###' @param dataFile (\emph{character}): Path to the data file. Can be absolute or relative to the current working directory.
+###' @param headerTypes (\emph{array<character>}): A collection of header types. 
+###' The possible header types are: "id", "time", "observation", "amount", "contcov", "catcov", "occ", "evid", "mdv", "obsid", "cens", "limit", "regressor","admid", "rate", "tinf", "ss", "ii", "addl", "date"
+###' Notice that these are not the types displayed in the interface, these one are shortcuts.
+###' @param observationTypes (\emph{list}): A list giving the type of each observation present in the data file. If there is only one y-type, the corresponding observation name can be omitted.
+###' The possible observation types are "continuous", "discrete", and "event"
+###' @param nbSSDoses [optional](\emph{int}): Number of doses (if there is a SS column).
+###' @examples
+###' \dontrun{
+###' setData(dataFile = "/path/to/data/file.txt", headerTypes = c("IGNORE","OBSERVATION"), observationTypes = "continuous")
+###' setData(dataFile = "/path/to/data/file.txt", headerTypes = c("IGNORE","OBSERVATION","YTYPE"), observationTypes = list(Concentration = "continuous", Level = "discrete"))
+###' }
+###' @seealso \code{\link{getData}}
+###' @export
 setData = function(dataFile, headerTypes, observationTypes, nbSSDoses = NULL){
   
   if (nargs() == 1 && is.list(dataFile)){
@@ -169,50 +215,8 @@ setData = function(dataFile, headerTypes, observationTypes, nbSSDoses = NULL){
       arguments$nbSSDoses = nbSSDoses
   }
   
-  if (is.character(arguments$dataFile) == FALSE){
-    .error("Unexpected type encountered for field \"dataFile\". Please give a string.")
+  if (!.checkData(arguments))
     return(invisible(FALSE))
-  }
-  
-  if (!is.vector(arguments$headerTypes) && !is.character(headerTypes)){
-    .error("Unexpected type encountered for field \"headerTypes\". Please give a collection of strings.")
-    return(invisible(FALSE))
-  }
-  
-  if (is.vector(arguments$observationTypes) || is.list(arguments$observationTypes)){
-    yTypes = names(arguments$observationTypes)
-    
-    if (is.null(yTypes) && length(yTypes) == 1){
-      if (!is.character(arguments$observationTypes[[1]])){
-        .error(paste0("Unexpected type encountered at position ",i,". Please give a string corresponding to the wanted observation type name of the preceding y-type."))
-        return(invisible(FALSE))
-      }
-      arguments$observationTypes = arguments$observationTypes[[1]]
-    }
-    else if (length(arguments$observationTypes) > 1){
-      for (i in 1:length(arguments$observationTypes)){
-        if (yTypes[i] == ""){
-          .error(paste0("No y-type name found at position ",i,"."))
-          return(invisible(FALSE))
-        }
-        else if (is.character(arguments$observationTypes[[yTypes[i]]]) == FALSE){
-          .error(paste0("Unexpected type encountered at position ",i,". Please give a string corresponding to the wanted observation type name of the preceding y-type."))
-          return(invisible(FALSE))
-        }
-      }
-    }
-  }
-  else if (!is.character(arguments$observationTypes) || length(arguments$observationTypes) != 1){
-    .error("Unexpected type encountered for field \"observationTypes\". Please give a list of string indexed by observation model names.")
-    return(invisible(FALSE))
-  }
-  
-  if (!is.null(arguments$nbSSDoses)){
-    if (.isInteger(arguments$nbSSDoses) == FALSE){
-      .error("Unexpected type encountered for field \"nbSSDoses\". Please give an integer.")
-      return(invisible(FALSE))
-    }
-  }
   
   arguments$dataFile <- normalizePath(arguments$dataFile, mustWork = FALSE)
   output = .processRequest("monolix", "setdata", arguments, "synchronous", type = "STATUS")
@@ -255,4 +259,3 @@ getData = function(){
 }
 # -------------------------------------------------------------------------------- #
 # ================================================================================ #
-

@@ -34,7 +34,6 @@
   return(invisible(x))
 }
 
-#' @importFrom RJSONIO toJSON 
 .makeRequest = function(applicationName, functionName, arguments, requestType, wait = TRUE){
   loadedDLLs <- getLoadedDLLs();
   tryCatch(expr = {
@@ -45,7 +44,7 @@
     outputStruct <- invisible ( .C( "applyJson",
                                     .encodeString(applicationName),
                                     .encodeString(functionName),
-                                    toJSON( .encodeString(arguments), digits = 15, .level = -Inf),
+                                    RJSONIO::toJSON( .encodeString(arguments), digits = 15, .level = -Inf),
                                     .encodeString(requestType),
                                     wait,
                                     output_R = "",
@@ -55,20 +54,20 @@
   },
   
   error = function(err){
-    if ( !exists("MLXCONNECTORS_LIB_PATH",envir = MlxEnvironment) ){
+    if ( !exists("MLXCONNECTORS_LIB_NAME",envir = MlxEnvironment) ){
       .error("Unknown OS -> Impossible to identify MlxConnectors library.")
       return(invisible())      
-    } else if ( is.null(loadedDLLs[[get("MLXCONNECTORS_LIB_PATH",envir = MlxEnvironment)]]) ){
+    } else if ( is.null(loadedDLLs[[get("MLXCONNECTORS_LIB_NAME",envir = MlxEnvironment)]]) ){
       .warning("The API has not been initialized yet. Please call initializeMlxConnectors() to make MlxConnectors package functions available.")
       return(invisible())     
     }
   },
   
   warning = function(war){
-    if ( !exists("MLXCONNECTORS_LIB_PATH", envir = MlxEnvironment) || get("MLXCONNECTORS_LIB_PATH", envir = MlxEnvironment) == "" ){
+    if ( !exists("MLXCONNECTORS_LIB_NAME", envir = MlxEnvironment) || get("MLXCONNECTORS_LIB_NAME", envir = MlxEnvironment) == "" ){
       .warning("Unknown OS -> Impossible to identify MlxConnectors library.")
       return(invisible())      
-    } else if ( is.null(loadedDLLs[[get("MLXCONNECTORS_LIB_PATH", envir = MlxEnvironment)]]) ){
+    } else if ( is.null(loadedDLLs[[get("MLXCONNECTORS_LIB_NAME", envir = MlxEnvironment)]]) ){
       .warning("The API has not been initialized yet. Please call initializeMlxConnectors() to make MlxConnectors package functions available.")
       return(invisible())     
     }
@@ -79,6 +78,8 @@
 .processRequest = function(applicationName, functionName, arguments, requestType, wait = TRUE,
                            type = "", ...){
   jsonOutput = .makeRequest(applicationName, functionName, arguments, requestType, wait)
+  Sys.setlocale("LC_NUMERIC","C")
+  
   decodedOutput = .decodeFromJSON(jsonOutput, type)
   return(invisible(decodedOutput))
 }
@@ -94,17 +95,26 @@
 }
 
 .encodeNumericData = function(data){
-  for (i in 1:length(data)){
-    if (is.nan(data[[i]])){
-      data[[i]] = "NaN"
+  shape = dim(data)
+  data <- as.vector(data)
+  
+  if (length(data) > 0){
+    for (i in 1:length(data)){
+      if (is.nan(data[[i]]) || is.na(data[[i]])){
+        data[[i]] = "NaN"
+      }
+      else if (data[[i]] == Inf){
+        data[[i]] = "Infinity"
+      }
+      else if (data[[i]] == -Inf){
+        data[[i]] = "-Infinity"
+      }
     }
-    else if (data[[i]] == Inf){
-      data[[i]] = "Infinity"
-    }
-    else if (data[[i]] == -Inf){
-      data[[i]] = "-Infinity"
-    }
+    
+    if (!is.null(shape))
+      dim(data) <- shape
   }
+  
   return(invisible(data))
 }
 
@@ -128,7 +138,6 @@
   return(invisible(struct))
 }
 
-#' @importFrom RJSONIO fromJSON
 .decodeFromJSON = function(jsonObj, type){
   tryCatch({
     decodedOutput = (fromJSON(jsonObj,digits = 15))
@@ -180,7 +189,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = paste0("\n(from : ",source,")")
+    source = parse0("\n(from : ",source,")")
   }
   message(paste0("[ERROR] ",str,source))
 }
@@ -191,7 +200,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = paste0("\n(from : ",source,")")
+    source = parse0("\n(from : ",source,")")
   }
   message(paste0("[WARNING] ",str,source))
 }
@@ -202,7 +211,7 @@
   } else if (is.null(source)){
     source = paste0("\n(from : ",deparse(sys.call(-1)),")")
   } else {
-    source = paste0("\n(from : ",source,")")
+    source = parse0("\n(from : ",source,")")
   }
   writeLines(paste0("[INFO] ",str,source)) 
 }
