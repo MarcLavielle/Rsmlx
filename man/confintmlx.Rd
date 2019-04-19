@@ -48,8 +48,7 @@ procedure. When method="bootstrap", the bootstrap estimates are obtained using t
 function
 }
 \examples{
-initializeMlxConnectors(software = "monolix")
-
+\dontrun{
 # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 # with parameters ka, V, Cl.
 
@@ -72,5 +71,6 @@ r <- confintmlx(project    = "RsmlxDemo2.mlxtran",
 r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
 
 # See http://rsmlx.webpopix.org/userguide/confintmlx/ for detailed examples of use of confintmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
+}
 }

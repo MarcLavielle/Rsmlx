@@ -22,6 +22,6 @@ r = getEstimatedIndividualParameters2()
 # "popPopCov" and "popIndCov"
 
 # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
 }
 }

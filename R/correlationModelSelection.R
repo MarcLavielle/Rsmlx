@@ -1,5 +1,7 @@
 correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0=NULL, seqcc=TRUE) {
   
+  if (criterion=="BICc")  criterion="BIC"
+  
   p.name <- getIndividualParameterModel()$name
   if (is.null(e)) {
     project.folder <- getProjectSettings()$directory

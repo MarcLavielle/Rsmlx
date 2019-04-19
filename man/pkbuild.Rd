@@ -4,8 +4,9 @@
 \alias{pkbuild}
 \title{Automatic PK model building}
 \usage{
-pkbuild(data = NULL, project = NULL, param = "clearance",
-  new.dir = NULL, MM = FALSE, level = NULL)
+pkbuild(data = NULL, project = NULL, stat = FALSE,
+  param = "clearance", new.dir = ".", MM = FALSE, level = NULL,
+  settings.stat = NULL)
 }
 \arguments{
 \item{data}{a list with fields
@@ -17,6 +18,8 @@ pkbuild(data = NULL, project = NULL, param = "clearance",
 
 \item{project}{a Monolix project}
 
+\item{stat}{({FALSE}, TRUE): the statistical model is also built (using buildmlx)}
+
 \item{param}{({"clearance"}, "rate", "both): parameterization}
 
 \item{new.dir}{name of the directory where the created files are stored 
@@ -25,6 +28,8 @@ pkbuild(data = NULL, project = NULL, param = "clearance",
 \item{MM}{({FALSE}, TRUE): tested models include or not Michaelis Menten elimination models}
 
 \item{level}{an integer between 1 and 9 (used by setSettings)}
+
+\item{settings.stat}{list of settings used by buildmlx (only if stat=TRUE)}
 }
 \value{
 A list of results

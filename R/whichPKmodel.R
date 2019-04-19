@@ -16,6 +16,9 @@
 
 whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL) {
   
+  if (!initRsmlx())
+    return()
+  
   parameter[parameter=="k"] <- "ke"
   parameter[parameter=="Q"] <- "Q2"
   parameter[parameter=="V"] <- "V1"

@@ -53,8 +53,7 @@ A p-value can be derived using the Pearson's correlation test for continuous cov
 }
 }
 \examples{
-initializeMlxConnectors(software = "monolix")
-
+\dontrun{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 # using a PK model with parameters ka, V, Cl.
 
@@ -72,5 +71,6 @@ r3 <- covariateSearch(project    = "RsmlxDemo1.mlxtran",
                       covToTest  = c("age","wt"))
 
 # See http://rsmlx.webpopix.org/userguide/covariatesearch/ for detailed examples of covariatesearch
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
+}
 }

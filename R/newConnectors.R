@@ -12,10 +12,14 @@
 #' # "popPopCov" and "popIndCov"
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
 getEstimatedIndividualParameters2 <- function() {
+  
+  if (!initRsmlx())
+    return()
   
   ind.param <- getEstimatedIndividualParameters()
   N <- nrow(ind.param$saem)
@@ -70,10 +74,14 @@ getEstimatedIndividualParameters2 <- function() {
 #' r = getEstimatedPredictions() # r is a list with elements "y1" and "y2"
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
 getEstimatedPredictions <- function() {
+  
+  if (!initRsmlx())
+    return()
   
   ip <- getEstimatedIndividualParameters2()
   
@@ -116,10 +124,14 @@ getEstimatedPredictions <- function() {
 #' r = getEstimatedResiduals()  # r is a list with elements "y1" and "y2" 
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
 getEstimatedResiduals <- function() {
+  
+  if (!initRsmlx())
+    return()
   
   df=getEstimatedPredictions()
   obs.info <- getObservationInformation()
@@ -179,10 +191,14 @@ getEstimatedResiduals <- function() {
 #' r = getSimulatedPredictions()  # r is a list with elements "Cc" and "E" 
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
 getSimulatedPredictions <- function() {
+  
+  if (!initRsmlx())
+    return()
   
   sip <- getSimulatedIndividualParameters()
   if (is.null(sip$rep)) 
@@ -231,14 +247,18 @@ getSimulatedPredictions <- function() {
 #' r = getSimulatedResiduals()  # r is a list with elements "y1" and "y2" 
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
 getSimulatedResiduals <- function() {
   
+  if (!initRsmlx())
+    return()
+  
   df=getSimulatedPredictions()
   obs.info <- getObservationInformation()
-
+  
   nout <- length(obs.info$name)
   error.model <- getContinuousObservationModel()$errorModel
   error.dist <- getContinuousObservationModel()$distribution
@@ -294,10 +314,15 @@ getSimulatedResiduals <- function() {
 #' r = GetEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
 #' }
 #' @export
-GetEstimatedCovarianceMatrix <- function() {
+getEstimatedCovarianceMatrix <- function() {
+  
+  if (!initRsmlx())
+    return()
+  
   param <- getEstimatedPopulationParameters()
   pname <- names(param)
   i.omega <- grep("^omega_",pname)
@@ -316,10 +341,12 @@ GetEstimatedCovarianceMatrix <- function() {
   c <- param[i.corr]
   R <- diag(rep(1,d))
   rownames(R) <- colnames(R) <- oname
-  for (j in 1:length(c)) {
-    cj <- names(c)[j]
-    sj <- strsplit(cj,"_")[[1]]
-    R[sj[3],sj[2]] <- R[sj[2],sj[3]] <- c[j]
+  if (length(c)>0) {
+    for (j in 1:length(c)) {
+      cj <- names(c)[j]
+      sj <- strsplit(cj,"_")[[1]]
+      R[sj[3],sj[2]] <- R[sj[2],sj[3]] <- c[j]
+    }
   }
   C <- diag(omega)%*%R%*%diag(omega)
   return(list(cor.matrix=R, cov.matrix=C))
@@ -330,8 +357,8 @@ error.parameter <- function(project=NULL) {
   if (is.null(project)) {
     dp <- getProjectSettings()$directory
     if (!is.null(dp))
-    project <- paste0(dp,".mlxtran")
-#    project <- paste0(basename(dp),".mlxtran")
+      project <- paste0(dp,".mlxtran")
+    #    project <- paste0(basename(dp),".mlxtran")
   }
   if (!file.exists(project)) 
     stop("Enter a valid project", call.=FALSE)

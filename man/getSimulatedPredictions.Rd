@@ -18,6 +18,6 @@ Get the individual predictions obtained with the simulated individual parameters
 r = getSimulatedPredictions()  # r is a list with elements "Cc" and "E" 
 
 # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
 }
 }

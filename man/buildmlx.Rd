@@ -4,11 +4,11 @@
 \alias{buildmlx}
 \title{Automatic model building}
 \usage{
-buildmlx(project, final.project = NULL, model = "all", paramToUse = "all",
-  covToTest = "all", covToTransform = "none", criterion = "BIC",
-  direction = NULL, max.iter = 20, print = TRUE, nb.model = 1,
-  linearization = FALSE, seqcc = FALSE, p.max = 1, steps = 1000,
-  exp.iter = 2)
+buildmlx(project, final.project = NULL, model = "all",
+  paramToUse = "all", covToTest = "all", covToTransform = "none",
+  criterion = "BICc", direction = NULL, max.iter = 20,
+  print = TRUE, nb.model = 1, linearization = FALSE, seqcc = FALSE,
+  p.max = 1, steps = 1000, exp.iter = 2)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
@@ -23,7 +23,7 @@ buildmlx(project, final.project = NULL, model = "all", paramToUse = "all",
 
 \item{covToTransform}{list of (continuous) covariates to be log-transformed (default="none")}
 
-\item{criterion}{penalization criterion to optimize c({"BIC"}, "AIC", gamma)}
+\item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
@@ -63,7 +63,7 @@ can be one of "both", "backward", or "forward", with a default of "both" when th
 See http://rsmlx.webpopix.org for more details.
 }
 \examples{
-initializeMlxConnectors(software = "monolix")
+\dontrun{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 # using a PK model with parameters ka, V, Cl.
 
@@ -82,5 +82,6 @@ r2 <- buildmlx(project="RsmlxDemo1.mlxtran", paramToUse=c("V", "Cl"), covToTrans
 r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC") 
 
 # See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
+}
 }

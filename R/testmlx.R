@@ -3,21 +3,30 @@
 #' Perform several statistical tests using the results of a Monolix run to assess the statistical
 #' components of the model in use.
 #' 
-#' The tests used are:  1) F-tests (or, equivalently, correlation tests) to evaluate the effect of 
-#' each covariate on each parameter ("covariate"), 2) Shapiro-Wilk and symmetry tests to assess 
-#' the distribution of the random effects (""randomEffect"), 3) correlation tests to assess the 
-#' correlation structure of the random effects ("correlation"), 4) Shapiro-Wilk and symmetry 
-#' tests to assess the distribution of the residual errors ("residual").
+#' The tests used are:  
+#' 1) F-tests (or, equivalently, correlation tests) to evaluate the effect of each covariate 
+#' on each parameter ("covariate"), 
+#' 2) correlation tests to assess the correlation structure of the random effects ("correlation"), 
+#' 3) Shapiro-Wilk and Miao-Gel-Gastwirth tests to assess, respectively the normality and the
+#' symmetry of the distribution of the random effects (""randomEffect"), 
+#' 4) Shapiro-Wilk and Miao-Gel-Gastwirth tests to assess, respectively the normality and the
+#' symmetry of the distribution of residual errors ("residual").
 #' 
-#' By default, the four tests are performed
+#' By default, the four tests are performed.
+#' 
+#' When several samples of the conditional distributions are used, two methods are proposed in order 
+#' to take into the dependance of the samples for the Shapiro-Wilk and Miao-Gel-Gastwirth tests: 
+#' "edf" computes an effective degrees of freedom, "BH" performs one test per replicates and adjust 
+#' the smallest p-value using the Benjamini-Hochberg correction.
 #' @param project a Monolix project
 #' @param tests  a vector of strings: the list of tests to perform 
 #' among c("covariate","randomEffect","correlation","residual")
 #' @param plot  {FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)
+#' @param adjust method to take into account the dependency of MCMC sample  c({"edf"},"BH")
+#' @param n.sample number of samples from the conditional distribution to be used (default = number of available samples in the project)
 #' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples
-#' initializeMlxConnectors(software = "monolix")
-#' 
+#' \dontrun{
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -28,7 +37,9 @@
 #' r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
+#' }
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth
 #' @importFrom gridExtra grid.arrange
@@ -40,8 +51,11 @@
 
 testmlx <- function(project, 
                     tests=c("covariate","randomEffect","correlation","residual"), 
-                    plot=FALSE) 
+                    plot=FALSE, adjust="edf", n.sample=NULL) 
 {
+  if (!initRsmlx())
+    return()
+  
   r <- prcheck(project, f="test", tests=tests)
   if (r$demo)
     return(r$res)
@@ -61,35 +75,65 @@ testmlx <- function(project,
   if (!any(getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
   
+  method.adjust <- adjust
   res <- list()
   if ("covariate" %in% tests)
-    res$covariate <- covariateTest(plot=plot)
+    res$covariate <- covariateTest(plot=plot, n.sample=n.sample)
   if ("residual" %in% tests)
-    res$residual <- residualTest(plot=plot)
+    res$residual <- residualTest(plot=plot, method.adjust=method.adjust, n.sample=n.sample)
   if ("randomEffect" %in% tests)
-    res$randomEffect <- randomEffectTest(plot=plot)
+    res$randomEffect <- randomEffectTest(plot=plot, method.adjust = method.adjust, n.sample=n.sample)
   if ("correlation" %in% tests)
-    res$correlation <- correlationTest(plot=plot)
+    res$correlation <- correlationTest(plot=plot, n.sample=n.sample)
   return(res)
 }
 
 #----------------------------------------------------------
-residualTest <- function(project=NULL, plot=FALSE) {
+residualTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
     loadProject(project)
   
   if (is.null(getContinuousObservationModel()))  return(list())
-  residual <- getSimulatedResiduals()
+  
+  if (!is.null(n.sample) && n.sample=="mode") {
+    residual <- getEstimatedResiduals()
+    for (i.out in (1:length(residual))) {
+      if (is.null(residual[[i.out]]$conditionalMode))
+        stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
+      residual[[i.out]] <- data.frame(rep=1, residual=residual[[i.out]]$conditionalMode)
+    }
+    n.sample <- 1
+  } else if (!is.null(n.sample) && n.sample=="mean") {
+    residual <- getEstimatedResiduals()
+    for (i.out in (1:length(residual))) {
+      if (is.null(residual[[i.out]]$conditionalMean))
+        stop("the conditional means have not been estimated...", call.=FALSE)
+      residual[[i.out]] <- data.frame(rep=1, residual=residual[[i.out]]$conditionalMean)
+    }
+    n.sample <- 1
+  } else {
+    residual <- getSimulatedResiduals()
+    for (i.out in (1:length(residual))) 
+      nrep <- max(residual[[i.out]]$rep)
+    if (is.null(n.sample))  n.sample <- nrep
+    if (n.sample<1)
+      stop("the number of replicates n.sample should be greater than or equal to 1", call. = FALSE)
+    if (n.sample>nrep)
+      stop(paste0("the number of replicates should be less than or equal to  ", nrep), call. = FALSE)
+    
+    residual[[i.out]] <- subset(residual[[i.out]], rep<=n.sample)
+  }
   n.out <- length(residual)
-  #res.errorModel <- list()
   res.errorModel <- NULL
   for (i.out in (1:n.out)) {
     resi <- residual[[i.out]]
     nrep <- max(resi$rep)
     resi <- matrix(resi$residual, ncol=nrep)
-    ri1 <- swmlx.test(resi)
-    ri2 <- vdwmlx.test(resi)
+    # adf1 <- adjust.df(resi)
+    # ndf1 <- nrow(resi)*adf1
+    ri1 <- sw.test(resi, method=method.adjust)
+    ri2 <- mgg.test(resi, method=method.adjust)
     res.errorModel <- rbind(res.errorModel, c(normality=ri1, symmetry=ri2))
     #res.errorModel[[i.out]] <- list(normality=ri1, symmetry=ri2)
   }
@@ -114,24 +158,57 @@ residualTest <- function(project=NULL, plot=FALSE) {
 }
 
 #----------------------------------------------------------
-randomEffectTest <- function(project=NULL, plot=FALSE) {
+randomEffectTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
     loadProject(project)
   
-  sim.randeff <- getSimulatedRandomEffects()
+  if (!is.null(n.sample) && n.sample=="mode") {
+    sim.randeff <- getEstimatedRandomEffects()$conditionalMode
+    if (is.null(sim.randeff))
+      stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else if (!is.null(n.sample) && n.sample=="mean") {
+    sim.randeff <- getEstimatedRandomEffects()$conditionalMean
+    if (is.null(sim.randeff))
+      stop("the conditional means have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else {
+    sim.randeff <- getSimulatedRandomEffects()
+  }
   if (is.null(sim.randeff$rep)) 
     sim.randeff$rep <- 1
   nrep <- max(sim.randeff$rep)
+  if (is.null(n.sample))  n.sample <- nrep
+  
+  if (n.sample<1)
+    stop("the number of replicates n.sample should be greater than or equal to 1", call. = FALSE)
+  if (n.sample>nrep)
+    stop(paste0("the number of replicates should be less than or equal to  ", nrep), call. = FALSE)
+  sim.randeff <- subset(sim.randeff, rep<=n.sample)
+  nrep <- n.sample
+  
+  pop <- getEstimatedPopulationParameters()
   
   var.param <- names(which(getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
+  omega <- paste0("omega_",var.param)
+  
   res.randeff <- NULL
+  k <- 0
   for (nj in var.randeff) {
-    refi <- matrix(sim.randeff[[nj]],ncol=nrep)
-    ri1 <- swmlx.test(refi)
-    ri2 <- vdwmlx.test(refi)
-    #res.randeff <- rbind(res.randeff, data.frame(randomEffect=nj,normality=ri1, symmetry=ri2))
+    k <- k+1
+    refi <- matrix(sim.randeff[[nj]], ncol=nrep)/pop[omega[k]]
+    
+    # if (method.adjust=="edf") {
+    #   adf1 <- adjust.df(refi)
+    #   ndf1 <- nrow(refi)*adf1
+    # } else {
+    #   adf1 <- ndf1 <- NULL
+    # }
+    
+    ri1 <- sw.test(refi, method=method.adjust)
+    ri2 <- mgg.test(refi, method=method.adjust)
     res.randeff <- rbind(res.randeff, c(normality=ri1, symmetry=ri2))
   }
   res.randeff <- as.data.frame(res.randeff)
@@ -171,15 +248,36 @@ randomEffectTest <- function(project=NULL, plot=FALSE) {
 }
 
 #----------------------------------------------------------
-correlationTest <- function(project=NULL, plot=FALSE) {
+correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
     loadProject(project)
   
-  sim.randeff <- getSimulatedRandomEffects()
+  if (!is.null(n.sample) && n.sample=="mode") {
+    sim.randeff <- getEstimatedRandomEffects()$conditionalMode
+    if (is.null(sim.randeff))
+      stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else if (!is.null(n.sample) && n.sample=="mean") {
+    sim.randeff <- getEstimatedRandomEffects()$conditionalMean
+    if (is.null(sim.randeff))
+      stop("the conditional means have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else {
+    sim.randeff <- getSimulatedRandomEffects()
+  }
   if (is.null(sim.randeff$rep)) 
     sim.randeff$rep <- 1
   nrep <- max(sim.randeff$rep)
+  if (is.null(n.sample))  n.sample <- nrep
+  
+  if (n.sample<1)
+    stop("the number of replicates n.sample should be greater than or equal to 1", call. = FALSE)
+  if (n.sample>nrep)
+    stop(paste0("the number of replicates should be less than or equal to  ", nrep), call. = FALSE)
+  sim.randeff <- subset(sim.randeff, rep<=n.sample)
+  nrep <- n.sample
+  
   
   var.param <- names(which(getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
@@ -258,7 +356,7 @@ correlationTest <- function(project=NULL, plot=FALSE) {
 }
 
 #----------------------------------------------------------
-covariateTest <- function(project=NULL, plot=FALSE) {
+covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
     loadProject(project)
@@ -274,21 +372,52 @@ covariateTest <- function(project=NULL, plot=FALSE) {
   covariates <- cov.info$covariate
   covariates[cat.cov] <-  lapply(covariates[cat.cov],as.factor)
   #covariates["id"] <- NULL
+  covariates <- covariates[order(covariates$id),]
   
-  sim.randeff <- getSimulatedRandomEffects()
-  if (is.null(sim.randeff$rep)) 
-    sim.randeff$rep <- 1
-  nrep <- max(sim.randeff$rep)
+  # sim.randeff <- getSimulatedRandomEffects()
+  # if (is.null(sim.randeff$rep)) 
+  #   sim.randeff$rep <- 1
+  # nrep <- max(sim.randeff$rep)
   
   var.param <- names(which(getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
   ind.dist <- getIndividualParameterModel()$distribution[var.param]
   n.param <- length(var.param)
-  m.indparam <- getEstimatedIndividualParameters()$conditionalMean[var.param]
-  m.randeff <- getEstimatedRandomEffects()$conditionalMean[var.randeff]
+  # m.indparam <- getEstimatedIndividualParameters()$conditionalMean[var.param]
+  # m.randeff <- getEstimatedRandomEffects()$conditionalMean[var.randeff]
   
-  d1 <- NULL
+  if (!is.null(n.sample) && n.sample=="mode") {
+    m.indparam <- getEstimatedIndividualParameters()$conditionalMode[c("id",var.param)]
+    m.randeff <- getEstimatedRandomEffects()$conditionalMode[c("id",var.randeff)]
+    if (is.null(m.indparam))
+      stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else if (!is.null(n.sample) && n.sample=="mean") {
+    m.indparam <- getEstimatedIndividualParameters()$conditionalMean[c("id",var.param)]
+    m.randeff <- getEstimatedRandomEffects()$conditionalMean[c("id",var.randeff)]
+    if (is.null(m.indparam))
+      stop("the conditional means have not been estimated...", call.=FALSE)
+    n.sample <- 1
+  } else {
+    m.indparam <- getSimulatedIndividualParameters()
+    m.randeff <- getSimulatedRandomEffects()
+  }
+  if (is.null(m.indparam$rep)) {
+    m.indparam$rep <- 1
+    m.randeff$rep <- 1
+  }
+  nrep <- max(m.indparam$rep)
+  if (is.null(n.sample))  n.sample <- nrep
+  
+  if (n.sample<1)
+    stop("the number of replicates n.sample should be greater than or equal to 1", call. = FALSE)
+  if (n.sample>nrep)
+    stop(paste0("the number of replicates should be less than or equal to  ", nrep), call. = FALSE)
+  m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",var.param)]
+  m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",var.randeff)]
+  
   g=getIndividualParameterModel()$covariateModel
+  lnj <- NULL
   for (nj in var.param) {
     dj <- tolower(ind.dist[nj])
     yj <- m.indparam[[nj]]
@@ -304,18 +433,29 @@ covariateTest <- function(project=NULL, plot=FALSE) {
       n.yj <- paste0("probit.",nj)
     } 
     m.indparam[[nj]] <- yj
-    names(m.indparam)[names(m.indparam)==nj] <- n.yj
+    lnj <- c(lnj, n.yj)
+  }
+  m.indparam <- aggregate(m.indparam[var.param],list(m.indparam$id),mean)
+  m.indparam <- m.indparam[order(m.indparam[,1]),]
+  
+  d1 <- NULL  
+  j <- 0
+  for (nj in var.param) {
+    j <- j+1
+    yj <- m.indparam[[nj]]
     lm0 <- lm(yj ~1)
     for (nc in cov.names) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      dnc <- data.frame(parameter=n.yj,covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
+      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
       d1 <- rbind(d1,dnc)
     }
   }
   foo <- d1[order(d1$parameter, d1$p.value),]
   d1 <- foo[order(foo$in.model, decreasing=TRUE),]
-  #  d1 <- d1[order(d1$in.model, decreasing=TRUE),]
+  
+  m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)
+  m.randeff <- m.randeff[order(m.randeff[,1]),]
   
   d2 <- NULL
   for (ne in var.randeff) {
@@ -375,54 +515,113 @@ covariateTest <- function(project=NULL, plot=FALSE) {
 }
 
 #----------------------------------------------------------
-vdwmlx.test <- function(x) {
-  if (is.matrix(x))
-    x <- apply(x, MARGIN = 1, mean)
-  i0 <- which(x==0)
-  x[i0] <- rnorm(length(i0))*sd(x)*0.000001
-  mx <- 0
-  x1 <- x[x>mx] - mx
-  x2 <- mx-x[x<mx]
-  n1 <- length(x1)
-  n2 <- length(x2)
-  n <- length(x)
-  
-  r <- rank(c(x1,x2))  
-  r1 <- r[1:n1]        
-  r2 <- r[(n1+1):n]    
-  
-  m1 <- mean(qnorm(r1/(n+1)))
-  m2 <- mean(qnorm(r2/(n+1)))
-  s2 <- sum(qnorm((1:n)/(n+1))^2)/(n-1)
-  T <- (n1*m1^2 + n2*m2^2)/s2  # test statistic ~ Chi2(1)
-  p1 <- 1 - pchisq(T,1)         # p-value
-  p2 <- binom.test(sum(x>0),length(x))$p.value
-  p <- min(1,2*min(p1, p2))
-  
-  return(p)
+mgg.u <- function(x, en=NULL) {
+  if (is.null(en))
+    en <- length(x)
+  dmx <- mean(x)-median(x)
+  T <- sqrt(en)/0.9468922*dmx/mean(abs(x-median(x)))
+  pT <- pnorm(T)
+  return(2*min(pT, 1-pT))
 }
 
-swmlx.test <- function(x) {
-  if (is.vector(x)) {
-    p <- shapiro.test(x)$p.value
+sw.u <- function(x, en=NULL) {
+  n <- length(x)
+  if (is.null(en))
+    en <- n
+  if (n <4)
+    stop("n should be greater than 3")
+  mt <- qnorm(((1:n)- 3/8)/(n+0.25))
+  c  <- 1/sqrt(sum(mt^2))*mt
+  xn <- 1/sqrt(n)
+  at <- vector(length=n)
+  at[n] <- c[n] + 0.221157*xn - 0.147981*xn^2 - 2.071190*xn^3 + 4.434685*xn^4 - 2.706056*xn^5
+  at[n-1] <- c[n-1] + 0.042981*xn - 0.293762*xn^2 - 1.752461*xn^3 + 5.682633*xn^4 - 3.582663*xn^5
+  
+  if (n<=5) {
+    phi <- (sum(mt^2) - 2*(mt[n]^2))/(1 - 2*(at[n]^2))
+    at[2:(n-1)] <- mt[2:(n-1)]/sqrt(phi)
+    at[1] <- -at[n]
   } else {
-    K <- ncol(x)
-    #   cu <- cov(x)
-    #   du <- mean(diag(cu))
-    #   cu <- cu + diag(mean(cu)-diag(cu))
-    #   mu <- mean(cu)
-    #   cu <- matrix(mu,nrow=K,ncol=K)
-    #   cu <- cu + diag(du-diag(cu))
-    #   v=x%*%solve(chol(cu))
-    #   p <- shapiro.test(v)$p.value
-    # 
-    p <- NULL
-    for (k in (1:K))
-      p <- c(p, shapiro.test(x[,k])$p.value)
-    p <- p.adjust(sort(p), method="BH")[1]
-    # p <- shapiro.test(rowMeans(x))$p.value
+    phi <- (sum(mt^2) - 2*(mt[n]^2) - 2*(mt[n-1]^2))/(1 - 2*(at[n]^2) - 2*(at[n-1]^2))
+    at[3:(n-2)] <- mt[3:(n-2)]/sqrt(phi)
+    at[1:2] <- -at[c(n, n-1)]
   }
-  return(p)
+  xs <- sort(x)
+  W <- sum(at*xs)^2/sum((x-mean(x))^2)
+  
+  if (en <= 11) {
+    mu <-  0.5440 - 0.39978*en + 0.025054*en^2 - 0.0006714*en^3
+    sigma <- exp( 1.3822 - 0.77857*en + 0.062767*en^2 - 0.0020322*en^3 ) 
+    gamma <- -2.273 + 0.459*en
+    w <- -log(gamma - log(1-W))
+  } else {
+    ln <- log(en)
+    mu <- - 1.5861 - 0.31082*ln - 0.083751*(ln^2) + 0.0038915*(ln^3)
+    sigma <- exp( -0.4803 - 0.082676*ln + 0.0030302*(ln^2)) 
+    w <- log(1-W)
+  }
+  return(1-pnorm(w,mu,sigma))
 }
+
+
+mgg.test <- function (x,  method="edf") {
+  my.test(x=x, method=method, FUN=mgg.u)
+}
+
+sw.test <- function (x,  method="edf") {
+  my.test(x=x, method=method, FUN=sw.u)
+}
+
+my.test <- function (x,  method="edf", FUN=NULL) {
+  if (is.vector(x)) 
+    x <- matrix(x,ncol=1)
+  x <- (x -mean(x))/sd(x)
+  K <- ncol(x)
+  if (K==1)
+    return(FUN(x))
+  
+  if (method=="ortho") {
+    rho <- mean((rowSums(x)^2-rowSums(x^2)))/(K*(K-1))
+    Q <- matrix(rho,K,K)  + diag(rep(1-rho, K))
+    z <- x%*%solve(chol(Q))
+    return(FUN(z))
+  }
+  if (method=="cov") {
+    z <- x%*%solve(chol(cov(x)))
+    return(FUN(z))
+  }
+  if (method=="BH") {
+    p <- NULL
+    for (k in (1:K)) 
+      p <- c(p, FUN(x[,k]))
+    p <- p.adjust(sort(p), method="BH")[1]
+    return(p)
+  }
+  if (method=="edf") {
+    en <- nrow(x)*adjust.df(x)
+    return(FUN(x, en))
+  }
+} 
+
+
+# ----------------------------------------
+adjust.df <- function(e) {
+  e1.df <- function(x,y,K) {
+    n <- length(y)
+    M <- K/x
+    ofv <- n*log(M) - sum(dchisq(x=y/M, df=x, log=TRUE))
+    return(ofv)
+  }
+  K <- ncol(e)
+  if (K==1) {
+    nu <- 1
+  } else {
+    s <- rowSums(e^2)
+    s <- s[s>0]
+    nu <- optimize(e1.df, c(1,K), y=s, K=K)$minimum
+  }
+  return(nu)
+}
+
 
 

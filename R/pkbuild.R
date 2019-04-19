@@ -11,11 +11,13 @@
 #'   \item \code{administration} ("iv", "bolus", "infusion", "oral", "ev"): route of administration 
 #' }
 #' @param project a Monolix project
+#' @param stat ({FALSE}, TRUE): the statistical model is also built (using buildmlx)
 #' @param param ({"clearance"}, "rate", "both): parameterization 
 #' @param new.dir   name of the directory where the created files are stored 
 #' (default is the current working directory) )
 #' @param MM   ({FALSE}, TRUE): tested models include or not Michaelis Menten elimination models
 #' @param level an integer between 1 and 9 (used by setSettings)
+#' @param settings.stat list of settings used by buildmlx (only if stat=TRUE)
 #' 
 #' @return A list of results 
 #' @examples
@@ -34,7 +36,11 @@
 #' }
 #' @importFrom stats aggregate optim 
 #' @export
-pkbuild <- function(data=NULL, project=NULL, param="clearance", new.dir=NULL, MM=FALSE, level=NULL) {
+pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.dir=".", 
+                    MM=FALSE, level=NULL, settings.stat=NULL) {
+  
+  if (!initRsmlx())
+    return()
   
   if (!is.null(project)) {
     r <- prcheck(project)
@@ -59,6 +65,8 @@ pkbuild <- function(data=NULL, project=NULL, param="clearance", new.dir=NULL, MM
     r.final$bic <- df.res[order(df.res$bic),]
     r.final$bic <- r.final$bic[!duplicated(r.final$bic), ]
     row.names(r.final$bic) =NULL
+    if (stat) 
+      r.final <- pkbuild.stat(r.final, settings.stat)
     return(r.final)
   }
   
@@ -171,19 +179,21 @@ pkbuild <- function(data=NULL, project=NULL, param="clearance", new.dir=NULL, MM
   r.final$bic <- df.res
   row.names(r.final$bic) =NULL
   r.final$pini <- NULL
-  #r.final$administration <- admin
   
-  # loadProject(r.final$project)
-  # pop.ini <- getPopulationParameterInformation()
-  # pop.est <- getEstimatedPopulationParameters()
-  # j.est <- which(pop.ini[['name']] %in% names(pop.est))
-  # pop.ini$initialValue[j.est] <- pop.est[j.est]
-  # j.pop <- grep("_pop", names(pop.est))
-  # pop.ini$initialValue[j.pop] <- pop.est[j.pop]
-  # j.omega <- grep("omega_", names(pop.est))
-  # pop.ini$initialValue[j.pop] <- 3*pop.est[j.omega]
-  # setPopulationParameterInformation(pop.ini)
-  # saveProject(projectFile = r$final$pop)
+  if (stat) 
+    r.final <- pkbuild.stat(r.final, settings.stat)
+  
+  return(r.final)
+}
+
+pkbuild.stat <- function(r.final, settings.stat) {
+  res.stat <- do.call("buildmlx", c(list(project=r.final$project), settings.stat))
+  loadProject(res.stat$project)
+  r.final$project <- res.stat$project
+  r.final$covariate.model <- res.stat$covariate.model
+  r.final$correlation.model <- res.stat$correlation.model
+  r.final$error.model <- res.stat$error.model
+  r.final$pop.est <- getEstimatedPopulationParameters()
   return(r.final)
 }
 

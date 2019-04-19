@@ -1,7 +1,9 @@
-covariateModelSelection <- function(criterion="BIC", nb.model=1, covToTransform=NULL, covFix=NULL, 
+covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform=NULL, covFix=NULL, 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, 
-                                    sp0=NULL, iter=1) 
-{
+                                    sp0=NULL, iter=1) {
+
+  if (criterion=="BICc")  criterion="BIC"
+
   project.folder <- getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
   

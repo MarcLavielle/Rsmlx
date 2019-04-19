@@ -5,7 +5,7 @@
 \title{Statistical tests for model assessment}
 \usage{
 testmlx(project, tests = c("covariate", "randomEffect", "correlation",
-  "residual"), plot = FALSE)
+  "residual"), plot = FALSE, adjust = "edf", n.sample = NULL)
 }
 \arguments{
 \item{project}{a Monolix project}
@@ -14,6 +14,10 @@ testmlx(project, tests = c("covariate", "randomEffect", "correlation",
 among c("covariate","randomEffect","correlation","residual")}
 
 \item{plot}{{FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)}
+
+\item{adjust}{method to take into account the dependency of MCMC sample  c({"edf"},"BH")}
+
+\item{n.sample}{number of samples from the conditional distribution to be used (default = number of available samples in the project)}
 }
 \value{
 a list of data frames and ggplot objects if plot=TRUE
@@ -23,17 +27,24 @@ Perform several statistical tests using the results of a Monolix run to assess t
 components of the model in use.
 }
 \details{
-The tests used are:  1) F-tests (or, equivalently, correlation tests) to evaluate the effect of 
-each covariate on each parameter ("covariate"), 2) Shapiro-Wilk and symmetry tests to assess 
-the distribution of the random effects (""randomEffect"), 3) correlation tests to assess the 
-correlation structure of the random effects ("correlation"), 4) Shapiro-Wilk and symmetry 
-tests to assess the distribution of the residual errors ("residual").
+The tests used are:  
+1) F-tests (or, equivalently, correlation tests) to evaluate the effect of each covariate 
+on each parameter ("covariate"), 
+2) correlation tests to assess the correlation structure of the random effects ("correlation"), 
+3) Shapiro-Wilk and Miao-Gel-Gastwirth tests to assess, respectively the normality and the
+symmetry of the distribution of the random effects (""randomEffect"), 
+4) Shapiro-Wilk and Miao-Gel-Gastwirth tests to assess, respectively the normality and the
+symmetry of the distribution of residual errors ("residual").
 
-By default, the four tests are performed
+By default, the four tests are performed.
+
+When several samples of the conditional distributions are used, two methods are proposed in order 
+to take into the dependance of the samples for the Shapiro-Wilk and Miao-Gel-Gastwirth tests: 
+"edf" computes an effective degrees of freedom, "BH" performs one test per replicates and adjust 
+the smallest p-value using the Benjamini-Hochberg correction.
 }
 \examples{
-initializeMlxConnectors(software = "monolix")
-
+\dontrun{
 # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 # with parameters ka, V, Cl.
 
@@ -44,5 +55,6 @@ r1 <- testmlx(project="RsmlxDemo2.mlxtran")
 r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
 
 # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+# Download the demo examples here: http://rsmlx.webpopix.org/installation
+}
 }

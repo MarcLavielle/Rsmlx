@@ -34,8 +34,7 @@
 #' \item \code{saveRun} [boolean] whether to save or not each run (default = TRUE)
 #' }
 #' @examples
-#' initializeMlxConnectors(software = "monolix")
-#' 
+#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -53,7 +52,9 @@
 #'                       covToTest  = c("age","wt"))
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/covariatesearch/ for detailed examples of covariatesearch
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
+#' }
 #' @export
 covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, testRelations = NULL, settings = NULL){
   
@@ -61,6 +62,10 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   # Initial check
   ###################################################################################
   # Check the validity of the project
+  
+  if (!initRsmlx())
+    return()
+  
   r <- prcheck(project, f="cov", paramToUse=paramToUse, method=method)
   if (r$demo)
     return(r$res)

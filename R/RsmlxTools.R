@@ -1,7 +1,6 @@
 
 #-------------------------------------------------
-generatePKmodel <-  function(parameter, model="pk_model.txt", output=NULL)
-{
+generatePKmodel <-  function(parameter, model="pk_model.txt", output=NULL) {
   str1 <- paste(parameter,collapse=",")
   str2 <- str1
   model_txt="

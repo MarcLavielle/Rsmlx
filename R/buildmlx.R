@@ -19,7 +19,7 @@
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
-#' @param criterion  penalization criterion to optimize c({"BIC"}, "AIC", gamma)
+#' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
 #' @param max.iter maximum number of iterations (default=20)
 #' @param exp.iter  number of iterations during the exploratory phase (default=1)
@@ -31,7 +31,7 @@
 #' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @return a new Monolix project with a new statistical model.
 #' @examples
-#' initializeMlxConnectors(software = "monolix")
+#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -50,18 +50,23 @@
 #' r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC") 
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/Rsmlx/Rsmlx10_demos.zip
+#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+
+#' }
 #' @importFrom MASS stepAIC 
 #' @importFrom stats coef as.formula model.matrix
 #' @importFrom utils data write.csv
 #' @export
 buildmlx <- function(project, final.project=NULL, model="all", 
                      paramToUse="all", covToTest="all", covToTransform="none", 
-                     criterion="BIC", direction=NULL,
+                     criterion="BICc", direction=NULL,
                      max.iter=20, print=TRUE, nb.model=1, linearization=FALSE, 
                      seqcc=FALSE, p.max=1, steps=1000, exp.iter=2)
   #lambda='cv', glmnet.settings=NULL)
 {
+  
+  if (!initRsmlx())
+    return()
   
   r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
   if (r$demo)
@@ -581,6 +586,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (test.del & dir.exists(final.dir)) {
     unlink(final.dir, recursive=TRUE)
   }
+  
   g=getScenario()
   g$tasks[[2]]=TRUE
   setScenario(g)
@@ -590,6 +596,9 @@ buildmlx <- function(project, final.project=NULL, model="all",
   # close(con)
   # summary.file = file.path(final.dir,"buildmlx.txt")
   # write(lines, file=summary.file)
+  
+  loadProject(final.project)
+  if ( !getLaunchedTasks()[[1]] )   runScenario()
   
   res <- list(project=final.project)
   if (iop.covariate)
@@ -744,6 +753,7 @@ computecriterion <- function(criterion, method.ll) {
   ll <- getEstimatedLogLikelihood()[[method.ll]]
   if (identical(criterion,"AIC")) cr <- ll[["AIC"]]
   else if (identical(criterion,"BIC")) cr <- ll[["BIC"]]
+  else if (identical(criterion,"BICc")) cr <- ll[["BICc"]]
   else {
     d <- (ll[["AIC"]] - ll[["-2LL"]])/2
     cr <- ll[["-2LL"]]+d*criterion
