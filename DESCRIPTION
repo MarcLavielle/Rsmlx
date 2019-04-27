@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 2.0.0
+Version: 2.0.1
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("aut"), email = "Jonathan.Chauvin@lixoft.com" ),
@@ -34,7 +34,6 @@ Collate: bootstrap.R
          pkbuild.R
          pkpopini.R
          whichPKmodel.R
-         apiManager.R
 License: BSD_2_clause + file LICENSE
 Copyright: Inria
 NeedsCompilation: no
