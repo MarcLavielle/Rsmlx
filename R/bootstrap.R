@@ -101,7 +101,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   
   if(is.null(dataFolder)){
     # generate data sets from the initial data set
-    if(!parametric)
+    if(parametric)
       boot.folder = '/bootstrap/parametric/'
     else
       boot.folder = '/bootstrap/nonParametric/'
