@@ -34,7 +34,6 @@
 #' \item \code{saveRun} [boolean] whether to save or not each run (default = TRUE)
 #' }
 #' @examples
-#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -53,8 +52,8 @@
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/covariatesearch/ for detailed examples of covariatesearch
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
-
-#' }
+#'
+#'
 #' @export
 covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, testRelations = NULL, settings = NULL){
   
@@ -62,9 +61,6 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   # Initial check
   ###################################################################################
   # Check the validity of the project
-  
-  if (!initRsmlx())
-    return()
   
   r <- prcheck(project, f="cov", paramToUse=paramToUse, method=method)
   if (r$demo)
@@ -90,7 +86,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   if(!.checkCovariateSearchInput(inputName = "method", inputValue = method)){return(invisible(FALSE))}
   
   # check the paramToUse
-  projectParameters <- getIndividualParameterModel()$name
+  projectParameters <- mlx.getIndividualParameterModel()$name
   if(is.null(paramToUse)){
     validParameters <- projectParameters
   }else{
@@ -104,15 +100,15 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   if(!is.null(covToTransform)){
     if(!.checkCovariateSearchInput(inputName = "covToTest", inputValue = covToTransform)){return(invisible(FALSE))}
     if(is.null(covToTest)){
-      covToTest <- getCovariateInformation()$name
+      covToTest <- mlx.getCovariateInformation()$name
     }
     for(index in 1:length(covToTransform)){
       cov <- covToTransform[index]
-      eval(parse(text=paste0('indexCov <- which(names(getCovariateInformation()$type)=="',cov,'")')))
-      if(length(intersect(getCovariateInformation()$type[indexCov],"continuous"))>0){
-        eval(parse(text=paste0('meanCov <- mean(getCovariateInformation()$covariate$',cov,')')))
+      eval(parse(text=paste0('indexCov <- which(names(mlx.getCovariateInformation()$type)=="',cov,'")')))
+      if(length(intersect(mlx.getCovariateInformation()$type[indexCov],"continuous"))>0){
+        eval(parse(text=paste0('meanCov <- mean(mlx.getCovariateInformation()$covariate$',cov,')')))
         newCov <- paste0("log_",cov)
-        eval(parse(text=paste0('addContinuousTransformedCovariate(',newCov,'="log(',cov,'/',toString(meanCov),')")')))
+        eval(parse(text=paste0('lixoftConnectors::addContinuousTransformedCovariate(',newCov,'="log(',cov,'/',toString(meanCov),')")')))
         cat(paste0(newCov," was added. \n" ))
         
         # Add it in the covariate to test
@@ -132,7 +128,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   }
   
   # Check the covToTest
-  projectCovariates <- getCovariateInformation()$name
+  projectCovariates <- mlx.getCovariateInformation()$name
   if(length(projectCovariates)==0){
     message("There is no covariate to test")
     return(invisible(FALSE))
@@ -171,7 +167,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   if(is.null(settings$saveRun)){settings$saveRun <- TRUE }
   
   # Check if linearization is possible
-  for(indexObservationModel in 1:length(getObservationInformation()$name)){settings$linearization <- settings$linearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  for(indexObservationModel in 1:length(mlx.getObservationInformation()$name)){settings$linearization <- settings$linearization & (mlx.getObservationInformation()$type[[indexObservationModel]]=="continuous")}
   
   
   ###################################################################################
@@ -197,7 +193,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   }
   
   nbRun <- 0;
-  outputDirectory <- getProjectSettings()$directory
+  outputDirectory <- mlx.getProjectSettings()$directory
   covariateSeachOutputFolder <- paste0(outputDirectory,'/covariateSearch_',method, '_',settings$criteria,'/')
   dir.create(path = covariateSeachOutputFolder, showWarnings = F, recursive = T)
   
@@ -210,11 +206,11 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   
   summary.file <- paste0(covariateSeachOutputFolder,"covSearchSummary.txt")
   if(settings$rankedSCM){additionalDisplay <- ''}else{additionalDisplay <- "+++++++++++++++++++++++\n"}
-  projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectFile = projectRun);
+  projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');mlx.saveProject(projectFile = projectRun);
   
   if(settings$criteria == 'BIC'){
     criteriaToDisplay <- 'BIC'
-    indexLL <- 4 # Index in getEstimatedLogLikelihood()[[1]] function
+    indexLL <- 4 # Index in mlx.getEstimatedLogLikelihood()[[1]] function
     displayPvalue <- FALSE
   }else if(settings$criteria == 'AIC'){
     criteriaToDisplay <- 'AIC'
@@ -234,8 +230,8 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   summary <- c(date(),'\n');  t_strat <- proc.time(); referenceOFV <- NULL;
   
   # Make a first run
-  bScenario <- runScenario(TRUE); nbRun = nbRun+1;
-  referenceOFV <- getEstimatedLogLikelihood()[[1]][indexLL]
+  bScenario <- mlx.runScenario(TRUE); nbRun = nbRun+1;
+  referenceOFV <- mlx.getEstimatedLogLikelihood()[[1]][indexLL]
   
   #############################################################################################################################
   # Forward inclusion step
@@ -248,7 +244,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     summary <- c(summary, lineDisplay); cat(lineDisplay);cat(summary, file = summary.file)
   }
   while(bForward&(length(remainingCovariateStructure$indivParam)>0)){
-    initialEstimates <- getPopulationParameterInformation(); # Keep the initial estimates of the project
+    initialEstimates <- mlx.getPopulationParameterInformation(); # Keep the initial estimates of the project
     if(settings$rankedSCM){
       idConfig <- which.min(x = remainingCovariateStructure$pValue); # We test the remaining most probable
     }else{
@@ -266,16 +262,16 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig];
         evaluatedCovariate <- remainingCovariateStructure$covariate[indexConfig];
         # Initialize the population parameters estimates and add the parameter - covariate relaionship
-        setPopulationParameterInformation(initialEstimates);
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
+        mlx.setPopulationParameterInformation(initialEstimates);
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
         # Run the scenario with the additional parameter - covariate relationship
-        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectRun);}
+        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');mlx.saveProject(projectRun);}
         OFvalues[iterConfig,1] <- .getOFV(indexLL); nbRun = nbRun+1;
         OFvalues[iterConfig,2] <- nbRun-1
         OFvalues[iterConfig,3] <- .getDof(covariate = evaluatedCovariate)
-        estimatedPopParam[[iterConfig]] <- getEstimatedPopulationParameters()
+        estimatedPopParam[[iterConfig]] <- mlx.getEstimatedPopulationParameters()
         # Get back to the initial state before decision
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
         
         if(settings$rankedSCM == F){endofline='\n'}else{endofline=paste0('')}
         lineDisplay <- paste0("Run ",toString(OFvalues[iterConfig,2]),": Evaluation of adding covariate ", evaluatedCovariate, ' on parameter ',evaluatedParameter,' ==> ', criteriaToDisplay,' = ', format(as.double(OFvalues[iterConfig,1]), nsmall = 1),', ',criteriaToDisplay,'-difference = ',format(as.double(referenceOFV-OFvalues[iterConfig,1]), nsmall = 1),endofline);
@@ -301,7 +297,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
       if(pValue <= settings$pInclusion){ # If the pValue is valid wrt the inclusion criteria
         # Add the parameter and list
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexMin]; evaluatedCovariate <- remainingCovariateStructure$covariate[indexMin]
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
         referenceOFV <- OFvalues[iterMin,1]
         if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'')}else{pValueDisplay<-''}
         lineDisplay <- paste0(pValueDisplay,' \n',"=> covariate ", evaluatedCovariate, ' was included on parameter ', evaluatedParameter,' (new ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
@@ -309,13 +305,13 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
         if(settings$updateInit){
           newInitialConditions = estimatedPopParam[[iterMin]]
           for(indexParam in 1:length(newInitialConditions)){
-            eval(parse(text=paste0('setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
+            eval(parse(text=paste0('lixoftConnectors::setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
           }
         }
         # Update the pValue of the remaining pairs
         remainingCovariateStructure <- .updateRemainingPvalue(structure = remainingCovariateStructure[-indexMin,])
       }else{
-        setPopulationParameterInformation(initialEstimates);
+        mlx.setPopulationParameterInformation(initialEstimates);
         if(settings$rankedSCM){# keep searching in the list
           if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'')}else{pValueDisplay<-''}
           lineDisplay <- paste0(pValueDisplay,' \n',"=> covariate ",remainingCovariateStructure$covariate[indexMin], ' was not included on parameter ', remainingCovariateStructure$indivParam[indexMin],' (ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
@@ -345,7 +341,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   }
   
   while(bBackward&(length(remainingCovariateStructure$indivParam)>0)){
-    initialEstimates <- getPopulationParameterInformation(); # Keep the initial estimates of the project
+    initialEstimates <- mlx.getPopulationParameterInformation(); # Keep the initial estimates of the project
     if(settings$rankedSCM){
       idConfig <- which.max(x = remainingCovariateStructure$pValue); # We test the remaining most probable
     }else{
@@ -363,16 +359,16 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexConfig];
         evaluatedCovariate <- remainingCovariateStructure$covariate[indexConfig];
         # Initialize the population parameters estimates and add the parameter - covariate relaionship
-        setPopulationParameterInformation(initialEstimates);
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
+        mlx.setPopulationParameterInformation(initialEstimates);
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
         # Run the scenario with the additional parameter - covariate relationship
-        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');saveProject(projectRun);}
+        if(settings$saveRun){projectRun <- paste0(covariateSeachOutputFolder,'run_',toString(nbRun),'.mlxtran');mlx.saveProject(projectRun);}
         OFvalues[iterConfig,1] <- .getOFV(indexLL); nbRun = nbRun+1;
         OFvalues[iterConfig,2] <- nbRun-1
         OFvalues[iterConfig,3] <- -.getDof(covariate = evaluatedCovariate)
-        estimatedPopParam[[iterConfig]] <- getEstimatedPopulationParameters()
+        estimatedPopParam[[iterConfig]] <- mlx.getEstimatedPopulationParameters()
         # Get back to the initial state before decision
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = TRUE))')))
         if(settings$rankedSCM == F){endofline='\n'}else{endofline=''}
         lineDisplay <- paste0("Run ",toString(OFvalues[iterConfig,2]),": Evaluation of removing covariate ", evaluatedCovariate, ' from parameter ',evaluatedParameter,' ==> ', criteriaToDisplay,' = ', format(as.double(OFvalues[iterConfig,1]), nsmall = 1),', ', criteriaToDisplay,'-difference = ',format(as.double(referenceOFV-OFvalues[iterConfig,1]), nsmall = 1),endofline);
         summary <- c(summary, lineDisplay);cat(lineDisplay);cat(summary, file = summary.file);  
@@ -397,7 +393,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
       if(pValue >= settings$pElimination){
         # Add the parameter and list
         evaluatedParameter <- remainingCovariateStructure$indivParam[indexMin]; evaluatedCovariate <- remainingCovariateStructure$covariate[indexMin]
-        eval(parse(text=paste0('setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
+        eval(parse(text=paste0('lixoftConnectors::setCovariateModel(',evaluatedParameter,' = list(', evaluatedCovariate, ' = FALSE))')))
         referenceOFV <- OFvalues[iterMin,1]
         if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'\n')}else{pValueDisplay<-''}
         lineDisplay <- paste0(pValueDisplay,"=> covariate ", evaluatedCovariate, ' was removed from parameter ', evaluatedParameter,' (new ref. ',criteriaToDisplay ,' = ',format(referenceOFV, nsmall = 1),') \n',additionalDisplay);
@@ -405,13 +401,13 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
         if(settings$updateInit){
           newInitialConditions = estimatedPopParam[[iterMin]]
           for(indexParam in 1:length(newInitialConditions)){
-            eval(parse(text=paste0('setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
+            eval(parse(text=paste0('lixoftConnectors::setPopulationParameterInformation(',names(newInitialConditions)[indexParam],' = list(initialValue = ',newInitialConditions[indexParam],'))')))
           }
         }
         # Update the pValue of the remaining pairs
         remainingCovariateStructure <- .updateRemainingPvalue(structure = remainingCovariateStructure[-indexMin,])
       }else{
-        setPopulationParameterInformation(initialEstimates);
+        mlx.setPopulationParameterInformation(initialEstimates);
         if(settings$rankedSCM){
           if(settings$criteria == "LRT" & settings$rankedSCM==T){pValueDisplay <- paste0(', pVal = ',format(pValue, digits = 3),'\n')}else{pValueDisplay<-''}
           remainingCovariateStructure <- remainingCovariateStructure[-indexMin,]
@@ -429,7 +425,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   }
   
   # Make the summary
-  saveProject(projectFile = final.project)
+  mlx.saveProject(projectFile = final.project)
   OFValue = .getOFV(indexLL); nbRun = nbRun+1;
   summary <- c(summary, paste0("========================================================\nFINAL MODEL (",criteriaToDisplay," = ",format(OFValue, nsmall = 1),")\n"))
   summary <- c(summary, paste0("--> target parameters: ",toString(unique(relationshipsToTest$indivParam)),"\n --> searched covariates: ",toString(unique(relationshipsToTest$covariate))," \n\n"))
@@ -453,7 +449,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     if(is.vector(inputValue) == FALSE){
       message("ERROR: Unexpected type encountered. paramToUse must be a vector")
       isValid = FALSE
-    }else if(prod(is.element(el = inputValue, set =getIndividualParameterModel()$name))==0){
+    }else if(prod(is.element(el = inputValue, set =mlx.getIndividualParameterModel()$name))==0){
       message("ERROR: paramToUse has at least one non-valid parameter name in its definition.")
       isValid = FALSE
     }
@@ -461,7 +457,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     if(is.vector(inputValue) == FALSE){
       message("ERROR: Unexpected type encountered. covToTest must be a vector")
       isValid = FALSE
-    }else if(prod(is.element(el = inputValue, set = getCovariateInformation()$name))==0){
+    }else if(prod(is.element(el = inputValue, set = mlx.getCovariateInformation()$name))==0){
       message("ERROR: covToTest has at least one non-valid covariate name in its definition.")
       isValid = FALSE
     }
@@ -472,12 +468,12 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     }else{
       for(indexList in 1:length(inputValue)){
         # Check the name
-        if(!is.element(el = names(inputValue)[indexList],set = getIndividualParameterModel()$name)){
+        if(!is.element(el = names(inputValue)[indexList],set = mlx.getIndividualParameterModel()$name)){
           message(paste0("ERROR: in testRelations, ", names(inputValue)[indexList], " is not a valid parameter name."))
           isValid = FALSE
           }
         # Check the values
-          if(prod(is.element(el = inputValue[[indexList]],set = getCovariateInformation()$name))==0){
+          if(prod(is.element(el = inputValue[[indexList]],set = mlx.getCovariateInformation()$name))==0){
             message(paste0("ERROR: in testRelations, some elements of (",toString(inputValue[[indexList]]), ") are not valid covariates."))
             isValid = FALSE
           }
@@ -590,7 +586,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   param <- cov <- pValue <-NULL
   if(length(relationshipsToTest$indivParam)>0){
     for(indexParam in 1:length(relationshipsToTest$indivParam)){
-      hasCov <- eval(parse(text=paste0('which(getIndividualParameterModel()$covariateModel$',relationshipsToTest$indivParam[indexParam],'==TRUE)')))
+      hasCov <- eval(parse(text=paste0('which(mlx.getIndividualParameterModel()$covariateModel$',relationshipsToTest$indivParam[indexParam],'==TRUE)')))
       if(length(hasCov)>0){
         covOnIndiv <- intersect(relationshipsToTest$covariate[indexParam], names(hasCov))
         if(length(covOnIndiv)>0){
@@ -695,7 +691,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 # Get the tests associated to the random effects w.r.t. the covariates
 ######################################################################################################################
 .getTestsRandomEffects <- function(){
-  testFile <- paste0(getProjectSettings()$directory,'/Tests/correlationRandomEffectsCovariates.txt')
+  testFile <- paste0(mlx.getProjectSettings()$directory,'/Tests/correlationRandomEffectsCovariates.txt')
   if(file.exists(testFile)){
     test <- read.table(file = testFile, header = T, sep = "")
     if(length(test[1,])==1){test <- read.table(file = testFile, header = T, sep = ",")}
@@ -711,7 +707,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 # Get the tests associated to the individual parameters w.r.t. the covariates
 ######################################################################################################################
 .getTestsIndivParam <- function(){
-  testFile <- paste0(getProjectSettings()$directory,'/Tests/correlationIndividualParametersCovariates.txt')
+  testFile <- paste0(mlx.getProjectSettings()$directory,'/Tests/correlationIndividualParametersCovariates.txt')
   if(file.exists(testFile)){
     test <- read.table(file = testFile, header = T, sep = "")
     if(length(test[1,])==1){test <- read.table(file = testFile, header = T, sep = ",")}
@@ -744,7 +740,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 #############################################################################################################################
 .defineScenario <- function(linearization, useTests){
   # Define the scenario associated to the type of test and the method
-  scenario <- getScenario()
+  scenario <- mlx.getScenario()
   if(linearization){
     scenario$linearization = T
   }else{
@@ -761,17 +757,17 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
       scenario$tasks <- c(populationParameterEstimation = T, conditionalDistributionSampling = T, logLikelihoodEstimation = T)
     }
   }
-  setScenario(scenario)
+  mlx.setScenario(scenario)
 }
 
 #############################################################################################################################
 # Run the scenario and get the OFV
 #############################################################################################################################
 .getOFV <- function(indexLL){
-  bScenario <- runScenario(TRUE);
+  bScenario <- mlx.runScenario(TRUE);
   
   if(bScenario){# The run is ok
-    OFValue = getEstimatedLogLikelihood()[[1]][indexLL]
+    OFValue = mlx.getEstimatedLogLikelihood()[[1]][indexLL]
   }else{
     OFValue <- Inf
   }
@@ -783,9 +779,9 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 #############################################################################################################################
 .getDof <- function(covariate){
   indexCov <- NULL
-  eval(parse(text=paste0('indexCov <- which(names(getCovariateInformation()$type)=="',covariate,'")')))
-  if(length(intersect(getCovariateInformation()$type[indexCov],c("categorical","categoricaltransformed")))>0){
-    eval(parse(text=paste0('dof <- length(unique(getCovariateInformation()$covariate$',covariate,'))-1')))
+  eval(parse(text=paste0('indexCov <- which(names(mlx.getCovariateInformation()$type)=="',covariate,'")')))
+  if(length(intersect(mlx.getCovariateInformation()$type[indexCov],c("categorical","categoricaltransformed")))>0){
+    eval(parse(text=paste0('dof <- length(unique(mlx.getCovariateInformation()$covariate$',covariate,'))-1')))
   }else{
     dof = 1
   }

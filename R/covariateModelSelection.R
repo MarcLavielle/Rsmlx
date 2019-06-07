@@ -4,7 +4,7 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
 
   if (criterion=="BICc")  criterion="BIC"
 
-  project.folder <- getProjectSettings()$directory
+  project.folder <- mlx.getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
   
   sp.df <- read.res(sp.file)
@@ -20,15 +20,15 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
   }
   nrep <- max(sp.df$rep)
 
-  ind.dist <- getIndividualParameterModel()$distribution
+  ind.dist <- mlx.getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
   if (identical(paramToUse,"all"))
     paramToUse <- param.names
   n.param <- length(param.names)
   #sim.parameters <- sp.df[c("rep","id",param.names)]
-  sim.parameters <- getSimulatedIndividualParameters()
+  sim.parameters <- mlx.getSimulatedIndividualParameters()
   
-  cov.info <- getCovariateInformation()
+  cov.info <- mlx.getCovariateInformation()
   cov.names <- cov.info$name
   cov.types <- cov.info$type
   j.trans <- grep("transformed",cov.types)
@@ -42,10 +42,10 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
   cov.cat <- cov.names[cov.types == "categorical"]
   covariates[cov.cat] <-  lapply(covariates[cov.cat],as.factor)
   
-  indvar <- getIndividualParameterModel()$variability$id
+  indvar <- mlx.getIndividualParameterModel()$variability$id
   indvar[setdiff(param.names, paramToUse)] <- FALSE
   
-  cov.model <- getIndividualParameterModel()$covariateModel
+  cov.model <- mlx.getIndividualParameterModel()$covariateModel
   r <- res <- list()
   for (j in (1:n.param)) {
     dj <- ind.dist[j]
@@ -88,8 +88,8 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
   if (!is.null(sp.df["rep"]))
     e <- cbind(sp.df["rep"], e)
   
-  covariate.model <- getIndividualParameterModel()$covariateModel
-  covariate <- getCovariateInformation()$covariate
+  covariate.model <- mlx.getIndividualParameterModel()$covariateModel
+  covariate <- mlx.getCovariateInformation()$covariate
   js <- 0
   trs <- list()
   tr0 <- NULL
@@ -107,7 +107,7 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
               covkj <- covariate[[ckj.name]]
               lckj <- paste0("l",ckj.name)
               tr.str <- paste0(lckj,' = "log(',ckj.name,"/",signif(mean(covkj),digits=2),')"')
-              trs[[js]] <- paste0("addContinuousTransformedCovariate(",tr.str,")")
+              trs[[js]] <- paste0("lixoftConnectors::addContinuousTransformedCovariate(",tr.str,")")
               tr0 <- unique(c(tr0,ckj.name))
               #eval(parse(text=tr.str))
               covariate.model[[k]][lckj] <- TRUE

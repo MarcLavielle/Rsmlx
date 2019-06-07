@@ -63,7 +63,6 @@ can be one of "both", "backward", or "forward", with a default of "both" when th
 See http://rsmlx.webpopix.org for more details.
 }
 \examples{
-\dontrun{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 # using a PK model with parameters ka, V, Cl.
 
@@ -83,5 +82,6 @@ r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC")
 
 # See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
 # Download the demo examples here: http://rsmlx.webpopix.org/installation
-}
+
+
 }

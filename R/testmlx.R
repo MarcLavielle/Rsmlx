@@ -26,7 +26,6 @@
 #' @param n.sample number of samples from the conditional distribution to be used (default = number of available samples in the project)
 #' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples
-#' \dontrun{
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -38,14 +37,14 @@
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
-
-#' }
+#' 
+#' 
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth
 #' @importFrom gridExtra grid.arrange
 #' @importFrom grDevices palette
-#' @importFrom stats quantile anova binom.test cor cov dnorm lm logLik nlm p.adjust pchisq pnorm qnorm
-#'             quantile rnorm runif sd shapiro.test spline t.test
+#' @importFrom stats quantile anova binom.test cor cov dnorm lm logLik nlm p.adjust pchisq dchisq pnorm qnorm
+#'             quantile rnorm runif sd shapiro.test spline t.test optimize median
 #' @importFrom utils ls.str read.csv read.table write.table
 #' @export
 
@@ -53,26 +52,26 @@ testmlx <- function(project,
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE, adjust="edf", n.sample=NULL) 
 {
-  if (!initRsmlx())
-    return()
-  
+
   r <- prcheck(project, f="test", tests=tests)
   if (r$demo)
     return(r$res)
   project <- r$project
   
-  launched.tasks <- getLaunchedTasks()
+  launched.tasks <- mlx.getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
     cat("\nEstimation of the population parameters... \n")
-    runPopulationParameterEstimation()
+    mlx.runPopulationParameterEstimation()
   }
   if (!launched.tasks[["conditionalDistributionSampling"]]) {
     cat("Sampling of the conditional distribution... \n")
-    runConditionalDistributionSampling()
+    mlx.runConditionalDistributionSampling()
   }
   
+  theme_set(theme_bw())
+  
   #------------------------------
-  if (!any(getIndividualParameterModel()$variability$id))
+  if (!any(mlx.getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
   
   method.adjust <- adjust
@@ -92,9 +91,9 @@ testmlx <- function(project,
 residualTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
-    loadProject(project)
+    mlx.loadProject(project)
   
-  if (is.null(getContinuousObservationModel()))  return(list())
+  if (is.null(mlx.getContinuousObservationModel()))  return(list())
   
   if (!is.null(n.sample) && n.sample=="mode") {
     residual <- getEstimatedResiduals()
@@ -161,20 +160,20 @@ residualTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, plot=
 randomEffectTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
-    loadProject(project)
+    mlx.loadProject(project)
   
   if (!is.null(n.sample) && n.sample=="mode") {
-    sim.randeff <- getEstimatedRandomEffects()$conditionalMode
+    sim.randeff <- mlx.getEstimatedRandomEffects()$conditionalMode
     if (is.null(sim.randeff))
       stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else if (!is.null(n.sample) && n.sample=="mean") {
-    sim.randeff <- getEstimatedRandomEffects()$conditionalMean
+    sim.randeff <- mlx.getEstimatedRandomEffects()$conditionalMean
     if (is.null(sim.randeff))
       stop("the conditional means have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else {
-    sim.randeff <- getSimulatedRandomEffects()
+    sim.randeff <- mlx.getSimulatedRandomEffects()
   }
   if (is.null(sim.randeff$rep)) 
     sim.randeff$rep <- 1
@@ -188,9 +187,9 @@ randomEffectTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, p
   sim.randeff <- subset(sim.randeff, rep<=n.sample)
   nrep <- n.sample
   
-  pop <- getEstimatedPopulationParameters()
+  pop <- mlx.getEstimatedPopulationParameters()
   
-  var.param <- names(which(getIndividualParameterModel()$variability$id))
+  var.param <- names(which(mlx.getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
   omega <- paste0("omega_",var.param)
   
@@ -217,7 +216,7 @@ randomEffectTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, p
   if (plot) {
     x <- seq(-3,3,length.out=100)
     dn <- data.frame(x,F=pnorm(x))
-    pop.param <- getEstimatedPopulationParameters()
+    pop.param <- mlx.getEstimatedPopulationParameters()
     names.pop.param <- gsub(" ","",names(pop.param))
     ind.param.omega <- grep("omega_",names.pop.param)
     iop.omega2 <- FALSE
@@ -251,20 +250,20 @@ randomEffectTest <- function(project=NULL, method.adjust="edf", n.sample=NULL, p
 correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
-    loadProject(project)
+    mlx.loadProject(project)
   
   if (!is.null(n.sample) && n.sample=="mode") {
-    sim.randeff <- getEstimatedRandomEffects()$conditionalMode
+    sim.randeff <- mlx.getEstimatedRandomEffects()$conditionalMode
     if (is.null(sim.randeff))
       stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else if (!is.null(n.sample) && n.sample=="mean") {
-    sim.randeff <- getEstimatedRandomEffects()$conditionalMean
+    sim.randeff <- mlx.getEstimatedRandomEffects()$conditionalMean
     if (is.null(sim.randeff))
       stop("the conditional means have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else {
-    sim.randeff <- getSimulatedRandomEffects()
+    sim.randeff <- mlx.getSimulatedRandomEffects()
   }
   if (is.null(sim.randeff$rep)) 
     sim.randeff$rep <- 1
@@ -279,7 +278,7 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   nrep <- n.sample
   
   
-  var.param <- names(which(getIndividualParameterModel()$variability$id))
+  var.param <- names(which(mlx.getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
   col.el <- which((names(sim.randeff) %in% var.randeff))
   nel <- length(col.el)
@@ -303,7 +302,7 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     }
     
     if (plot) {
-      pop.param <- getEstimatedPopulationParameters()
+      pop.param <- mlx.getEstimatedPopulationParameters()
       names.pop.param <- gsub(" ","",names(pop.param))
       ind.param.omega <- grep("omega_",names.pop.param)
       iop.omega2 <- FALSE
@@ -359,9 +358,9 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
 covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   
   if (!is.null(project)) 
-    loadProject(project)
+    mlx.loadProject(project)
   
-  cov.info <- getCovariateInformation()
+  cov.info <- mlx.getCovariateInformation()
   if (is.null(cov.info)) return(list())
   cov.names <- cov.info$name
   cov.types <- cov.info$type
@@ -374,33 +373,33 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   #covariates["id"] <- NULL
   covariates <- covariates[order(covariates$id),]
   
-  # sim.randeff <- getSimulatedRandomEffects()
+  # sim.randeff <- mlx.getSimulatedRandomEffects()
   # if (is.null(sim.randeff$rep)) 
   #   sim.randeff$rep <- 1
   # nrep <- max(sim.randeff$rep)
   
-  var.param <- names(which(getIndividualParameterModel()$variability$id))
+  var.param <- names(which(mlx.getIndividualParameterModel()$variability$id))
   var.randeff <- paste0("eta_",var.param)
-  ind.dist <- getIndividualParameterModel()$distribution[var.param]
+  ind.dist <- mlx.getIndividualParameterModel()$distribution[var.param]
   n.param <- length(var.param)
-  # m.indparam <- getEstimatedIndividualParameters()$conditionalMean[var.param]
-  # m.randeff <- getEstimatedRandomEffects()$conditionalMean[var.randeff]
+  # m.indparam <- mlx.getEstimatedIndividualParameters()$conditionalMean[var.param]
+  # m.randeff <- mlx.getEstimatedRandomEffects()$conditionalMean[var.randeff]
   
   if (!is.null(n.sample) && n.sample=="mode") {
-    m.indparam <- getEstimatedIndividualParameters()$conditionalMode[c("id",var.param)]
-    m.randeff <- getEstimatedRandomEffects()$conditionalMode[c("id",var.randeff)]
+    m.indparam <- mlx.getEstimatedIndividualParameters()$conditionalMode[c("id",var.param)]
+    m.randeff <- mlx.getEstimatedRandomEffects()$conditionalMode[c("id",var.randeff)]
     if (is.null(m.indparam))
       stop("the conditional modes (EBE's) have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else if (!is.null(n.sample) && n.sample=="mean") {
-    m.indparam <- getEstimatedIndividualParameters()$conditionalMean[c("id",var.param)]
-    m.randeff <- getEstimatedRandomEffects()$conditionalMean[c("id",var.randeff)]
+    m.indparam <- mlx.getEstimatedIndividualParameters()$conditionalMean[c("id",var.param)]
+    m.randeff <- mlx.getEstimatedRandomEffects()$conditionalMean[c("id",var.randeff)]
     if (is.null(m.indparam))
       stop("the conditional means have not been estimated...", call.=FALSE)
     n.sample <- 1
   } else {
-    m.indparam <- getSimulatedIndividualParameters()
-    m.randeff <- getSimulatedRandomEffects()
+    m.indparam <- mlx.getSimulatedIndividualParameters()
+    m.randeff <- mlx.getSimulatedRandomEffects()
   }
   if (is.null(m.indparam$rep)) {
     m.indparam$rep <- 1
@@ -416,7 +415,7 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",var.param)]
   m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",var.randeff)]
   
-  g=getIndividualParameterModel()$covariateModel
+  g=mlx.getIndividualParameterModel()$covariateModel
   lnj <- NULL
   for (nj in var.param) {
     dj <- tolower(ind.dist[nj])
@@ -472,7 +471,7 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   d2 <- d2[order(d2$in.model, decreasing=TRUE),]
   
   if (plot) {
-    sim.param <- getSimulatedIndividualParameters()
+    sim.param <- mlx.getSimulatedIndividualParameters()
     sim.param$rep <- NULL
     tr.param <- NULL
     for (nj in var.param) {

@@ -23,7 +23,6 @@
 #' }
 #' @return a data frame with the bootstrap estimates
 #' @examples
-#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -40,24 +39,21 @@
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
-
-#' }
+#' 
+#' 
 #' @importFrom graphics boxplot lines par plot
 #' @importFrom stats quantile
 #' @export
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE, tasks=c(populationParameterEstimation=TRUE), 
                     settings = NULL){
   
-  #r <- prcheck(project, f="boot", settings=settings)
-  #if (r$demo)
-  #  return(r$res)
-  #project <- r$project
+  r <- prcheck(project, f="boot", settings=settings)
+  if (r$demo)
+   return(r$res)
+  project <- r$project
   
-  if (!initRsmlx())
-    return()
-  
-  loadProject(project)
-  exportDir <- getProjectSettings()$directory
+  mlx.loadProject(project)
+  exportDir <- mlx.getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   
   # Check and initialize the settings
@@ -96,7 +92,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   }
   
   # Prepare all the output folders
-  param <- getPopulationParameterInformation()$name[which(getPopulationParameterInformation()$method!="FIXED")]
+  param <- mlx.getPopulationParameterInformation()$name[which(mlx.getPopulationParameterInformation()$method!="FIXED")]
   
   
   if(is.null(dataFolder)){
@@ -123,43 +119,43 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   paramResults <- NULL 
   for(indexSample in 1:settings$nboot){
     projectBoot <-  paste0(exportDir,boot.folder,projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
-    loadProject(projectBoot)
+    mlx.loadProject(projectBoot)
     cat(paste0('Project ',toString(indexSample),'/',toString(settings$nboot)))
     
     # Check if the run was done
-    # if(!file.exists(paste0(getProjectSettings()$directory,'/populationParameters.txt'))){
-    launched.tasks <- getLaunchedTasks()
-    g <- getScenario()
+    # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
+    launched.tasks <- mlx.getLaunchedTasks()
+    g <- mlx.getScenario()
     g$tasks <- tasks
-    setScenario(g)
-    scenario.tasks <- getScenario()$tasks
+    mlx.setScenario(g)
+    scenario.tasks <- mlx.getScenario()$tasks
     if (!launched.tasks[["populationParameterEstimation"]]) {
       if (sum(scenario.tasks)==1)
         cat(' => Estimating the population parameters \n')
       else
         cat(' => Running the scenario \n')
-      runScenario()
+      mlx.runScenario()
     } else {
       missing.tasks <- 0
       if (scenario.tasks[['conditionalDistributionSampling']] && !launched.tasks[['conditionalDistributionSampling']]) {
         missing.tasks <- missing.tasks + 1 
         if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        runConditionalDistributionSampling()
+        mlx.runConditionalDistributionSampling()
       }
       if (scenario.tasks[['conditionalModeEstimation']] && !launched.tasks[['conditionalModeEstimation']]) {
         missing.tasks <- missing.tasks + 1 
         if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        runConditionalModeEstimation()
+        mlx.runConditionalModeEstimation()
       }
       if (scenario.tasks[['standardErrorEstimation']] && launched.tasks[['standardErrorEstimation']]==FALSE) {
         missing.tasks <- missing.tasks + 1 
         if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        runStandardErrorEstimation(linearization=g$linearization)
+        mlx.runStandardErrorEstimation(linearization=g$linearization)
       }
       if (scenario.tasks[['logLikelihoodEstimation']] && !launched.tasks[['logLikelihoodEstimation']]) {
         missing.tasks <- missing.tasks + 1 
         if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        runLogLikelihoodEstimation()
+        mlx.runLogLikelihoodEstimation()
       }
       if (missing.tasks==0)  {
         if (sum(scenario.tasks)==1)
@@ -169,9 +165,9 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       }
     }
     
-    paramResults <-  rbind(paramResults, getEstimatedPopulationParameters())
+    paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
   }
-  colnames(paramResults) <- names(getEstimatedPopulationParameters())
+  colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
   paramResults <- as.data.frame(paramResults)
   
   
@@ -203,7 +199,7 @@ generateDataSetResample = function(project, settings, boot.folder){
     return(invisible(FALSE))
   }
   
-  loadProject(project)   
+  mlx.loadProject(project)   
   
   if(is.null(settings)){
     settings$nboot <- 100 
@@ -214,24 +210,24 @@ generateDataSetResample = function(project, settings, boot.folder){
   if(!is.na(settings$seed)){set.seed(settings$seed)}
   
   # Prepare all the output folders
-  exportDir <- getProjectSettings()$directory
+  exportDir <- mlx.getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   
   # Get the data set information
-  referenceDataset <- getData()
-  cov <- getCovariateInformation()
+  referenceDataset <- mlx.getData()
+  cov <- mlx.getCovariateInformation()
   datasetFile <- referenceDataset$dataFile
-  refCovInfo  <- getCovariateInformation()
-  # Get the index in getCovariateInformation()$ of the covariates used in the statistical model
+  refCovInfo  <- mlx.getCovariateInformation()
+  # Get the index in mlx.getCovariateInformation()$ of the covariates used in the statistical model
   indexUsedCat <- NULL
   for(indexCov in 1:length(refCovInfo$name)){
     if(grepl("categorical", refCovInfo$type[indexCov], fixed=TRUE)){
       # Is the covariate used in the covariate model
       isUsed <- F
-      idCov <- which(names(getIndividualParameterModel()$covariateModel[[1]])==refCovInfo$name[indexCov])
-      for(indexParam in 1:length(getIndividualParameterModel()$covariateModel)){
-        isUsed <- isUsed||getIndividualParameterModel()$covariateModel[[indexParam]][idCov] 
+      idCov <- which(names(mlx.getIndividualParameterModel()$covariateModel[[1]])==refCovInfo$name[indexCov])
+      for(indexParam in 1:length(mlx.getIndividualParameterModel()$covariateModel)){
+        isUsed <- isUsed||mlx.getIndividualParameterModel()$covariateModel[[indexParam]][idCov] 
       }
       if(isUsed){
         indexUsedCat <- c(indexUsedCat, indexCov)
@@ -362,10 +358,10 @@ generateDataSetParametric = function(project, settings=NULL, boot.folder=NULL){
     message(paste0("ERROR: project '", project, "' does not exist"))
     return(invisible(FALSE))
   }
-  suppressMessages(initializeLixoftConnectors(software = 'monolix', force = T))
-  loadProject(project)   
+  suppressMessages(mlx.initializeLixoftConnectors())
+  mlx.loadProject(project)   
   # Prepare all the output folders
-  exportDir <- getProjectSettings()$directory
+  exportDir <- mlx.getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE, recursive = TRUE)
@@ -378,7 +374,7 @@ generateDataSetParametric = function(project, settings=NULL, boot.folder=NULL){
   if(!is.na(settings$seed)){set.seed(settings$seed)}
   
   for(indexSample in 1:settings$nboot){
-    suppressMessages(initializeLixoftConnectors(software = 'simulx', force = T))
+    suppressMessages(mlx.initializeLixoftConnectors())
     
     datasetFileName <- paste0(exportDir,'/bootstrap/data/dataset_',toString(indexSample),'.csv')
     if(!file.exists(datasetFileName)){
@@ -392,7 +388,7 @@ generateDataSetParametric = function(project, settings=NULL, boot.folder=NULL){
       }
     }
   }
-  suppressMessages(initializeLixoftConnectors(software = 'monolix', force = T))
+  suppressMessages(mlx.initializeLixoftConnectors())
   
 }
 
@@ -403,25 +399,25 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
   
   dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
   # Get the data set information
-  loadProject(project)
-  exportDir <- getProjectSettings()$directory
+  mlx.loadProject(project)
+  exportDir <- mlx.getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
   
   # 
-  scenario = getScenario()
-  #new.tasks <- any(names(which(getScenario()$tasks)) != names(which(tasks)))
+  scenario = mlx.getScenario()
+  #new.tasks <- any(names(which(mlx.getScenario()$tasks)) != names(which(tasks)))
   scenario$tasks = c(populationParameterEstimation=TRUE)
-  setScenario(scenario)
+  mlx.setScenario(scenario)
   
-  referenceDataset <- getData()
+  referenceDataset <- mlx.getData()
   cat("Generating projects with bootstrap data sets...\n")
   for(indexSample in 1:length(dataFiles)){
     projectBootFileName =  file.path(exportDir,boot.folder,paste0(projectName,'_bootstrap_',toString(indexSample),'.mlxtran'))
     if(!file.exists(projectBootFileName)){
       bootData <- referenceDataset
       bootData$dataFile <- paste0(dataFolder,'/',dataFiles[indexSample])
-      setData(bootData)
-      saveProject(projectFile =projectBootFileName)
+      mlx.setData(bootData)
+      mlx.saveProject(projectFile =projectBootFileName)
     }
   }
 }
@@ -433,8 +429,8 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
 cleanbootstrap <- function(project,boot.folder){
   # Prepare all the output folders
   cat('Clearing all previous results and projects')
-  loadProject(project)
-  exportDir <- getProjectSettings()$directory
+  mlx.loadProject(project)
+  exportDir <- mlx.getProjectSettings()$directory
   listProjectsToDelete <- list.files(path = paste0(exportDir,boot.folder), pattern = '*.mlxtran')
   
   if(length(listProjectsToDelete)>0){
@@ -480,11 +476,11 @@ cleanbootstrap <- function(project,boot.folder){
     }
   }else if(inputName == tolower("tasks")){
     if(!is.vector(inputValue) || !is.logical(inputValue)){
-      message("ERROR: Unexpected type encountered. 'tasks' must be a vector of booleans (see getScenario()$tasks)")
+      message("ERROR: Unexpected type encountered. 'tasks' must be a vector of booleans (see mlx.getScenario()$tasks)")
       isValid = FALSE
     }
-    if (!all(names(inputValue) %in% names(getScenario()$tasks))) {
-      message("ERROR: Unexpected list of task (see getScenario()$tasks)")
+    if (!all(names(inputValue) %in% names(mlx.getScenario()$tasks))) {
+      message("ERROR: Unexpected list of task (see mlx.getScenario()$tasks)")
       isValid = FALSE
     }
   }
@@ -551,12 +547,12 @@ cleanbootstrap <- function(project,boot.folder){
       message("ERROR: Unexpected length. covStrat must be a single string (not a vector, nor a list)")
       isValid = FALSE
     }else{
-      if(length(intersect(getCovariateInformation()$name, settingValue))==0){
+      if(length(intersect(mlx.getCovariateInformation()$name, settingValue))==0){
         message(paste0("ERROR: ",settingValue," is not a valid covariate of the project."))
         isValid = FALSE
       }else{
-        indexCAT <- which(getCovariateInformation()$name==settingValue)
-        catType <- getCovariateInformation()$type[indexCAT[1]]
+        indexCAT <- which(mlx.getCovariateInformation()$name==settingValue)
+        catType <- mlx.getCovariateInformation()$type[indexCAT[1]]
         if(!((catType=="categorical")||(catType=="categoricaltransformed"))){
           message(paste0("ERROR: ",settingValue," is not a categorical covariate."))
           isValid = FALSE

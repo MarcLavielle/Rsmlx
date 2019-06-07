@@ -41,10 +41,10 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
   
   if (!is.null(project)) {
     r <- prcheck(project)
-    data <- getData()[c('dataFile', 'headerTypes')]
+    data <- mlx.getData()[c('dataFile', 'headerTypes')]
     if (is.null(parameter))
-      parameter <- getIndividualParameterModel()$name
-    y.name <- getObservationInformation()$name
+      parameter <- mlx.getIndividualParameterModel()$name
+    y.name <- mlx.getObservationInformation()$name
   } else {
     y.name <- "y"
   }
@@ -102,15 +102,15 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
     , error=function(e) {
       new.model <- paste0("pk_",paste0(parameter, collapse=""),'.txt')
       new.model <- file.path(new.dir,new.model)
-      generatePKmodel(parameter=parameter, model=new.model)
+      mlx.generatePKmodel(parameter=parameter, model=new.model)
       return(new.model)
     }
   )
   
-  #newProject(data = c(data, list(observationTypes = list(y1="continuous"), nbSSDoses = 10)), modelFile = new.model)
-  newProject(data = data, modelFile = new.model)
-  g <- getContinuousObservationModel()
-  eval(parse(text=paste0('setErrorModel(',names(g$errorModel),'= "combined2")')))
+  #mlx.newProject(data = c(data, list(observationTypes = list(y1="continuous"), nbSSDoses = 10)), modelFile = new.model)
+  mlx.newProject(data = data, modelFile = new.model)
+  g <- mlx.getContinuousObservationModel()
+  eval(parse(text=paste0('lixoftConnectors::setErrorModel(',names(g$errorModel),'= "combined2")')))
   
   r <- readDataRsmlx(data=data)
   #r <- readDatamlx(data=data)
@@ -120,13 +120,13 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
   else
     popt <- par.ini
   
-  pop.ini <- getPopulationParameterInformation()
+  pop.ini <- mlx.getPopulationParameterInformation()
   j.pop <- which(pop.ini$name %in% paste0(parameter,"_pop"))
   j.pop <- match(paste0(parameter,"_pop"), pop.ini$name[j.pop])
   pop.ini$initialValue[j.pop] <- popt
-  setPopulationParameterInformation(pop.ini)
+  mlx.setPopulationParameterInformation(pop.ini)
   
-  saveProject(projectFile = new.project)
+  mlx.saveProject(projectFile = new.project)
   
   return(list(pop.ini=popt, project=new.project, model=new.model, data=data))
 }
@@ -164,6 +164,7 @@ readDataRsmlx  <- function(data = NULL, project=NULL, out.data=FALSE, nbSSDoses=
   id <- NULL
   observationName <- NULL
   datas=NULL
+  time <- NULL
   
   if (!is.null(addl.ss)) 
     warning("addl.ss is deprecated. Use nbSSDoses instead.", call. = FALSE)
@@ -220,7 +221,7 @@ readDataRsmlx  <- function(data = NULL, project=NULL, out.data=FALSE, nbSSDoses=
   #*************************************************************************  
   fileFormat=NULL
   if (is.list(infoProject)) {
-    if (isfield(infoProject, 'dataformat'))
+    if (!is.null(infoProject$dataformat))
       fileFormat = infoProject$dataformat      
   }
   if (is.null(fileFormat)) {
@@ -478,6 +479,10 @@ readDataRsmlx  <- function(data = NULL, project=NULL, out.data=FALSE, nbSSDoses=
     if ("evid" %in% names(u) && any(u$evid==4))
       stop("Washout (EVID=4) is not supported", call.=FALSE)
     
+    if (!is.null(u$rate) )
+      u$rate <- as.numeric(as.character(u$rate))
+    if (!is.null(u$tinf) )
+      u$tinf <- as.numeric(as.character(u$tinf))
     if(nrow(u)) {
       datas   = c(datas,list(treatment = u))
     }

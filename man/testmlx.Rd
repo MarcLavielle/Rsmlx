@@ -44,7 +44,6 @@ to take into the dependance of the samples for the Shapiro-Wilk and Miao-Gel-Gas
 the smallest p-value using the Benjamini-Hochberg correction.
 }
 \examples{
-\dontrun{
 # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 # with parameters ka, V, Cl.
 
@@ -56,5 +55,6 @@ r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
 
 # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
 # Download the demo examples here: http://rsmlx.webpopix.org/installation
-}
+
+
 }

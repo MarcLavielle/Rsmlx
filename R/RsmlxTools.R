@@ -1,3 +1,84 @@
+prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
+                    parameters=NULL, level=NULL, tests=NULL, nboot=NULL, method=NULL) {
+  #prcheck <- function(project) {
+  if (identical(substr(project,1,9),"RsmlxDemo")) {
+    RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+    rm(RsmlxDemo1.project, RsmlxDemo2.project, warfarin.data, resMonolix)
+    eval(parse(text="data(RsmlxDemo)"))
+    tmp.dir <- tempdir()
+    write(RsmlxDemo1.project, file=file.path(tmp.dir,"RsmlxDemo1.mlxtran"))
+    write(RsmlxDemo2.project, file=file.path(tmp.dir,"RsmlxDemo2.mlxtran"))
+    write.csv(warfarin.data, file=file.path(tmp.dir,"warfarin_data.csv"), quote=FALSE, row.names = FALSE)
+    project <- file.path(tmp.dir,project)
+    demo <- TRUE
+    if (!is.null(f)) {
+      if (f=="boot") {
+        if (is.null(settings))
+          res <- resMonolix$r1.boot
+        else if (!is.null(settings$N) & is.null(settings$covStrat))
+          res <- resMonolix$r2.boot
+        else
+          res <- resMonolix$r3.boot
+      } else if (f=="build") {
+        if (identical(model,"all") & identical(paramToUse,"all")) 
+          res <- resMonolix$r1.build
+        else if (identical(model,"all")) 
+          res <- resMonolix$r2.build
+        else 
+          res <- resMonolix$r3.build
+      } else if (f=="conf") {
+        if (method == "fim" & level==0.90)
+          res <- resMonolix$r1.conf
+        else if (method == "fim" & level==0.95)
+          res <- resMonolix$r2.conf
+        else if (method == "proflike")
+          res <- resMonolix$r3.conf
+        else
+          res <- resMonolix$r4.conf
+      } else if (f=="cov") {
+        if (identical(method,"COSSAC") & identical(paramToUse,"all")) 
+          res <- resMonolix$r1.cov
+        else if (identical(method,"SCM")) 
+          res <- resMonolix$r2.cov
+        else 
+          res <- resMonolix$r3.cov
+      } else if (f=="test") {
+        if (length(tests)==4) 
+          res <- resMonolix$r1.test
+        else 
+          res <- resMonolix$r2.test
+      } else if (f=="set")
+        res="foo"
+    }
+    
+  } else {
+    
+    if (!initRsmlx())
+      return()
+    
+    if (!grepl("\\.",project))
+      project <- paste0(project,".mlxtran")
+    
+    if(!file.exists(project))
+      stop(paste0("Project '", project, "' does not exist"), call.=FALSE)
+    
+    lp <- mlx.loadProject(project) 
+    if (!lp) 
+      stop(paste0("Could not load project '", project, "'"), call.=FALSE)
+    
+    demo <- FALSE
+    res <- NULL
+  }
+  
+  return(list(project=project, demo=demo, res=res))
+  #  return(project)
+}
+
+
+
+
+
+
 
 #' Initialize Rsmlx library
 #' 
@@ -14,18 +95,18 @@ initRsmlx <- function(){
     stop("You need to install the lixoftConnectors package in order to use Rsmlx", call. = FALSE)
   
   
-  lixoftConnectorsState <- getLixoftConnectorsState(quietly = TRUE)
+  lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
   
   if (!is.null(lixoftConnectorsState)){
     
     if (lixoftConnectorsState$software == "monolix") {
       status=TRUE
     } else {
-      status = initializeLixoftConnectors(software = "monolix")
+      status = mlx.initializeLixoftConnectors()
     }
     
   } else {
-    status = initializeLixoftConnectors(software = "monolix")
+    status = mlx.initializeLixoftConnectors()
   }
   return(invisible(status))
   
@@ -33,7 +114,7 @@ initRsmlx <- function(){
 
 
 #-------------------------------------------------
-generatePKmodel <-  function(parameter, model="pk_model.txt", output=NULL) {
+mlx.generatePKmodel <-  function(parameter, model="pk_model.txt", output=NULL) {
   str1 <- paste(parameter,collapse=",")
   str2 <- str1
   model_txt="
@@ -78,13 +159,13 @@ setPKproject <- function(parameter, project="pk_project.mlxtran", model="pk_mode
     param.list <- parameter
   else
     param.list <- names(parameter)
-  generatePKmodel(parameter=param.list, model=model)
-  setStructuralModel(modelFile=model)
+  mlx.generatePKmodel(parameter=param.list, model=model)
+  mlx.setStructuralModel(modelFile=model)
   if (is.numeric(parameter)) {
-    pop.ini <- getPopulationParameterInformation()
+    pop.ini <- mlx.getPopulationParameterInformation()
     j.pop <- which(pop.ini$name %in% paste0(param.list,"_pop"))
     pop.ini$initialValue[j.pop] <- parameter
-    setPopulationParameterInformation(pop.ini)
+    mlx.setPopulationParameterInformation(pop.ini)
   }
 }
 
@@ -92,7 +173,7 @@ setPKproject <- function(parameter, project="pk_project.mlxtran", model="pk_mode
 #-------------------------------------------------
 pk.estim <- function(r, admin) {  
   time <- NULL
-  g=getObservationInformation()
+  g=mlx.getObservationInformation()
   gn <- g$name[[1]]
   gy <- g[[gn]]
   
@@ -186,7 +267,7 @@ compute.ini <- function(r, parameter) {
     ka_ini <- lm(log(y) ~ time, data=subset(abs, y>0))$coefficients[[2]]
     Tk0_ini <- mean(tmax)
     if (ka_ini>0)
-      V_ini <- 1/mean(ymax)*ka_ini/(ka_ini-k_ini)
+      V_ini <- 1/mean(ymax)*ka_ini/abs(ka_ini-k_ini)
     else
       V_ini <- 1/(Tk0_ini*k_ini*mean(ymax))*(1-exp(-k_ini*Tk0_ini))
     Tlag_ini <- Tk0_ini/5
@@ -221,7 +302,7 @@ compute.ini <- function(r, parameter) {
 #-------------------------------------------------
 err <-  function(parameter, y, p.ind, N, a) {
   p.ind[,] <- matrix(exp(parameter),nrow=N,ncol=length(parameter),byrow=TRUE)
-  f <- as.numeric(computePredictions(p.ind)[[1]])
+  f <- as.numeric(mlx.computePredictions(p.ind)[[1]])
   if (any(is.nan(f)) | any(is.infinite(f)))
     e <- Inf
   else
@@ -232,7 +313,7 @@ err <-  function(parameter, y, p.ind, N, a) {
 #-------------------------------------------------
 pop.opt <- function(p0) {
   #setPKproject(parameter=p0)
-  g=getObservationInformation()
+  g=mlx.getObservationInformation()
   gn <- g$name[[1]]
   gy <- g[[gn]]
   N <- length(unique(gy[['id']]))
@@ -252,35 +333,35 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
   cat("\n")
   r <- pkpopini(parameter=parameter, data=data, new.dir=new.dir) 
   print(r$project)
-  loadProject(projectFile = r$project)
-  g=getObservationInformation()
+  mlx.loadProject(projectFile = r$project)
+  g=mlx.getObservationInformation()
   gn <- g$name[[1]]
   gy <- g[[gn]]
   N <- length(unique(gy[['id']]))
   n <- nrow(gy)
-  scenario <- getScenario()
+  scenario <- mlx.getScenario()
   scenario$tasks[1:6] <- c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE)
   scenario$linearization <- FALSE
-  setScenario(scenario)
+  mlx.setScenario(scenario)
   if (!is.null(level))
     setSettings(level=level)
-  saveProject(r$project)
-  launched.tasks <- getLaunchedTasks()
+  mlx.saveProject(r$project)
+  launched.tasks <- mlx.getLaunchedTasks()
   # Sys.sleep(0.1)
   # dir.create(final.dir)
   w.dir <- getwd()
   setwd(new.dir)
   if (!launched.tasks[["populationParameterEstimation"]]) {
     cat("Estimation of the population parameters...\n")
-    runPopulationParameterEstimation()
+    mlx.runPopulationParameterEstimation()
   }
   if (!("importanceSampling" %in% launched.tasks[["logLikelihoodEstimation"]])) { 
     cat("Estimation of the log-likelihood... \n")
-    runLogLikelihoodEstimation()
+    mlx.runLogLikelihoodEstimation()
   }
   setwd(w.dir)
-  r$bic <- getEstimatedLogLikelihood()[[1]][['-2LL']] + (2*length(parameter)+2)*log(n)
-  r$pop.est <- getEstimatedPopulationParameters()
+  r$bic <- mlx.getEstimatedLogLikelihood()[[1]][['-2LL']] + (2*length(parameter)+2)*log(n)
+  r$pop.est <- mlx.getEstimatedPopulationParameters()
   return(r)
 }
 
@@ -296,5 +377,6 @@ read.res <- function(file) {
     d <- read.csv(file, sep="\t")
   return(d)
 }
+
 
 

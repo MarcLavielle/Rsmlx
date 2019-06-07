@@ -18,14 +18,14 @@ llp <-function(project, parameters = NULL, settings=NULL){
   ##################################################################################
   # Project initialization
   ##################################################################################
-  loadProject(project)
+  mlx.loadProject(project)
   # Check if linearization is possible
   if(method=="lin"){useLinearization <- T}else{useLinearization <- F}
   # Check if linearization is possible
-  for(indexObservationModel in 1:length(getObservationInformation()$name)){useLinearization <- useLinearization & (getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  for(indexObservationModel in 1:length(mlx.getObservationInformation()$name)){useLinearization <- useLinearization & (mlx.getObservationInformation()$type[[indexObservationModel]]=="continuous")}
   
   # Define the scenario
-  currentScenario <- getScenario()
+  currentScenario <- mlx.getScenario()
   currentScenario$linearization <- useLinearization
   currentScenario$tasks <-as.list(currentScenario$tasks)
   currentScenario$tasks$logLikelihoodEstimation <- T
@@ -39,18 +39,18 @@ llp <-function(project, parameters = NULL, settings=NULL){
     currentScenario$tasks$conditionalModeEstimation <-F
   }
   # Set the scenario
-  setScenario(currentScenario)
+  mlx.setScenario(currentScenario)
   
   # Set the location of the saved informations
-  expDirectory <- getProjectSettings()$directory
+  expDirectory <- mlx.getProjectSettings()$directory
   expDirectoryLlp <- paste0(expDirectory,"/proflike/")
   dir.create(expDirectoryLlp, showWarnings = F)
-  setProjectSettings(directory = expDirectoryLlp)
+  mlx.setProjectSettings(directory = expDirectoryLlp)
   modelName <- substr(basename(project), 1, nchar(basename(project))-8)
   file_llp <- paste0(expDirectoryLlp,"proflike.csv")
   
   # Define the parameters to look at
-  populationParameters <- getPopulationParameterInformation()$name[which(!(getPopulationParameterInformation()$method=="FIXED"))]
+  populationParameters <- mlx.getPopulationParameterInformation()$name[which(!(mlx.getPopulationParameterInformation()$method=="FIXED"))]
   if(!is.null(parameters)){
     if(!.checkLLPinput(inputName = "parameters", inputValue = parameters)){return(invisible(FALSE))}
     populationParameters <- intersect(parameters, populationParameters)
@@ -59,13 +59,13 @@ llp <-function(project, parameters = NULL, settings=NULL){
   #################################################################################
   # Get the reference LL and the initial conditions
   #################################################################################
-  validParameterIndex <- match(x = populationParameters, table=getPopulationParameterInformation()$name)
-  referenceParameterValues<- getPopulationParameterInformation()$initialValue[validParameterIndex]
+  validParameterIndex <- match(x = populationParameters, table=mlx.getPopulationParameterInformation()$name)
+  referenceParameterValues<- mlx.getPopulationParameterInformation()$initialValue[validParameterIndex]
   LLref <- .getLL()
   LLtarget <- LLref + dLLthreshold
-  setInitialEstimatesToLastEstimates()
-  referenceParameterValues <- getPopulationParameterInformation()$initialValue[validParameterIndex]
-  names(referenceParameterValues) <- getPopulationParameterInformation()$name[validParameterIndex]
+  mlx.setInitialEstimatesToLastEstimates()
+  referenceParameterValues <- mlx.getPopulationParameterInformation()$initialValue[validParameterIndex]
+  names(referenceParameterValues) <- mlx.getPopulationParameterInformation()$name[validParameterIndex]
   # See if the results were not already computed
   llpCompute <- TRUE
   # if(file.exists(file_llp)){
@@ -207,16 +207,16 @@ llp <-function(project, parameters = NULL, settings=NULL){
     for(indexParam in 1:length(referenceParameterValues)){
       parameterName <- names(referenceParameterValues)[indexParam]
       # Unfix all the parameters and reinit them
-      eval(parse(text=paste0('setPopulationParameterInformation(',parameterName,' = list(method = "MLE", initialValue = as.double(referenceParameterValues[indexParam])))')))
+      eval(parse(text=paste0('lixoftConnectors::setPopulationParameterInformation(',parameterName,' = list(method = "MLE", initialValue = as.double(referenceParameterValues[indexParam])))')))
     }
   }
   # Fix te parameter to a value
   if(!is.null(paramName)&!is.null(paramValue)){
-    eval(parse(text=paste0('setPopulationParameterInformation(',paramName,' = list(method = "FIXED", initialValue =',as.double(paramValue),'))')))
+    eval(parse(text=paste0('lixoftConnectors::setPopulationParameterInformation(',paramName,' = list(method = "FIXED", initialValue =',as.double(paramValue),'))')))
   }
   # Run the scenario and get the LL
-  runScenario(TRUE)
-  return(as.double(getEstimatedLogLikelihood()[[1]][1]))
+  mlx.runScenario(TRUE)
+  return(as.double(mlx.getEstimatedLogLikelihood()[[1]][1]))
 }
 
 #########################################################################
@@ -397,7 +397,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
     if(is.vector(inputValue) == FALSE){
       message("ERROR: Unexpected type encountered. parameters must be a vector")
       isValid = FALSE
-    }else if(length(intersect(x = getPopulationParameterInformation()$name, y=inputValue))==0){
+    }else if(length(intersect(x = mlx.getPopulationParameterInformation()$name, y=inputValue))==0){
       message("ERROR: parameters have no valid population parameters in its definition.")
       isValid = FALSE
     }
@@ -485,8 +485,8 @@ llp <-function(project, parameters = NULL, settings=NULL){
   # Get the individual transformation
   paramTransform <- NULL
   if(length(grep(pattern="_pop", x = paramName))>0){# This is a population parameter
-    indexParam <- which(sub(pattern="_pop",replacement = "",x = paramName)==getIndividualParameterModel()$name)
-    paramTransform <- getIndividualParameterModel()$distribution[indexParam]
+    indexParam <- which(sub(pattern="_pop",replacement = "",x = paramName)==mlx.getIndividualParameterModel()$name)
+    paramTransform <- mlx.getIndividualParameterModel()$distribution[indexParam]
   }else if(length(grep(pattern="omega", x = paramName))>0){
     paramTransform <- "logNormal"
   }else if(length(grep(pattern="gamma", x = paramName))>0){

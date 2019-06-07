@@ -44,8 +44,8 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
   
   if (!is.null(project)) {
     r <- prcheck(project)
-    data <- getData()[c('dataFile', 'headerTypes')]
-    parameter <- getIndividualParameterModel()$name
+    data <- mlx.getData()[c('dataFile', 'headerTypes')]
+    parameter <- mlx.getIndividualParameterModel()$name
     if ("ka" %in% parameter | "Tk0" %in% parameter)
       data$administration <- "oral"
     else
@@ -188,12 +188,12 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
 
 pkbuild.stat <- function(r.final, settings.stat) {
   res.stat <- do.call("buildmlx", c(list(project=r.final$project), settings.stat))
-  loadProject(res.stat$project)
+  mlx.loadProject(res.stat$project)
   r.final$project <- res.stat$project
   r.final$covariate.model <- res.stat$covariate.model
   r.final$correlation.model <- res.stat$correlation.model
   r.final$error.model <- res.stat$error.model
-  r.final$pop.est <- getEstimatedPopulationParameters()
+  r.final$pop.est <- mlx.getEstimatedPopulationParameters()
   return(r.final)
 }
 
@@ -214,7 +214,7 @@ check.pkbuild <- function(data, param, MM, level) {
     stop("Valid header types should be provided", call.=FALSE)
   
   if (is.null(data$administration)) 
-    stop("Route of administration should be provided in data$headerTypes", call.=FALSE)
+    stop("Route of administration should be provided in data (e.g. data$administation='oral')", call.=FALSE)
   
   admList <- c('IV', 'BOLUS', 'INFUSION', 'ORAL', 'EV')
   if (!(toupper(data$administration) %in% admList ))

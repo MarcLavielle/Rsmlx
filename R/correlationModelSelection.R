@@ -2,9 +2,9 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
   
   if (criterion=="BICc")  criterion="BIC"
   
-  p.name <- getIndividualParameterModel()$name
+  p.name <- mlx.getIndividualParameterModel()$name
   if (is.null(e)) {
-    project.folder <- getProjectSettings()$directory
+    project.folder <- mlx.getProjectSettings()$directory
     sp.file <- file.path(project.folder,"IndividualParameters","simulatedRandomEffects.txt")
     e <- read.res(sp.file)
     if (is.null(e$rep)) 
@@ -13,13 +13,13 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
     e <- e[c("rep","id",eta.names)]
   } 
   # else {
-  #   e$rep <- getSimulatedRandomEffects()$rep
+  #   e$rep <- mlx.getSimulatedRandomEffects()$rep
   # }
   
   nrep <- max(e$rep)
   N <- nrow(e)/nrep
   e$rep <- e$id <- NULL
-  e.name <- names(which(getIndividualParameterModel()$variability$id))
+  e.name <- names(which(mlx.getIndividualParameterModel()$variability$id))
   e.var <- paste0("eta_",e.name)
   e.var <- e.var[e.var %in% names(e)]
   e <- e[e.var]

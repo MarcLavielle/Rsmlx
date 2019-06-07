@@ -47,10 +47,13 @@ setSettings  <- function(project=NULL, new.project=NULL, level=5) {
   if (level<1 | level>n)
     stop(paste0("level should be an integer beween 1 and ",n), call. = FALSE)
   
+  tr.str <- paste0("lixoftConnectors::setPopulationParameterEstimationSettings(exploratoryautostop=TRUE, smoothingautostop=TRUE)")
+  eval(parse(text=tr.str))
+  tr.str <- paste0("lixoftConnectors::setGeneralSettings(autochains=TRUE)")
+  eval(parse(text=tr.str))
   
-  setGeneralSettings(autochains=TRUE)
-  setPopulationParameterEstimationSettings(exploratoryautostop=TRUE,
-                                           smoothingautostop=TRUE)
+  #  mlx.setGeneralSettings(autochains=TRUE)
+  #  mlx.setPopulationParameterEstimationSettings(exploratoryautostop=TRUE, smoothingautostop=TRUE)
   
   set.list <- c(
     "minindivforchains", 			
@@ -98,12 +101,12 @@ setSettings  <- function(project=NULL, new.project=NULL, level=5) {
   
   x <- c(1, round((n+1)/2), n)
   
-  g1 <- getGeneralSettings()
-  g2 <- getPopulationParameterEstimationSettings()
-  g3 <- getLogLikelihoodEstimationSettings()
-  g4 <- getConditionalDistributionSamplingSettings()
-  g5 <- getStandardErrorEstimationSettings()
-  g6 <- getConditionalModeEstimationSettings()
+  g1 <- mlx.getGeneralSettings()
+  g2 <- mlx.getPopulationParameterEstimationSettings()
+  g3 <- mlx.getLogLikelihoodEstimationSettings()
+  g4 <- mlx.getConditionalDistributionSamplingSettings()
+  g5 <- mlx.getStandardErrorEstimationSettings()
+  g6 <- mlx.getConditionalModeEstimationSettings()
   
   for (j in 1:np) {
     pj <- spline(x,p[j,],n,method="hyman")$y[level]
@@ -122,16 +125,18 @@ setSettings  <- function(project=NULL, new.project=NULL, level=5) {
     else if (set.list[j] %in% names(g6))
       g6[set.list[j]] <- pj
   }
-  setGeneralSettings(g1)
-  setPopulationParameterEstimationSettings(g2)
-  setLogLikelihoodEstimationSettings(g3)
-  setConditionalDistributionSamplingSettings(g4)
-  setStandardErrorEstimationSettings(g5)
-  setConditionalModeEstimationSettings(g6)
+  mlx.setGeneralSettings(g1)
+  g2$simulatedannealingiterations <- NULL
+  mlx.setPopulationParameterEstimationSettings(g2)
+  mlx.setLogLikelihoodEstimationSettings(g3)
+  mlx.setConditionalDistributionSamplingSettings(g4)
+  mlx.setStandardErrorEstimationSettings(g5)
+  mlx.setConditionalModeEstimationSettings(g6)
   
   if (!is.null(new.project)) 
-    saveProject(projectFile = new.project)
+    mlx.saveProject(projectFile = new.project)
   else
-    saveProject()
+    eval(parse(text=paste0("lixoftConnectors::saveProject()")))
+  
   
 }

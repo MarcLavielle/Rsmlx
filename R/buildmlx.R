@@ -31,7 +31,6 @@
 #' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @return a new Monolix project with a new statistical model.
 #' @examples
-#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -51,8 +50,8 @@
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
-
-#' }
+#' 
+#' 
 #' @importFrom MASS stepAIC 
 #' @importFrom stats coef as.formula model.matrix
 #' @importFrom utils data write.csv
@@ -65,8 +64,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
   #lambda='cv', glmnet.settings=NULL)
 {
   
-  if (!initRsmlx())
-    return()
   
   r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
   if (r$demo)
@@ -88,7 +85,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   }
   
   
-  if (length(getIndividualParameterModel()$variability)>1)
+  if (length(mlx.getIndividualParameterModel()$variability)>1)
     stop("Multiple levels of variability are not supported in this version of buildmlx", call.=FALSE)
   #  initializeMlxConnectors(software = "monolix")
   
@@ -112,10 +109,10 @@ buildmlx <- function(project, final.project=NULL, model="all",
   
   ptm <- proc.time()
   Sys.sleep(0.1)
-  project.dir <- getProjectSettings()$directory
+  project.dir <- mlx.getProjectSettings()$directory
   if (!dir.exists(project.dir))
     dir.create(project.dir)
-  buildmlx.dir <- file.path(getProjectSettings()$directory,"buildmlx")
+  buildmlx.dir <- file.path(mlx.getProjectSettings()$directory,"buildmlx")
   Sys.sleep(0.1)
   if (dir.exists(buildmlx.dir))
     unlink(buildmlx.dir, recursive=TRUE)
@@ -124,7 +121,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   dir.create(buildmlx.dir)
   summary.file = file.path(buildmlx.dir,"summary.txt")
   
-  launched.tasks <- getLaunchedTasks()
+  launched.tasks <- mlx.getLaunchedTasks()
   Sys.sleep(0.1)
   dir.create(final.dir)
   
@@ -136,33 +133,33 @@ buildmlx <- function(project, final.project=NULL, model="all",
   }
   
   #------------------------------
-  if (!any(getIndividualParameterModel()$variability$id))
+  if (!any(mlx.getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
   iop.error <- "residualError" %in% model
-  if (is.null(getContinuousObservationModel()))
+  if (is.null(mlx.getContinuousObservationModel()))
     iop.error <- FALSE
   iop.covariate <- "covariate" %in% model
-  if (is.null(getCovariateInformation()))
+  if (is.null(mlx.getCovariateInformation()))
     iop.covariate <- FALSE
   iop.correlation <- "correlation" %in% model
-  if (sum(getIndividualParameterModel()$variability$id)==1)
+  if (sum(mlx.getIndividualParameterModel()$variability$id)==1)
     iop.correlation <- FALSE
   if (!any(c(iop.error, iop.covariate, iop.correlation)))
     stop("\nThere is no statistical model to build...\n", call.=FALSE)
   
   #-------------------------------------------------
   
-  p.ini <- getPopulationParameterInformation()
+  p.ini <- mlx.getPopulationParameterInformation()
   rownames(p.ini) <- p.ini$name
   ind.omega <- grep("omega_",p.ini[['name']])
   omega <- p.ini$name[ind.omega]
   omega.ini <- p.ini[ind.omega,]
   
-  error.model <- getContinuousObservationModel()$errorModel
-  obs.dist <- getContinuousObservationModel()$distribution
-  covariate.model <- getIndividualParameterModel()$covariateModel
+  error.model <- mlx.getContinuousObservationModel()$errorModel
+  obs.dist <- mlx.getContinuousObservationModel()$distribution
+  covariate.model <- mlx.getIndividualParameterModel()$covariateModel
   cov.ini <- names(covariate.model[[1]])
-  correlation.model <- getIndividualParameterModel()$correlationBlocks$id
+  correlation.model <- mlx.getIndividualParameterModel()$correlationBlocks$id
   if (is.null(correlation.model))
     correlation.model <- list()
   
@@ -200,12 +197,12 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (!launched.tasks[["populationParameterEstimation"]]) {
     lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
     if (print) cat(lineDisplay)
-    runPopulationParameterEstimation()
+    mlx.runPopulationParameterEstimation()
   }
   if (!launched.tasks[["conditionalDistributionSampling"]]) {
     lineDisplay <- "Sampling of the conditional distribution using the initial model ... \n"
     if (print) cat(lineDisplay)
-    runConditionalDistributionSampling()
+    mlx.runConditionalDistributionSampling()
   }
   
   #----  LL & linearization
@@ -215,14 +212,14 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (iop.ll) {
     if (!(method.ll %in% launched.tasks[["logLikelihoodEstimation"]]))  {
       if (lin.ll & !launched.tasks[["conditionalModeEstimation"]])
-        runConditionalModeEstimation()
+        mlx.runConditionalModeEstimation()
       lineDisplay <- ("Estimation of the log-likelihood of the initial model ... \n")
       if (print) cat(lineDisplay)
-      runLogLikelihoodEstimation(linearization = lin.ll)
+      mlx.runLogLikelihoodEstimation(linearization = lin.ll)
     }
     ll.ini <- computecriterion(criterion, method.ll)
     list.criterion <- ll.ini
-    ll <- getEstimatedLogLikelihood()[[method.ll]]
+    ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
     names(ll)[which(names(ll)=="standardError")] <- "s.e."
     if (is.numeric(criterion))
       ll['criterion'] <- ll.ini
@@ -241,17 +238,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
   
   #-----------------------------------------
   
-  res.dir <- getProjectSettings()$directory
+  res.dir <- mlx.getProjectSettings()$directory
   if (dir.exists(res.dir)) 
     list_of_files <- c(list.files(res.dir) , ".Internals")
   foo <- file.copy(file.path(res.dir,list_of_files), final.dir, recursive=TRUE)
   foo <- file.rename(file.path(final.dir,".Internals",basename(project)),
                      file.path(final.dir,".Internals",basename(final.project)))
   
-  setProjectSettings(directory=final.dir)
-  saveProject(final.project)
-  if (is.null(getEstimatedPopulationParameters()))
-    runScenario()
+  mlx.setProjectSettings(directory=final.dir)
+  mlx.saveProject(final.project)
+  if (is.null(mlx.getEstimatedPopulationParameters()))
+    mlx.runScenario()
   
   #--------------
   
@@ -267,7 +264,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (identical(covToTest,"all"))
     covFix = NULL
   else
-  covFix <- setdiff(getCovariateInformation()$name, covToTest)
+  covFix <- setdiff(mlx.getCovariateInformation()$name, covToTest)
   
   
   ll.prev <- Inf
@@ -296,7 +293,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       if (nb.model==1)
         error.model <- res.error
       else {
-        error.model <- getContinuousObservationModel()$errorModel
+        error.model <- mlx.getContinuousObservationModel()$errorModel
         for (k in (1:length(error.model)))
           error.model[[k]] <- as.character(res.error[[k]]$error.model[1])
       }
@@ -317,7 +314,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       cov.names <- lapply(covariate.model, function(x) {sort(names(which(x)))})
       cov.names0 <- lapply(covariate.model0, function(x) {sort(names(which(x)))})
     } else {
-      e <- getSimulatedRandomEffects()
+      e <- mlx.getSimulatedRandomEffects()
       #     e$id <- e$rep <- NULL
     }
     
@@ -338,7 +335,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       else  correlation.model <- res.correlation[[1]]$block
       if (is.null(correlation.model))  correlation.model <- list()
     } else {
-      res.correlation <- getIndividualParameterModel()$correlationBlocks$id
+      res.correlation <- mlx.getIndividualParameterModel()$correlationBlocks$id
     }
     #-------------------------------
     
@@ -387,19 +384,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
     } 
     
     if (!stop.test) {
-      setInitialEstimatesToLastEstimates()
-      p.ini <- getPopulationParameterInformation()
+      mlx.setInitialEstimatesToLastEstimates()
+      p.ini <- mlx.getPopulationParameterInformation()
       rownames(p.ini) <- p.ini$name
       p.ini[omega,] <- omega.ini
       jcor <- grep("corr_",p.ini$name)
       if (length(jcor)>0)  p.ini <- p.ini[-jcor,]
-      setPopulationParameterInformation(p.ini)
-      
-      #  setPopulationParameterEstimationSettings(simulatedAnnealing=FALSE)
+      mlx.setPopulationParameterInformation(p.ini)
       
       if (iop.error) {
         emodel <- error.model
-        odist <- getContinuousObservationModel()$distribution
+        odist <- mlx.getContinuousObservationModel()$distribution
         for (k in (1:length(emodel))) {
           if (identical(emodel[[k]],"exponential")) {
             emodel[[k]] <- "constant"
@@ -408,8 +403,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
             odist[[k]] <- "normal"
           }
         }
-        setErrorModel(emodel)
-        setObservationDistribution(odist)
+        mlx.setErrorModel(emodel)
+        mlx.setObservationDistribution(odist)
       }
       
       if (iop.covariate) {
@@ -417,33 +412,33 @@ buildmlx <- function(project, final.project=NULL, model="all",
           for (k in 1:length(res.covariate$add.covariate))
             eval(parse(text=res.covariate$add.covariate[[k]]))
         }
-        setCovariateModel(covariate.model)
+        mlx.setCovariateModel (covariate.model)
       }
       
       if (iop.correlation & corr.test)
-        setCorrelationBlocks(correlation.model)
+        mlx.setCorrelationBlocks(correlation.model)
       
       #-------------------------------
       
       if (max.iter>0) {
         if (ll.new > ll.prev) {
-          g <- getGeneralSettings()
+          g <- mlx.getGeneralSettings()
           g$autochains <- FALSE
           g$nbchains <- g$nbchains+1
-          setGeneralSettings(g)
+          mlx.setGeneralSettings(g)
         }
         ll.prev <- ll.new
-        g=getConditionalDistributionSamplingSettings()
+        g=mlx.getConditionalDistributionSamplingSettings()
         g$nbminiterations <- max(100, g$nbminiterations)
-        setConditionalDistributionSamplingSettings(g)
+        mlx.setConditionalDistributionSamplingSettings(g)
         
         
         buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter))
         buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
-        saveProject(buildmlx.project.iter)
+        mlx.saveProject(buildmlx.project.iter)
       }
       
-      saveProject(final.project)
+      mlx.saveProject(final.project)
       if (dir.exists(final.dir))
         unlink(final.dir, recursive=TRUE)
       
@@ -453,17 +448,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
         lineDisplay <- paste0("Run scenario for model ",iter," ... \nEstimation of the population parameters... \n")
         sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
         
-        runPopulationParameterEstimation()
+        mlx.runPopulationParameterEstimation()
         lineDisplay <- "Sampling from the conditional distribution... \n"
         sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
         
-        runConditionalDistributionSampling()
+        mlx.runConditionalDistributionSampling()
         if (iop.ll) {
           lineDisplay <- "Estimation of the log-likelihood... \n"
           sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
           if (lin.ll)
-            runConditionalModeEstimation()
-          runLogLikelihoodEstimation(linearization = lin.ll)
+            mlx.runConditionalModeEstimation()
+          mlx.runLogLikelihoodEstimation(linearization = lin.ll)
         }
         ll.new <- computecriterion(criterion, method.ll)
         list.criterion <- c(list.criterion, ll.new)
@@ -477,12 +472,12 @@ buildmlx <- function(project, final.project=NULL, model="all",
         foo <- file.rename(file.path(buildmlx.dir.iter,".Internals",basename(final.project)),
                            file.path(buildmlx.dir.iter,".Internals",basename(buildmlx.project.iter)))
         
-        #loadProject(final.project)
+        #mlx.loadProject(final.project)
         
         if (stop.test)
           ll <- ll0
         else {
-          ll <- getEstimatedLogLikelihood()[[method.ll]]
+          ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
           names(ll)[which(names(ll)=="standardError")] <- "s.e."
           if (is.numeric(criterion))
             ll['criterion'] <- ll.new
@@ -506,7 +501,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       }
     }
     if (max.iter==0) stop.test <- TRUE
-    saveProject(final.project)
+    mlx.saveProject(final.project)
   }
   
   if (iop.covariate & nb.model>1) 
@@ -520,7 +515,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       if (max.iter>0 | nb.model>1)
         print(res.covariate$res)
       else
-        print(formatCovariateModel(getIndividualParameterModel()$covariateModel))
+        print(formatCovariateModel(mlx.getIndividualParameterModel()$covariateModel))
     }
     if (iop.correlation) {
       cat("\nCorrelation model:\n")
@@ -539,8 +534,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   # iter.opt <- which.min(list.criterion) - 1
   # buildmlx.dir.iter <- file.path(buildmlx.dir,paste0("iteration",iter.opt))
   # buildmlx.project.iter <- paste0(buildmlx.dir.iter,".mlxtran")
-  # loadProject(buildmlx.project.iter)
-  # saveProject(final.project)
+  # mlx.loadProject(buildmlx.project.iter)
+  # mlx.saveProject(final.project)
   
   sink(summary.file, append=TRUE)
   cat("____________________________________________\n")
@@ -550,7 +545,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     if (max.iter>0 | nb.model>1)
       print(res.covariate$res)
     else
-      print(formatCovariateModel(getIndividualParameterModel()$covariateModel))
+      print(formatCovariateModel(mlx.getIndividualParameterModel()$covariateModel))
   }
   if (iop.correlation) {
     cat("\nCorrelation model:\n")
@@ -569,17 +564,17 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (iop.covariate) {
     foo <- lapply(res.covariate$model,function(x) {which(x)})
     cov.model <- unique(unlist(lapply(foo,function(x) {names(x)})))
-    cov.type <- getCovariateInformation()$type[cov.model]
+    cov.type <- mlx.getCovariateInformation()$type[cov.model]
     cov.cont <- names(cov.type[cov.type=="continuous"])
     for (ck in cov.cont) {
       cck <- paste0("c",ck)
-      covk <- getCovariateInformation()$covariate[[ck]]
+      covk <- mlx.getCovariateInformation()$covariate[[ck]]
       tr.str <- paste0(cck,' = "',ck,"-",signif(mean(covk),digits=2),'"')
-      tr.str <- paste0("addContinuousTransformedCovariate(",tr.str,")")
+      tr.str <- paste0("lixoftConnectors::addContinuousTransformedCovariate(",tr.str,")")
       eval(parse(text=tr.str))
-      g=getIndividualParameterModel()$covariateModel
+      g=mlx.getIndividualParameterModel()$covariateModel
       cg <- lapply(g, function(x) {foo <- x[ck]; x[ck]<-x[cck]; x[cck]=foo; return(x)})
-      setCovariateModel(cg)
+      mlx.setCovariateModel (cg)
       test.del <- TRUE
     }
   }
@@ -587,18 +582,18 @@ buildmlx <- function(project, final.project=NULL, model="all",
     unlink(final.dir, recursive=TRUE)
   }
   
-  g=getScenario()
+  g=mlx.getScenario()
   g$tasks[[2]]=TRUE
-  setScenario(g)
-  saveProject(final.project)
+  mlx.setScenario(g)
+  mlx.saveProject(final.project)
   # con        = file(summary.file, open = "r")
   # lines      = readLines(con, warn=FALSE)
   # close(con)
   # summary.file = file.path(final.dir,"buildmlx.txt")
   # write(lines, file=summary.file)
   
-  loadProject(final.project)
-  if ( !getLaunchedTasks()[[1]] )   runScenario()
+  mlx.loadProject(final.project)
+  if ( !mlx.getLaunchedTasks()[[1]] )   mlx.runScenario()
   
   res <- list(project=final.project)
   if (iop.covariate)
@@ -633,7 +628,7 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest,
     stop(paste0(final.project, " is not a valid name for a Monolix project (use the .mlxtran extension)"), call.=FALSE)
   
   
-  cov.info <- getCovariateInformation()
+  cov.info <- mlx.getCovariateInformation()
   cov.names <- cov.info$name
   cov.types <- cov.info$type
   j.trans <- grep("transformed",cov.types)
@@ -664,7 +659,7 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest,
     if (length(ncov0)>0)  stop(paste0(ncov0, " is not a valid covariate"), call.=FALSE)
   }
   
-  ind.dist <- getIndividualParameterModel()$distribution
+  ind.dist <- mlx.getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
   if (identical(paramToUse,"all"))
     paramToUse <- param.names
@@ -682,7 +677,7 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest,
   if ("covariate" %in% model) {
     dir.names <- c("full", "both", "backward", "forward")
     if (is.null(direction)) {
-      nbcov <- length(getCovariateInformation()$name)
+      nbcov <- length(mlx.getCovariateInformation()$name)
       direction <- ifelse(nbcov<=10,"full","both")
       idir <- direction
     }
@@ -750,7 +745,7 @@ formatErrorModel <- function(m) {
 }
 
 computecriterion <- function(criterion, method.ll) {
-  ll <- getEstimatedLogLikelihood()[[method.ll]]
+  ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
   if (identical(criterion,"AIC")) cr <- ll[["AIC"]]
   else if (identical(criterion,"BIC")) cr <- ll[["BIC"]]
   else if (identical(criterion,"BICc")) cr <- ll[["BICc"]]

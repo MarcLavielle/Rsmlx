@@ -41,7 +41,6 @@ Generate replicates of the original data using random sampling with replacement.
 Population parameters are then estimated from each replicate.
 }
 \examples{
-\dontrun{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 # with parameters ka, V, Cl.
 
@@ -58,5 +57,6 @@ r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
 
 # See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
 # Download the demo examples here: http://rsmlx.webpopix.org/installation
-}
+
+
 }

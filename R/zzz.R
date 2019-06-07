@@ -5,7 +5,7 @@
   #   return(invisible(FALSE))
   # }
 #  library(lixoftConnectors)
-#  initializeLixoftConnectors(software="monolix", force=TRUE)
+#  mlx.initializeLixoftConnectors()
 }
 # 
 .onAttach <- function(libname,pkgname){

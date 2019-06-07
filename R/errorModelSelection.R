@@ -1,15 +1,21 @@
 errorModelSelection <- function(project=NULL, criterion="BICc", nb.model=1) {
   
   if (!is.null(project))
-    loadProject(project)
+    mlx.loadProject(project)
   
-  obs.model <- getContinuousObservationModel()
-  obs.info <- getData()
+  obs.model <- mlx.getContinuousObservationModel()
+  obs.names <- mlx.getData()$observationNames
+  fit.info <- mlx.getFit()
+  for (noj in seq_along(obs.names)) {
+    nojk <- grep(obs.names[noj],fit.info$data)
+    if (length(nojk)>0)
+      obs.names[noj] <- fit.info$model[nojk]
+  }
   i.contObs <- which(obs.info$observationTypes=="continuous") 
-  i.contModel <- which(names(obs.model$prediction) %in% obs.info$observationNames[i.contObs])
+  i.contModel <- which(names(obs.model$prediction) %in% obs.names[i.contObs])
   n.out <- length(i.contModel)
   pred <- getSimulatedPredictions()
-  d <- getObservationInformation()
+  d <- mlx.getObservationInformation()
   
   if (criterion=="BIC")
     pen.bic <- log(nlevels(pred[[1]]$id))
