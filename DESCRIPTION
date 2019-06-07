@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 2.0.1
+Version: 2.0.3
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("aut"), email = "Jonathan.Chauvin@lixoft.com" ),
@@ -18,7 +18,8 @@ SystemRequirements: 'Monolix' (<http://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
 Imports: tools, methods, graphics, grDevices, utils, stats, tcltk, MASS, ggplot2, gridExtra
 Suggests: mlxR, 
-Collate: bootstrap.R
+Collate: mlxConnectors.R
+         bootstrap.R
          buildmlx.R
          confintmlx.R
          correlationModelSelection.R
