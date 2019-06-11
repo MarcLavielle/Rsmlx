@@ -382,7 +382,7 @@ error.parameter <- function(project=NULL) {
 
 #-------------------------------------------------
 mlx.getFit <- function() {
-  project <- getProjectSettings()$project
+  project <- mlx.getProjectSettings()$project
   con     <- file(project, open = "r")
   lines   <- readLines(con, warn=FALSE)
   close(con)
