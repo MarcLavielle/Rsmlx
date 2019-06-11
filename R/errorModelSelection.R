@@ -11,7 +11,7 @@ errorModelSelection <- function(project=NULL, criterion="BICc", nb.model=1) {
     if (length(nojk)>0)
       obs.names[noj] <- fit.info$model[nojk]
   }
-  i.contObs <- which(obs.info$observationTypes=="continuous") 
+  i.contObs <- which(mlx.getData()$observationTypes=="continuous") 
   i.contModel <- which(names(obs.model$prediction) %in% obs.names[i.contObs])
   n.out <- length(i.contModel)
   pred <- getSimulatedPredictions()
