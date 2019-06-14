@@ -221,7 +221,7 @@ generateDataSetResample = function(project, settings, boot.folder){
   refCovInfo  <- mlx.getCovariateInformation()
   # Get the index in mlx.getCovariateInformation()$ of the covariates used in the statistical model
   indexUsedCat <- NULL
-  for(indexCov in 1:length(refCovInfo$name)){
+  for(indexCov in seq_len(length(refCovInfo$name))){
     if(grepl("categorical", refCovInfo$type[indexCov], fixed=TRUE)){
       # Is the covariate used in the covariate model
       isUsed <- F
