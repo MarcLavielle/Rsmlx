@@ -36,7 +36,7 @@
 #' @export
 pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, new.dir=NULL, par.ini=NULL) {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   if (!is.null(project)) {
@@ -98,7 +98,7 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
   new.project <- file.path(new.dir,new.project)
   
   new.model = tryCatch( {
-    whichPKmodel(parameter)  }
+    whichPKmodel(parameter, lib=TRUE)  }
     , error=function(e) {
       new.model <- paste0("pk_",paste0(parameter, collapse=""),'.txt')
       new.model <- file.path(new.dir,new.model)

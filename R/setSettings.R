@@ -29,7 +29,7 @@
 
 setSettings  <- function(project=NULL, new.project=NULL, level=5) {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   if (!is.null(project)){

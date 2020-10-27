@@ -292,6 +292,9 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
         ri <- rowSums(refi1*refi2)
         ci <- cor(matrix(refi1,ncol=1),matrix(refi2,ncol=1))
         pv <- signif(t.test(ri)$p.value, 4)
+        # pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
+        # plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+        # dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
         if (is.null(res.cor))
           res.cor <- data.frame(randomEffect.1=nref[col.el[i1]], randomEffect.2=nref[col.el[i2]], correlation=ci, p.value=pv)
         else {
@@ -446,7 +449,8 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     for (nc in cov.names) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
+      plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d1 <- rbind(d1,dnc)
     }
   }
@@ -464,7 +468,8 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     for (nc in cov.names) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,in.model=g[[nj]][[nc]])
+      plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+      dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d2 <- rbind(d2,dnc)
     }
   }

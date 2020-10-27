@@ -218,7 +218,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     displayPvalue <- FALSE
   }else{
     indexLL <- 1
-    criteriaToDisplay <- '-2LL'
+    criteriaToDisplay <- 'OFV'
     displayPvalue <- TRUE
   }
   if(settings$linearization){

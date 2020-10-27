@@ -151,7 +151,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
       llp[[indexParam]] <- data.frame(param = sortParam$x, paramInit = paramValue,
                                       LL = llEval[sortParam$ix], name = paramName,
                                       thresh = dLLthreshold, tol.param = tol.param, tol.LL = tol.LL, useLinearization = useLinearization)
-      names(llp[[indexParam]])[3] <- "-2LL"
+      names(llp[[indexParam]])[3] <- "OFV"
       ###############################################################################
       # Save a summary
       ###############################################################################
@@ -308,7 +308,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
 ###################################################################################
 .displaySummary <- function(llp2display){
   xVal <- llp2display$param
-  yVal <- llp2display[['-2LL']]
+  yVal <- llp2display[['OFV']]
   xlabel <- llp2display$name[1]
   LLtarget <- yVal[which(xVal == llp2display$paramInit[1])]+llp2display$thresh[1]
   tol.LL <- llp2display$tol.LL[1]
@@ -346,7 +346,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
 ###################################################################################
 .computeCI <- function(llp2display){
   xVal <- llp2display$param
-  yVal <- llp2display[['-2LL']]
+  yVal <- llp2display[['OFV']]
   xlabel <- llp2display$name[1]
   LLtarget <- yVal[which(xVal == llp2display$paramInit[1])]+llp2display$thresh[1]
   tol.LL <- llp2display$tol.LL[1]
@@ -372,7 +372,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
 ###################################################################################
 .plotFigure <- function(llp2plot){
   xVal <- llp2plot$param
-  yVal <- llp2plot[['-2LL']]
+  yVal <- llp2plot[['OFV']]
   xlabel <- llp2plot$name[1]
   LLtarget <- yVal[which(xVal == llp2plot$paramInit[1])]+llp2plot$thresh[1]
   ymin <- min(min(yVal),LLtarget)-1

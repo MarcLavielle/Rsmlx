@@ -39,7 +39,7 @@
 pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.dir=".", 
                     MM=FALSE, level=NULL, settings.stat=NULL) {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   if (!is.null(project)) {

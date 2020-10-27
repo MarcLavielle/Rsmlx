@@ -53,7 +53,7 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
     
   } else {
     
-    if (!initRsmlx())
+    if (!initRsmlx()$status)
       return()
     
     if (!grepl("\\.",project))
@@ -83,32 +83,44 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 #' Initialize Rsmlx library
 #' 
 #' Initialize Rsmlx library
-#' @return A boolean equaling TRUE if the initialization has been successful and FALSE if not.
+#' @return A list:
+#' \itemize{
+#'   \item \code{software}: the software that is used (should be monolix with Rsmlx)
+#'   \item \code{path}: the path to MonolixSuite
+#'   \item \code{version}: the version of MonolixSuite that is used
+#'   \item \code{status}: boolean equaling TRUE if the initialization has been successful.
+#' }
 #' @examples
 #' \dontrun{
-#' initRsmlx()
+#' initRsmlx()  # print the info about Monolix and lixoftConnectors
+#' initRsmlx(path="C:/ProgramData/Lixoft/MonolixSuite2019R1")  # use MonolixSuite 2019R1
 #' }
 #' @export
-initRsmlx <- function(){
+initRsmlx <- function(path=NULL){
   packinfo <- utils::installed.packages()
-  if (!is.element("lixoftConnectors", packinfo[,1]))
-    stop("You need to install the lixoftConnectors package in order to use Rsmlx", call. = FALSE)
+  # if (!is.element("lixoftConnectors", packinfo[,1]))
+  #   stop("You need to install the lixoftConnectors package in order to use Rsmlx", call. = FALSE)
   
   
   lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
   
   if (!is.null(lixoftConnectorsState)){
     
-    if (lixoftConnectorsState$software == "monolix") {
+    if (lixoftConnectorsState$software == "monolix"  && is.null(path)) {
       status=TRUE
     } else {
-      status = mlx.initializeLixoftConnectors()
+      status = mlx.initializeLixoftConnectors(path=path)
     }
     
   } else {
-    status = mlx.initializeLixoftConnectors()
+    status = mlx.initializeLixoftConnectors(path=path)
   }
-  return(invisible(status))
+  lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
+  lixoftConnectorsState$status <- status
+  if (is.null(path))
+    return(lixoftConnectorsState)
+  else
+    return(invisible(lixoftConnectorsState))
   
 }
 
@@ -360,7 +372,10 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
     mlx.runLogLikelihoodEstimation()
   }
   setwd(w.dir)
-  r$bic <- mlx.getEstimatedLogLikelihood()[[1]][['-2LL']] + (2*length(parameter)+2)*log(n)
+  ofv <- mlx.getEstimatedLogLikelihood()[[1]][['OFV']]
+  # if (is.null(ofv))
+  #   ofv <- mlx.getEstimatedLogLikelihood()[[1]][['OFV']]
+  r$bic <- ofv + (2*length(parameter)+2)*log(n)
   r$pop.est <- mlx.getEstimatedPopulationParameters()
   return(r)
 }

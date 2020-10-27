@@ -322,7 +322,8 @@ for (k in 1:ng) {
   ll <- c(ll , llk)
   df <- c(df, dfk)
   bic <- c(bic , bick)
-  bic.cor <- c(bic.cor , bick-corb*dfk)
+#  bic.cor <- c(bic.cor , bick-corb*dfk)
+  bic.cor <- c(bic.cor , bick)
 }
 
 bic <- round(bic.cor, digits=3)

@@ -20,6 +20,7 @@
 #' @param linearization  {TRUE}/FALSE  whether the calculation of the standard errors 
 #' or the profile likelihood  is based on a linearization of the model (default=TRUE) 
 #' @param nboot number of bootstrat replicates (default=100, used when method="bootstrap")
+#' @param parametric boolean to define if parametric bootstrap is performed (new data is drawn from the model), (default: false)
 #' @param settings a list of settings for the profile likelihood method:
 #' \itemize{
 #' \item \code{max.iter} maximum number of iterations to find the solution (default=10)
@@ -57,7 +58,7 @@
 #' @importFrom stats qchisq
 #' @export
 confintmlx <- function(project, parameters="all", method="fim", level=0.90, 
-                       linearization=TRUE, nboot=100, settings=NULL)
+                       linearization=TRUE, nboot=100, parametric=FALSE, settings=NULL)
 {
   
   r <- prcheck(project, f="conf", level=level, method=method )
@@ -87,7 +88,7 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   }
   
   if (method=="bootstrap") {
-    r.boot <- bootmlx(project, nboot=nboot, settings=list(plot=FALSE, level=level))
+    r.boot <- bootmlx(project, nboot=nboot, settings=list(plot=FALSE, level=level), parametric=parametric)
     c.inf <- apply(r.boot,MARGIN=2, quantile,(1-level)/2)
     c.sup <- apply(r.boot,MARGIN=2, quantile,(1+level)/2)
     lp <- mlx.loadProject(project) 
@@ -140,17 +141,28 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   set <- se
   mut <- param
   iL <- which(tr=="L")
-  set[iL] <- se[iL]/param[iL]
-  mut[iL] <- log(param[iL])
+  if (length(iL)>0) {
+    mut[iL] <- log(param[iL])
+#    set[iL] <- se[iL]/param[iL]
+    set[iL] <- sqrt(log((1+sqrt(1+(2*se[iL]/param[iL])^2))/2))
+  }
   iG <- which(tr=="G")
-  set[iG] <- se[iG]/(param[iG]*(1-param[iG]))
-  mut[iG] <- log(param[iG]/(1-param[iG]))
+  if (length(iG)>0) {
+    r.iG <- logit.param(param[iG], se[iG], a=0, b=1)
+    mut[iG] <- r.iG$mut
+    set[iG] <- r.iG$st
+  }
   iR <- which(tr=="R")
-  set[iR] <- se[iR]*2/(1 - param[iR]^2)
-  mut[iR] <- log((param[iR]+1)/(1-param[iR]))
+  if (length(iR)>0) {
+    r.iR <- logit.param(param[iR], se[iR], a=-1, b=1)
+    mut[iR] <- r.iR$mut
+    set[iR] <- r.iR$st
+  }
   iP <- which(tr=="P")
-  set[iP] <- se[iP]/dnorm(qnorm(param[iP]))
-  mut[iP] <- qnorm(param[iP])
+  if (length(iP)>0) {
+    mut[iP] <- qnorm(param[iP])
+    set[iP] <- se[iP]/dnorm(qnorm(param[iP]))
+  }
   
   cit <- cbind(mut + qnorm((1-level)/2)*set, mut + qnorm((1+level)/2)*set)
   ci <- cit
@@ -164,5 +176,51 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   if (!identical(parameters, "all"))
     ci <- ci[parameters,]
   return(list(confint=ci, level=level, method="fim"))
+}
+
+
+# ---------------------------------------
+
+
+# logit.param <- function(mu, s, a=0, b=1) {
+#   dx <- 0.005*(b-a)
+#   x <- seq((a+dx), (b-dx), by=dx)
+#   mut <- log((mu-a)/(b-mu))
+#   st <- (b-a)*s/((mu-a)*(b-mu))
+#   for (k in seq_len(length(mu))) {
+#     r <- optim(c(mut[k], st[k]),logit2.err,o=c(mu[k], s[k]), a=a, b=b, x=x)
+#     mut[k] <- r$par[1]
+#     st[k] <- r$par[2]
+#   }
+#   return(list(mut=mut, st=st))
+# }
+
+logit2.err <- function(theta, o, a, b, x) {
+  f <- (b-a)/(x-a)/(b-x)/theta[2]*exp(-0.5/(theta[2]^2)*(log((x-a)/(b-x)) - theta[1])^2)
+  f <- f/sum(f)
+  m <- sum(x*f)
+  v <- sum((x^2)*f) - m^2
+  return((o[1]-m)^2 + (o[2]-sqrt(v))^2)
+}
+
+logit.param <- function(mu, s, a=0, b=1) {
+  dx <- 0.005*(b-a)
+  x <- seq((a+dx), (b-dx), by=dx)
+  mut <- log((mu-a)/(b-mu))
+  st <- (b-a)*s/((mu-a)*(b-mu))
+  for (k in seq_len(length(mu))) {
+    suppressWarnings(r <- optimize(logit1.err, interval=c(-100, 100), mu=mut[k], sigma=s[k], a=a, b=b, x=x))
+    st[k] <- r$minimum
+  }
+  return(list(mut=mut, st=st))
+}
+
+
+logit1.err <- function(theta, mu, sigma, a, b, x) {
+  f <- (b-a)/(x-a)/(b-x)/theta*exp(-0.5/(theta^2)*(log((x-a)/(b-x)) - mu)^2)
+  f <- f/sum(f)
+  m <- sum(x*f)
+  v <- sum((x^2)*f) - m^2
+  return((sigma-sqrt(v))^2)
 }
 

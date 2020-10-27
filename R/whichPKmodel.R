@@ -5,6 +5,7 @@
 #' @param parameter a vector of PK parameter names
 #' @param mlxPath path to Monolix install
 #' @param pkPath path to the Monolix PK library
+#' @param lib boolean to define if the absolute path is returned
 #' @examples
 #' \dontrun{
 #' whichPKmodel(parameter=c("Tlag", "Tk0", "V", "Cl"))
@@ -14,9 +15,9 @@
 #session <- "C:/ProgramData/Lixoft/MonolixSuite2018R2"
 
 
-whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL) {
+whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL, lib=FALSE) {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   parameter[parameter=="k"] <- "ke"
@@ -45,7 +46,10 @@ whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL) {
   plist <- c("Tlag", "Mtt", "Ktr", "ka", "Tk0", "V1", "V2", "V3", "k12", "k21", "k13", "k31", "Q2", "Q3", "Vm", "Km", "Cl", "ke")
   for (k in (1:length(d))) {
     lk <- plist[unlist(lapply(plist, function(x) grepl(x, d[k])))]
-    if (identical(sort(lk), parameter))
+    if (identical(sort(lk), parameter)) 
+      if (lib)
+      return(paste0("lib:",d0[k]))
+    else
       return(file.path(pkPath,d0[k]))
   }
   

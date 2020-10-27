@@ -18,7 +18,7 @@
 #' @export
 getEstimatedIndividualParameters2 <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   ind.param <- mlx.getEstimatedIndividualParameters()
@@ -80,7 +80,7 @@ getEstimatedIndividualParameters2 <- function() {
 #' @export
 getEstimatedPredictions <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   ip <- getEstimatedIndividualParameters2()
@@ -130,7 +130,7 @@ getEstimatedPredictions <- function() {
 #' @export
 getEstimatedResiduals <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   df=getEstimatedPredictions()
@@ -197,7 +197,7 @@ getEstimatedResiduals <- function() {
 #' @export
 getSimulatedPredictions <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   sip <- mlx.getSimulatedIndividualParameters()
@@ -253,7 +253,7 @@ getSimulatedPredictions <- function() {
 #' @export
 getSimulatedResiduals <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   df=getSimulatedPredictions()
@@ -320,7 +320,7 @@ getSimulatedResiduals <- function() {
 #' @export
 getEstimatedCovarianceMatrix <- function() {
   
-  if (!initRsmlx())
+  if (!initRsmlx()$status)
     return()
   
   param <- mlx.getEstimatedPopulationParameters()
