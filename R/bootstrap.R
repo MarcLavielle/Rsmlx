@@ -47,9 +47,14 @@
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE, tasks=c(populationParameterEstimation=TRUE), 
                     settings = NULL){
   
+  
+  monolixPath <- mlx.getLixoftConnectorsState()$path
+  if (parametric & grepl("2020",monolixPath))
+    stop("Parametric bootstrap is not possible with MonolixSuite 2020")
+  
   r <- prcheck(project, f="boot", settings=settings)
   if (r$demo)
-   return(r$res)
+    return(r$res)
   project <- r$project
   
   mlx.loadProject(project)
@@ -105,7 +110,10 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       cleanbootstrap(project,boot.folder)
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
-    generateDataSetResample(project, settings, boot.folder)
+    if(parametric)
+      generateDataSetParametric(project, settings, boot.folder)
+    else
+      generateDataSetResample(project, settings, boot.folder)
     useLL = F
   }else{
     dataFolderToUse = dataFolder
@@ -113,7 +121,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     if (!dir.exists(file.path(exportDir, boot.folder)))
       dir.create(file.path(exportDir, boot.folder))
   }
-  generateBootstrapProject(project, dataFolder = dataFolderToUse, boot.folder=boot.folder)
+    generateBootstrapProject(project, dataFolder = dataFolderToUse, boot.folder=boot.folder)
   
   #paramResults <- array(dim = c(settings$nboot, length(param))) 
   paramResults <- NULL 
@@ -373,10 +381,12 @@ generateDataSetParametric = function(project, settings=NULL, boot.folder=NULL){
   }
   if(!is.na(settings$seed)){set.seed(settings$seed)}
   
+  monolixPath <- mlx.getLixoftConnectorsState()$path
+  mlx.initializeLixoftConnectors(software="simulx", path=monolixPath, force=TRUE)
   for(indexSample in 1:settings$nboot){
-    suppressMessages(mlx.initializeLixoftConnectors())
+    #suppressMessages(mlx.initializeLixoftConnectors())
     
-    datasetFileName <- paste0(exportDir,'/bootstrap/data/dataset_',toString(indexSample),'.csv')
+    datasetFileName <- paste0(exportDir,boot.folder, 'data/dataset_',toString(indexSample),'.csv')
     if(!file.exists(datasetFileName)){
       if(!is.na(settings$seed)){
         simSettings = list(format.original=TRUE, seed = settings$seed+indexSample)
@@ -384,6 +394,7 @@ generateDataSetParametric = function(project, settings=NULL, boot.folder=NULL){
         simSettings = list(format.original=TRUE)  
       }
       if(!file.exists(datasetFileName)){
+  #      res <- simulx(project = project,  result.file=datasetFileName, setting=simSettings)
         res <- mlxR::simulx(project = project,  result.file=datasetFileName, setting=simSettings)
       }
     }
@@ -402,6 +413,7 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
   projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  #mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
   
   # 
   scenario = mlx.getScenario()
@@ -417,6 +429,7 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
       bootData <- referenceDataset
       bootData$dataFile <- paste0(dataFolder,'/',dataFiles[indexSample])
       mlx.setData(bootData)
+#      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
       mlx.saveProject(projectFile =projectBootFileName)
     }
   }
