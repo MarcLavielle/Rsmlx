@@ -252,6 +252,14 @@ mlx.runLogLikelihoodEstimation <- function(linearization = NULL) {
   .hiddenCall(paste0('r <- lixoftConnectors::runLogLikelihoodEstimation(linearization = linearization)'))
 }
 
+mlx.computeBins <- function(data, options = NULL) {
+  if (is.null(options)) { 
+    .hiddenCall(paste0('r <- lixoftConnectors::computeBins(data = data)'))
+  } else {
+    .hiddenCall(paste0('r <- lixoftConnectors::computeBins(data = data, options = options)'))
+  }
+}
 
-
-
+mlx.computeChartsData <- function(exportVPCSimulations) {
+  .hiddenCall(paste0('r <- lixoftConnectors::computeChartsData(exportVPCSimulations = exportVPCSimulations)'))
+}
