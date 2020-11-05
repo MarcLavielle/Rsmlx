@@ -1,6 +1,5 @@
 prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
                     parameters=NULL, level=NULL, tests=NULL, nboot=NULL, method=NULL) {
-  #prcheck <- function(project) {
   if (identical(substr(project,1,9),"RsmlxDemo")) {
     RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
     rm(RsmlxDemo1.project, RsmlxDemo2.project, warfarin.data, resMonolix)
@@ -11,46 +10,47 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
     write.csv(warfarin.data, file=file.path(tmp.dir,"warfarin_data.csv"), quote=FALSE, row.names = FALSE)
     project <- file.path(tmp.dir,project)
     demo <- TRUE
-    if (!is.null(f)) {
-      if (f=="boot") {
-        if (is.null(settings))
-          res <- resMonolix$r1.boot
-        else if (!is.null(settings$N) & is.null(settings$covStrat))
-          res <- resMonolix$r2.boot
-        else
-          res <- resMonolix$r3.boot
-      } else if (f=="build") {
-        if (identical(model,"all") & identical(paramToUse,"all")) 
-          res <- resMonolix$r1.build
-        else if (identical(model,"all")) 
-          res <- resMonolix$r2.build
-        else 
-          res <- resMonolix$r3.build
-      } else if (f=="conf") {
-        if (method == "fim" & level==0.90)
-          res <- resMonolix$r1.conf
-        else if (method == "fim" & level==0.95)
-          res <- resMonolix$r2.conf
-        else if (method == "proflike")
-          res <- resMonolix$r3.conf
-        else
-          res <- resMonolix$r4.conf
-      } else if (f=="cov") {
-        if (identical(method,"COSSAC") & identical(paramToUse,"all")) 
-          res <- resMonolix$r1.cov
-        else if (identical(method,"SCM")) 
-          res <- resMonolix$r2.cov
-        else 
-          res <- resMonolix$r3.cov
-      } else if (f=="test") {
-        if (length(tests)==4) 
-          res <- resMonolix$r1.test
-        else 
-          res <- resMonolix$r2.test
-      } else if (f=="set")
-        res="foo"
-    }
-    
+  } else {
+    demo <- FALSE
+  }
+  if (demo & !is.null(f)) {
+    if (f=="boot") {
+      if (is.null(settings))
+        res <- resMonolix$r1.boot
+      else if (!is.null(settings$N) & is.null(settings$covStrat))
+        res <- resMonolix$r2.boot
+      else
+        res <- resMonolix$r3.boot
+    } else if (f=="build") {
+      if (identical(model,"all") & identical(paramToUse,"all")) 
+        res <- resMonolix$r1.build
+      else if (identical(model,"all")) 
+        res <- resMonolix$r2.build
+      else 
+        res <- resMonolix$r3.build
+    } else if (f=="conf") {
+      if (method == "fim" & level==0.90)
+        res <- resMonolix$r1.conf
+      else if (method == "fim" & level==0.95)
+        res <- resMonolix$r2.conf
+      else if (method == "proflike")
+        res <- resMonolix$r3.conf
+      else
+        res <- resMonolix$r4.conf
+    } else if (f=="cov") {
+      if (identical(method,"COSSAC") & identical(paramToUse,"all")) 
+        res <- resMonolix$r1.cov
+      else if (identical(method,"SCM")) 
+        res <- resMonolix$r2.cov
+      else 
+        res <- resMonolix$r3.cov
+    } else if (f=="test") {
+      if (length(tests)==4) 
+        res <- resMonolix$r1.test
+      else 
+        res <- resMonolix$r2.test
+    } else if (f=="set")
+      res="foo"
   } else {
     
     if (!initRsmlx()$status)
@@ -65,8 +65,6 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
     lp <- mlx.loadProject(project) 
     if (!lp) 
       stop(paste0("Could not load project '", project, "'"), call.=FALSE)
-    
-    demo <- FALSE
     res <- NULL
   }
   
