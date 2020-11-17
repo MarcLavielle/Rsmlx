@@ -8,27 +8,12 @@ readmlxDataset <-function(obsid = NULL) {
   filename <- mlx.getData()$dataFile
   df <- .readDataset(filename)
   names(df) <- mlx.getData()$header
-  if (.isHeader("evid")) {
-    message("WARNING: EVID dataset ! ")
-  }
+
   renameHeaders <- .filterHeaders(c("id", "time", "observation", "amount", "evid",
                                     "obsid", "cens", "limit", "regressor", "admid",
                                     "rate", "tinf", "ss", "addl", "mdv", "ii"))
   df <- .renameColumns(df, .matchToData(renameHeaders), renameHeaders)
   return(df)
-}
-
-#' Get censoring information from input dataset
-#' @return Censoring columns of input dataset (dataframe).
-#' @examples
-#' \dontrun{
-#' getCensoringInformation()
-#' }
-getCensoringInformation <- function() {
-  subjocc <- .getSubjocc()
-  censoring <- getPKObservations()
-  censoring <- subset(censoring, select = .filterHeaders(c(subjocc, "time", "cens", "limit")))
-  return(censoring)
 }
 
 #' Get dose rows from input dataset
@@ -39,49 +24,12 @@ getCensoringInformation <- function() {
 #' }
 getDoseInformation <- function() {
   df <- readmlxDataset()
-  if (!is.element("evid", df)) {
+  if (!is.element("evid", names(df))) {
     subDf <- subset(df, df$amount != ".")
   } else {
     subDf <- subset(df, (df$amount != ".") & (df$evid %in% c(1, 3, 4)))
   }
   return(subDf)
-}
-
-#' Get observations rows from input dataset
-#' @return PK Observations rows of input dataset (dataframe)
-#' @examples
-#' \dontrun{
-#' getPKObservations()
-#' }
-getPKObservations <- function() {
-  df <- readmlxDataset()
-  if (!is.element("evid", df)) {
-    subDf <- subset(df, df$observation != ".")
-  } else {
-    subDf <- subset(df, (df$observation != ".") & (df$evid %in% c(0)))
-  }
-  if (is.element("mdv", df)){
-    subDf <- subset(df, mdv == 1)
-  }
-  if (is.element("obsid", df)) {
-    subDf <- subset(subDf, df$obsid == mlx.getGlobalObsIdToUse())
-  }
-  return(subDf)
-}
-
-#' Get dataset to get only observations after the last dose
-#' @param df Input dataframe.
-#' @return observations after last dose (dataframe)
-#' @examples
-#' \dontrun{
-#' cutData()
-#' }
-cutData <- function(df) {
-  starttime =  unique(as.numeric(df$startTime))
-  df <- subset(df, df$time >= starttime)
-  df["time"] <- sapply(df$time, FUN=function(time) {time - starttime})
-  df <-  df[,!(names(df) %in% c("startTime"))]
-  return(df)
 }
 
 .getDelim <- function(filename, seps = c("\t"," ",";",","), nrows = 10) {
@@ -116,18 +64,6 @@ cutData <- function(df) {
   }
   df <- read.csv(filename, sep = sep)
   return(df)
-}
-
-.getStartTime <- function(df) {
-  subjocc <- .getSubjocc()
-  dfStart <- subset(getDoseInformation(), select = c(subjocc, "time"))
-  dfStart <- aggregate(
-    dfStart$time,
-    by = as.list(subset(dfStart, select = subjocc)),
-    FUN=max
-  )
-  dfStart <- .renameColumns(dfStart, "x", "startTime")
-  return(dfStart)
 }
 
 .filterHeaders <- function(headersList) {
@@ -171,6 +107,45 @@ cutData <- function(df) {
   return(headerDataset)
 }
 
+.isHeader <- function(headers) {
+  return(invisible(headers %in% mlx.getData()$headerTypes))
+}
+
+.getObsType <- function(obsName) {
+  obsInformation <- mlx.getObservationInformation()
+  obsType <- obsInformation$type[[obsInformation$mapping[[obsName]]]]
+  
+  subType = obsType
+  modelFile <- mlx.getStructuralModel()
+  if (grepl( "^lib:", modelFile)) {
+    lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
+    libPath <- paste(lixoftConnectorsState$path, "factory", "library", sep = "/")
+    modelFile <- paste(
+      libPath,
+      list.files(
+        path = libPath,
+        pattern = paste0("*", gsub("^lib:", "", modelFile)),
+        recursive = TRUE
+      ),
+      sep = "/"
+    )
+  }
+  lines  <- paste(readLines(modelFile, warn = FALSE), collapse = " ")
+  if (obsType == "discrete") {
+    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,]|\\s)*}"), lines, perl=TRUE))
+    m2 <- regmatches(lines, regexpr("type\\s*=\\s*[a-zA-Z]*", lines, perl=TRUE))
+    subType <- gsub("type\\s*=\\s*", "", m2)
+  } else if (obsType == "event") {
+    subType <- "exactEvent"
+    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,]|\\s)*}"), lines, perl=TRUE))
+    m2 <- regmatches(m, regexpr("eventType\\s*=\\s*[a-zA-Z]*", m, perl=TRUE))
+    if (length(m2) > 0) {
+      subType <- gsub("eventType\\s*=\\s*", "", m2)
+    }
+  }
+  return(list(type = obsType, subType = subType))
+}
+
 .getSubjocc <- function(){
   if (.isHeader("occ")) {
     subjocc <- c("id", .matchToData("occ"))
@@ -180,6 +155,49 @@ cutData <- function(df) {
   return(subjocc)
 }
 
-.isHeader <- function(headers) {
-  return(invisible(headers %in% mlx.getData()$headerTypes))
+.stratify <- function(stratifierData, type, covName, breaks = NULL, filtering = FALSE, filterGroup = NULL) {
+  if (type == "continuous") {
+    rangeCov <- range(stratifierData)
+    if (is.null(breaks)) breaks <- median(stratifierData)
+    breaks <- sort(unique(c(rangeCov, pmin(pmax(rangeCov[1], breaks), rangeCov[2]))))
+  
+    if (!filtering) {
+      factor <- cut(stratifierData, breaks = breaks, include.lowest=TRUE)
+      levels(factor) <- paste0("#", covName, ": ", levels(factor), " ")
+      res <- factor
+    } else {
+      factor <- cut(stratifierData, breaks = breaks, include.lowest=TRUE, labels = F)
+      res <- !(factor == filterGroup)
+    }
+  } else {
+    if (!filtering) {
+      res <- paste0("#", covName, ": ", stratifierData, " ")
+    } else {
+      res <- !(stratifierData == filterGroup)
+    }
+  }
+  return(res)
+}
+
+.addStratificationColumn <- function(covData, covtypes, stratifiers, breaks,
+                                     filtering = FALSE, filterGroups = NULL,
+                                     columnName = "split") {
+  if (!filtering) {
+    stratCol <- rep("", nrow(covData))
+  } else {
+    stratCol <- rep(FALSE, nrow(covData))
+  }
+  for (cov in stratifiers) {
+    strat <- .stratify(
+      covData[[cov]], covTypes[[cov]], breaks[[cov]], covName = cov,
+      filtering = filtering, filterGroup = filterGroups[[cov]]
+    )
+    if (!filtering) {
+      stratCol <- paste0(stratCol, strat)
+    } else {
+      stratCol <- stratCol | strat
+    }
+  }
+  covData[columnName] <- stratCol
+  return(covData)
 }
