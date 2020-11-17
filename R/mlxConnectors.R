@@ -263,3 +263,11 @@ mlx.computeBins <- function(data, options = NULL) {
 mlx.computeChartsData <- function(exportVPCSimulations) {
   .hiddenCall(paste0('r <- lixoftConnectors::computeChartsData(exportVPCSimulations = exportVPCSimulations)'))
 }
+
+mlx.getVariabilityLevels <- function() {
+  .hiddenCall(paste0('r <- lixoftConnectors::getVariabilityLevels()'))
+}
+
+mlx.getLixoftEnvInfo <- function() {
+  .hiddenCall(paste0('r <- lixoftConnectors::getLixoftEnvInfo()'))
+}
