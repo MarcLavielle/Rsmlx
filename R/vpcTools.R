@@ -1,4 +1,4 @@
-.computeContinuousVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=90, level=90) {
+computeContinuousVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=90, level=90) {
   empiricalData <- as.data.frame(do.call(
         rbind, tapply(obsDf[[obsName]], obsDf$binIndex, .stats, higherPercentile, header = "empirical")
       ))
@@ -32,7 +32,7 @@
   return(res)
 }
 
-.computeDiscreteVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=90, level=90, categories = NULL) {
+computeDiscreteVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=90, level=90, categories = NULL) {
   if (is.null(categories)) categories <- unique(obsDf$category)
   empiricalData <- .discreteDataProba(obsDf, obsName, categories = categories, name = "empirical")
   simData <- do.call(rbind, by (
@@ -64,21 +64,22 @@
   res <- merge(empiricalData, theoreticalData, by = c("bins", "category"))
 }
 
-.computeEventVPC <- function(obsDf, obsName, simDf, simName, nbDataPoints = 100, level = 90) {
-  subjocc <- .getSubjocc()
+computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType, nbDataPoints = 100, level = 90, averageEventNumber = FALSE) {
+  exact <- (eventType == "exactEvent")
+  
   tRange <- range(obsDf$time)
-  timeGrid <- sort(unique(c(
-    obsDf[obsDf[obsName] == 1, "time"],  # obs events
-    seq(tRange[1], tRange[2], (tRange[2] - tRange[1]) / (nbDataPoints - 1))  # grid
-  )))
-  
-  empiricalData <- .computeSurvivalCurve(obsDf, obsName, timeGrid) 
-  
+  timeGrid <- seq(tRange[1], tRange[2], (tRange[2] - tRange[1]) / (nbDataPoints - 1))
+  if (exact) timeGrid <- c(timeGrid, obsDf[obsDf[obsName] == 1, timeName])
+  timeGrid <- sort(unique(timeGrid))
+  obsDf <- .addEventIdColumn(obsDf, obsName)
+  simDf <- .addEventIdColumn(simDf, simName)
+  empiricalData <- computeSurvivalCurves(obsDf, timeName, obsName, timeGrid, exact, averageEventNumber) 
+
   simData <- do.call(rbind, by (
-    subset(simDf, select = c(subjocc, "rep", simName, "time", "censored")),
+    simDf,
     subset(simDf, select = c("rep")),
     function(df) {
-      res <- .computeSurvivalCurve(df, simName, timeGrid)
+      res <- computeSurvivalCurves(df, timeName, simName, timeGrid, exact, averageEventNumber)
       res <- cbind(rep = unique(df$rep), res)
       return(res)
     }
@@ -86,14 +87,14 @@
   
   theoreticalData <- do.call(rbind, by (
     simData,
-    subset(simData, select = c("time")),
+    subset(simData, select = c(timeName)),
     function(df) {
       res <- as.data.frame(sapply(
-        df[!names(df) %in% c("time", "rep")],
+        df[!names(df) %in% c(timeName, "rep")],
         .stats, (100 - level) / 2
       ))
       res <- cbind(list(stat = rownames(res), time = unique(df$time)), res)
-      res <- reshape(res, idvar = c("time"), timevar = "stat", direction = "wide")
+      res <- reshape(res, idvar = c(timeName), timevar = "stat", direction = "wide")
       return(res)
     }
   ))
@@ -103,77 +104,6 @@
   
   res <- merge(empiricalData, theoreticalData, by = c("time"))
   return(res)
-}
-
-.computeSurvivalCurve <- function(data, eventName, timeGrid) {
-  subjocc <- .getSubjocc()
-  data <- data[order(subset(data, select = time)),]
-  data$kEvent <- 0
-  subjoccs <- unique(subset(data, select = subjocc))
-  for (i in seq_len(nrow(subjoccs))) {
-    so <- subjoccs[i, ]
-    df <- subset(
-      data,
-      apply(subset(data, select = subjocc), 1, function(x) all(x==so))
-    )
-    df$kEvent[df[eventName] == 1] <- seq_len(nrow(df[df[eventName] == 1,]))
-    df$kEvent[df$censored] <- - (max(df$kEvent) + 1)
-    data[apply(subset(data, select = subjocc), 1, function(x) all(x==so)),] <- df
-  }
-
-  times <- sort(unique(c(
-    c(0, data[data[eventName] == 1, "time"]),
-    timeGrid
-  )))
-  nbMaxEvents <- max(data$kEvent)
-  S <- sapply(
-    seq_len(nbMaxEvents),
-    function(k) {
-      cumprod(sapply(
-        times,
-        function(t) {
-          nbSubject <- nrow(unique(subset(
-            data,
-            time >= t & (kEvent == k | (censored == 1 & kEvent >= -k)),
-            select = subjocc
-          )))
-          res <- 1 - ifelse(
-            nbSubject > 0,
-            nrow(subset(data, time == t & kEvent == k)) / nbSubject,
-            0
-          )
-          return(res)
-        }
-      ))
-    }
-  )
-  survivalFunction <- S[, 1]
-  averageEventNumber <- rowSums(1 - S)
-  res <- as.data.frame(list(
-    time = timeGrid,
-    survivalFunction = survivalFunction[times %in% timeGrid],
-    averageEventNumber = averageEventNumber[times %in% timeGrid]
-  ))
-  return(res)
-  
-}
-
-.addTTECensoredColumn <- function(data) {
-  subjocc <- .getSubjocc()
-  data <- data[order(subset(data, select = time)),]
-  data$censored <- 0
-  subjoccs <- unique(subset(data, select = subjocc))
-  for (i in seq_len(nrow(subjoccs))) {
-    so <- subjoccs[i, ]
-    df <- subset(
-      data,
-      apply(subset(data, select = subjocc), 1, function(x) all(x==so))
-    )
-    df$censored[df[eventName] == 0 & df$time == max(df$time)] <- 1
-    data[apply(subset(data, select = subjocc), 1, function(x) all(x==so)),] <- df
-  }
-  return(data)
-  
 }
 
 .discreteDataProba <- function(data, discreteName, categories = NULL, name = NULL) {

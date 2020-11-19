@@ -344,17 +344,17 @@ vpc <- function(project, time = NULL, obsName = NULL,
     }
   }
   
-  if (dataType == "event") obsData <- .addTTECensoredColumn(obsData)
+  if (dataType == "event") obsData <- .addTTECensoredColumn(obsData, obsName)
 
   # compute time since last dose if needed
   if (time == "timeSinceLastDose") {
     obsData <- .addDoseRelTime(obsData)
     simData <- .addDoseRelTime(simData)
     if (is.null(displaySettings$xlab)) displaySettings$xlab <- "time since last dose"
-    time <- "time_rel"
+    timeName <- "time_rel"
   } else {
     if (is.null(displaySettings$xlab)) displaySettings$xlab <- "time"
-    time <- "time"
+    timeName <- "time"
   }
   
   # Stratify: split and filter -------------------------------------------------
@@ -472,7 +472,7 @@ vpc <- function(project, time = NULL, obsName = NULL,
         s <- unique(simSplit$split)
         obsSplit <- subset(obsData, split == s, select = c(obsName, timeName, "binIndex"))
         simSplit <- subset(simSplit, select = c("rep", simName, timeName, "binIndex"))
-        res <- .computeContinuousVPC(
+        res <- computeContinuousVPC(
           obsSplit, obsName, simSplit, simName,
           vpcSettings$higherPercentile, vpcSettings$level
         )
@@ -490,7 +490,7 @@ vpc <- function(project, time = NULL, obsName = NULL,
       function(simSplit) {
         s <- unique(simSplit$split)
         obsSplit <- subset(obsData, split == s, select = c(obsName, "split", timeName, "binIndex", "category"))
-        res <- .computeDiscreteVPC(
+        res <- computeDiscreteVPC(
           obsData, obsName, simData, simName,
           vpcSettings$higherPercentile, vpcSettings$level, categories
         )
@@ -508,9 +508,9 @@ vpc <- function(project, time = NULL, obsName = NULL,
       function(simSplit) {
         s <- unique(simSplit$split)
         obsSplit <- subset(obsData, split == s)
-        res <- .computeEventVPC(
-          obsData, obsName, simData, simName,
-          xBinsSettings$nbDataPoints, vpcSettings$level
+        res <- computeEventVPC(
+          obsSplit, obsName, simSplit, simName, timeName, dataSubType,
+          xBinsSettings$nbDataPoints, vpcSettings$level, displaySettings$meanNumberEventsCurve
         )
         res <- cbind(list(split = s), res)
       }
@@ -519,24 +519,24 @@ vpc <- function(project, time = NULL, obsName = NULL,
 
   # Plot VPC -------------------------------------------------------------------
   if (dataType %in% c("discrete", "continuous")) {
-    p <- plotVpc(vpcData, obsData, obsName, time, displaySettings, vpcTheme)
+    p <- plotVpc(vpcData, obsData, obsName, timeName, displaySettings, vpcTheme)
   } else {
     if (displaySettings$survivalCurve) {
       displaySettings$ylab <- "Survival Function"
-      data <- subset(vpcData, select = c("split", "time", names(vpcData)[grepl("survivalFunction", names(vpcData))]))
-      p1 <- plotVpc(data, obsData, obsName, time, displaySettings, vpcTheme)
+      data <- subset(vpcData, select = c("split", timeName, names(vpcData)[grepl("survivalFunction", names(vpcData))]))
+      p1 <- plotVpc(data, obsData, obsName, timeName, displaySettings, vpcTheme)
       if (displaySettings$meanNumberEventsCurve) {
         displaySettings$ylab <- "Mean number of events per subject"
-        data <- subset(vpcData, select = c("split", "time", names(vpcData)[grepl("averageEventNumber", names(vpcData))]))
-        p2 <- plotVpc(data, obsData, obsName, time, displaySettings, vpcTheme)
+        data <- subset(vpcData, select = c("split", timeName, names(vpcData)[grepl("averageEventNumber", names(vpcData))]))
+        p2 <- plotVpc(data, obsData, obsName, timeName, displaySettings, vpcTheme)
         p <- grid.arrange(p1, p2, vp, sc, ncol=2)
       } else {
         p <- p1
       }
     } else if (displaySettings$meanNumberEventsCurve) {
       displaySettings$ylab <- "Mean number of events per subject"
-      data <- subset(vpcData, select = c("split", "time", names(vpcData)[grepl("averageEventNumber", names(vpcData))]))
-      p <- plotVpc(data, obsData, "meanNumberEventsCurve", time, displaySettings, vpcTheme)
+      data <- subset(vpcData, select = c("split", timeName, names(vpcData)[grepl("averageEventNumber", names(vpcData))]))
+      p <- plotVpc(data, obsData, "meanNumberEventsCurve", timeName, displaySettings, vpcTheme)
     }
   }
   return(invisible(p))
@@ -576,7 +576,7 @@ vpc <- function(project, time = NULL, obsName = NULL,
       }
     }
   } else if (inputName == "vpcTheme") {
-    if (class(vpc_theme) != "vpc_theme") {
+    if (class(inputValue) != "vpc_theme") {
       message("ERROR: Unexpected type encountered. vpcTheme must be a `vpc_theme` object")
     }
   } else if (inputName == "plotSettings") {
@@ -1006,6 +1006,9 @@ vpc <- function(project, time = NULL, obsName = NULL,
   if (! file.exists(simFilename)) {
     # Get VPC chart data files
     message("Download Charts data.")
+    s = mlx.getScenario()
+    s$plotList = c(s$plotList, "vpc")
+    mlx.setScenario(s)
     mlx.computeChartsData(exportVPCSimulations = TRUE)
   }
   simData <- .renameColumns(.readDataset(simFilename), "ID", "id")

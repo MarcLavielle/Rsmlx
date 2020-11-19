@@ -132,12 +132,12 @@ getDoseInformation <- function() {
   }
   lines  <- paste(readLines(modelFile, warn = FALSE), collapse = " ")
   if (obsType == "discrete") {
-    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,]|\\s)*}"), lines, perl=TRUE))
+    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,;]|\\s)*}"), lines, perl=TRUE))
     m2 <- regmatches(lines, regexpr("type\\s*=\\s*[a-zA-Z]*", lines, perl=TRUE))
     subType <- gsub("type\\s*=\\s*", "", m2)
   } else if (obsType == "event") {
     subType <- "exactEvent"
-    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,]|\\s)*}"), lines, perl=TRUE))
+    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,;]|\\s)*}"), lines, perl=TRUE))
     m2 <- regmatches(m, regexpr("eventType\\s*=\\s*[a-zA-Z]*", m, perl=TRUE))
     if (length(m2) > 0) {
       subType <- gsub("eventType\\s*=\\s*", "", m2)
@@ -200,4 +200,14 @@ getDoseInformation <- function() {
   }
   covData[columnName] <- stratCol
   return(covData)
+}
+
+fill.na <- function(df, columns) {
+  for(col in columns) {
+    naidx <- which(is.na(df[col]))
+    valuesidx <- which(!is.na(df[col]))
+    closestidx <- sapply(naidx, function(x) tail(valuesidx[valuesidx < x], n = 1))
+    df[col][naidx,] <- df[col][closestidx,]
+  }
+  return(df)
 }
