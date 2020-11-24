@@ -6,130 +6,199 @@
 \usage{
 vpc(
   project,
-  time = NULL,
+  time = "time",
   obsName = NULL,
-  stratifier = NULL,
-  vpcSettings = NULL,
-  eventDataDisplay = NULL,
-  discreteDataDisplay = NULL,
-  continuousDataDisplay = NULL,
-  xBinsSettings = NULL,
-  yBinsSettings = NULL,
-  plotSettings = NULL,
+  plot = TRUE,
+  stratSplit = c(),
+  stratFilter = list(),
+  stratScale = list(),
+  level = 90,
+  higherPercentile = 90,
+  useCorrpred = FALSE,
+  useCensored = TRUE,
+  censoring = "simulated",
+  eventDisplay = c("survivalCurve", "empiricalCurve", "predictionInterval"),
+  discreteDisplay = c("empiricalProbability", "predictionInterval"),
+  continuousDisplay = c("empiricalPercentiles", "predictionInterval", "outliersDots",
+    "outlierAreas"),
+  xBins.useFixedBins = FALSE,
+  xBins.fixedBins = c(),
+  xBins.criteria = "leastsquare",
+  xBins.useFixedNbBins = FALSE,
+  xBins.nbBins = 10,
+  xBins.binRange = c(5, 20),
+  xBins.nbBinData = c(10, 200),
+  xBins.nbDataPoints = 100,
+  yBins.useFixedBins = FALSE,
+  yBins.fixedBins = c(),
+  yBins.criteria = "leastsquare",
+  yBins.useFixedNbBins = FALSE,
+  yBins.nbBins = 5,
+  yBins.binRange = c(3, 7),
+  yBins.nbBinData = c(10, 200),
+  legend = FALSE,
+  grid = FALSE,
+  xlogScale = FALSE,
+  ylogScale = FALSE,
+  linearInterpolation = TRUE,
+  xlab = "time",
+  ylab = "y",
+  binLimits = FALSE,
   vpcTheme = NULL
 )
 }
 \arguments{
 \item{project}{Monolix project}
 
-\item{time}{[optional] in {`time`, `timeSinceLastDose`} (default `time`).
+\item{time}{emph{[Optional]} in {`time`, `timeSinceLastDose`} (default `time`).
 `timeSinceLastDose` only possible when there is an `amount` column in the dataset}
 
-\item{obsName}{[optional] observation name. By default the first observation is considered.}
+\item{obsName}{emph{[Optional]} observation name. By default the first observation is considered.}
 
-\item{stratifier}{[optional] a list of settings to stratify vpc plots:
-\itemize{
-\item \code{covariateSplit} [optional] vector of covariate names used to split vpc plot 
-(no split by default).
-\item \code{covariateFilter} [optional] list of covariate names used to filter vpc plot
+\item{plot}{emph{[Optional]} if TRUE return plot (ggplot object), else return vpc stat dataframe (default TRUE)
+
+\strong{parameters startification}}
+
+\item{stratSplit}{emph{[Optional]} vector of covariate names used to split vpc plot.
+(no split by default).}
+
+\item{stratFilter}{emph{[Optional]} list of covariate names used to filter vpc plot
 names are covariate names and values are category name in case of categorical covariate
 and group id in case of continuous covariate.
-(no filter by default).
-\item \code{covariateScaling} [optional] list of continuous covariate scaling
+(no filter by default).}
+
+\item{stratScale}{emph{[Optional]} list of continuous covariate scaling
 Names are continuous covariate names and values are vector of break doubles.
 If not scaling defined, by default break is defined at the median.
-}}
 
-\item{vpcSettings}{[optional] a list of settings for vpc computation:
+\strong{parameters for vpc computation}}
+
+\item{level}{emph{[Optional]} (integer) level for prediction intervals computation (default 90).}
+
+\item{higherPercentile}{emph{[Optional]}[continuous data] (integer)
+Higher percentile for empirical and predicted percentiles computation (default 90). For continuous data only.}
+
+\item{useCorrpred}{emph{[Optional]}[continuous data] (boolean) if TRUE, pcVPC are computed using Uppsala prediction correction (default FALSE). For continuous data only.}
+
+\item{useCensored}{emph{[Optional]}[continuous data] (boolean) Choose to use BLQ data or to ignore it to compute the VPC (default TRUE). For continuous data only.}
+
+\item{censoring}{emph{[Optional]}[continuous data] in {`simulated`, `loq`}, BLQ data can be simulated, or can be equal to the limit of quantification (LOQ) (default `simulated`). For continuous data only.
+
+\strong{display parameters for plot}}
+
+\item{eventDisplay}{emph{[Optional]}[event data] (vector[string]) List of event data curves to display in VPC plots.
+(by default eventDisplay = c("survivalCurve", "empiricalCurve", "predictionInterval"))
+You must choose among the following curves:
 \itemize{
-\item \code{level} [optional] (integer) level for prediction intervals computation (default 90).
-\item \code{higherPercentile} [optional][continuous data] (integer) Higher percentile for empirical and predicted percentiles computation (default 90). For continuous data only.
-\item \code{correctedPredictions} [optional][continuous data] (boolean) if TRUE, pcVPC are computed using Uppsala prediction correction (default FALSE). For continuous data only.
-\item \code{useCensoredData} [optional][continuous data] (boolean) Choose to use BLQ data or to ignore it to compute the VPC (default TRUE). For continuous data only.
-\item \code{censoredData} [optional][continuous data] in {`simulated`, `loq`}, BLQ data can be simulated, or can be equal to the limit of quantification (LOQ) (default `simulated`). For continuous data only.
+\item \code{survivalCurve} Add plot for survival function (Kapan-Meier plot) (default TRUE).
+\item \code{meanNumberEventsCurve} Add plot for mean number of events per individual (default FALSE).
+\item \code{empiricalCurve} Add empirical curve (default TRUE).
+\item \code{predictedMedian} Add predicted median (default FALSE).
+\item \code{predictionInterval} Add prediction intervals given by the model (default TRUE).
 }}
 
-\item{eventDataDisplay}{[optional][event data] a list of display settings for event data plots only.
+\item{discreteDisplay}{emph{[Optional]}[discrete data] (vector[string]) List of discrete data curves to display in VPC plots.
+(by default discreteDisplay = c("empiricalProbability", "predictionInterval"))
+You must choose among the following curves:
 \itemize{
-\item \code{survivalCurve} [optional] (boolean) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
-\item \code{meanNumberEventsCurve} [optional] (boolean) Add/remove plot for mean number of events per individual (default FALSE).
-\item \code{empiricalCurve} [optional] (boolean) Add/remove empirical curve (default TRUE).
-\item \code{predictedMedian} [optional] (boolean) Add/remove predicted median (default FALSE).
-\item \code{predictionInterval} [optional] (boolean) Add/remove prediction intervals given by the model (default TRUE).
+\item \code{empiricalProbability} Add empirical probability.
+\item \code{predictedMedian} Add theorical probability.
+\item \code{predictionInterval} Add prediction intervals given by the model.
+\item \code{outlierAreas} Add red areas indicating empirical percentiles that are outside prediction intervals.
 }}
 
-\item{discreteDataDisplay}{[optional][discrete data] a list of display settings for discrete data plots only.
+\item{continuousDisplay}{emph{[Optional]}[continuous data] (vector[string]) List of continuous data curves to display in VPC plots.
+(by default continuousDisplay = c("empiricalPercentiles", "predictionInterval", "outliersDots", "outlierAreas"))
+You must choose among the following curves:
 \itemize{
-\item \code{empiricalProbability} [optional] (boolean) Add/remove empirical probability (default TRUE).
-\item \code{predictedMedian} [optional] (boolean) Add/remove theorical probability (default FALSE).
-\item \code{predictionInterval} [optional] (boolean) Add/remove prediction intervals given by the model (default TRUE).
-\item \code{outlierAreas} [optional] (boolean) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default FALSE).
-}}
+\item \code{observedData} Add observed data (default FALSE).
+\item \code{censoredData} Add BLQ data if present (default FALSE).
+\item \code{empiricalPercentiles} Add empirical percentiles for the 10%, 50% and 90% quantiles.
+\item \code{predictedPercentiles} Add theoretical percentiles for the 10% and 90% quantiles.
+\item \code{predictionInterval} Add prediction intervals given by the model for the 10% and 90% quantiles (in blue) and the 50% quantile (in pink).
+\item \code{outliersDots} Add red dots indicating empirical percentiles that are outside prediction intervals.
+\item \code{outlierAreas} Add red areas indicating empirical percentiles that are outside prediction intervals.
+}
 
-\item{continuousDataDisplay}{[optional][continuous data] a list of display settings for continuous data plots only.
-\itemize{
-\item \code{observedData} [optional] (boolean) Add/remove observed data (default FALSE).
-\item \code{censoredData} [optional] (boolean) Add/remove BLQ data if present (default FALSE).
-\item \code{empiricalPercentiles} [optional] (boolean) Add/remove empirical percentiles for the 10%, 50% and 90% quantiles (default TRUE).
-\item \code{predictedPercentiles} [optional] (boolean) Add/remove theoretical percentiles for the 10% and 90% quantiles (default FALSE).
-\item \code{predictionInterval} [optional] (boolean) Add/remove prediction intervals given by the model for the 10% and 90% quantiles (in blue) and the 50% quantile (in pink) (default TRUE).
-\item \code{outliersDots} [optional] (boolean) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
-\item \code{outlierAreas} [optional] (boolean) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
-}}
+\strong{parameters for x-axis bins - only for continuous and discrete data}}
 
-\item{xBinsSettings}{[optional][continuous and discrete data] a list of settings for time axis binning.
-\itemize{
-\item \code{limits} [optional] (boolean) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
-\item \code{useFixedBins} [optional] (boolean) If TRUE, specify manually bin list (default FALSE).
-\item \code{fixedBins} [optional] (list[integer]) Define mannually a list of bins. To use when `useFixedBins` is set to TRUE.
-\item \code{criteria} [optional] Choose the bining criteria among `equalwidth`, `equalsize` or `leastsquare` (default leastsquare).
-\item \code{useFixedNbBins} [optional] (boolean) If TRUE define a fixed number of bins, else define a range for automatic selection (default FALSE).
-\item \code{nbBins} [optional] (integer) Define a fixed number of bins (default 10).
-\item \code{binRange} [optional] (list[integer]) Define a range for the number of bins (default c(5, 20)).
-\item \code{nbBinData} [optional] (list[integer]) Define a range for the number of data points per bin (default c(10, 200)).
-}}
+\item{xBins.useFixedBins}{emph{[Optional]} (boolean) If TRUE, specify manually bin list (default FALSE).}
 
-\item{yBinsSettings}{[optional][countable discrete data] a list of settings for y axis binning.
-\itemize{
-\item \code{useFixedBins} [optional] (boolean) If TRUE, specify manually bin list (default FALSE).
-\item \code{fixedBins} [optional] (list[integer]) Define mannually a list of bins. To use when `useFixedBins` is set to TRUE.
-\item \code{criteria} [optional]  Choose the bining criteria among `equalwidth`, `equalsize` or `leastsquare` (default leastsquare).
-\item \code{useFixedNbBins} [optional] (boolean) If TRUE define a fixed number of bins, else define a range for automatic selection (default FALSE).
-\item \code{nbBins} [optional] (integer) Define a fixed number of bins (default 5).
-\item \code{binRange} [optional] (list[integer]) Define a range for the number of bins (default c(3, 7)).
-\item \code{nbBinData} [optional] (list[integer]) Define a range for the number of data points per bin (default c(10, 200)).
-}}
+\item{xBins.fixedBins}{emph{[Optional]} (list[integer]) Define mannually a list of bins. To use when `useFixedBins` is set to TRUE.}
 
-\item{plotSettings}{[optional] a list of settings for plot
-\itemize{
-\item \code{legend} [optional] (boolean) Add/remove legend (default FALSE).
-\item \code{grid} [optional] (boolean) Add/remove grid (default FALSE).
-\item \code{xlogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
-\item \code{ylogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
-\item \code{linearInterpolation} [optional] (boolean) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
-\item \code{xlab} [optional] (str) Time label (default "time" if time = "time", "time since last dose" if time = "timeSinceLastDose").
-\item \code{ylab} [optional] (str) y label (default observation name).
-}}
+\item{xBins.criteria}{emph{[Optional]} Choose the bining criteria among `equalwidth`, `equalsize` or `leastsquare` (default leastsquare).}
 
-\item{vpcTheme}{[optional] theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()}
+\item{xBins.useFixedNbBins}{emph{[Optional]} (boolean) If TRUE define a fixed number of bins, else define a range for automatic selection (default FALSE).}
+
+\item{xBins.nbBins}{emph{[Optional]} (integer) Define a fixed number of bins (default 10).}
+
+\item{xBins.binRange}{emph{[Optional]} (list[integer]) Define a range for the number of bins (default c(5, 20)).}
+
+\item{xBins.nbBinData}{emph{[Optional]} (list[integer]) Define a range for the number of data points per bin (default c(10, 200)).}
+
+\item{xBins.nbDataPoints}{emph{[Optional]}[event data] (integer) Number of data point in event time grid (default 100)
+
+\strong{parameters for y-axis bins - only for discrete countable data}}
+
+\item{yBins.useFixedBins}{emph{[Optional]} (boolean) If TRUE, specify manually bin list (default FALSE).}
+
+\item{yBins.fixedBins}{emph{[Optional]} (list[integer]) Define mannually a list of bins. To use when `useFixedBins` is set to TRUE.}
+
+\item{yBins.criteria}{emph{[Optional]} Choose the bining criteria among `equalwidth`, `equalsize` or `leastsquare` (default leastsquare).}
+
+\item{yBins.useFixedNbBins}{emph{[Optional]} (boolean) If TRUE define a fixed number of bins, else define a range for automatic selection (default FALSE).}
+
+\item{yBins.nbBins}{emph{[Optional]} (integer) Define a fixed number of bins (default 5).}
+
+\item{yBins.binRange}{emph{[Optional]} (list[integer]) Define a range for the number of bins (default c(3, 7)).}
+
+\item{yBins.nbBinData}{emph{[Optional]} (list[integer]) Define a range for the number of data points per bin (default c(10, 200)).
+
+\strong{General settings for plot}}
+
+\item{legend}{emph{[Optional]} (boolean) Add/remove legend (default FALSE).}
+
+\item{grid}{emph{[Optional]} (boolean) Add/remove grid (default FALSE).}
+
+\item{xlogScale}{emph{[Optional]} (boolean) Add/remove log scale for x axis (default FALSE).}
+
+\item{ylogScale}{emph{[Optional]} (boolean) Add/remove log scale for x axis (default FALSE).}
+
+\item{linearInterpolation}{emph{[Optional]} (boolean) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).}
+
+\item{xlab}{emph{[Optional]} (str) Time label (default "time" if time = "time", "time since last dose" if time = "timeSinceLastDose").}
+
+\item{ylab}{emph{[Optional]} (str) y label (default observation name).}
+
+\item{binLimits}{emph{[Optional]} (boolean) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).}
+
+\item{vpcTheme}{emph{[Optional]} theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()}
 }
 \value{
-a ggplot2 object
+If plot set to TRUE, return a ggplot2 object, else return chart Data
 }
 \description{
 Creates a VPC plot from monolix project
 }
 \examples{
 \dontrun{
-  stratifier <- list(covariateSplit = c("sex", "wt"),
-                     covariateFilter = list("age" = 1),
-                     covariateScaling = list("age" = c(65), "wt" = c(70)))
-  settings <- list(xBinCriteria = "manual", xManualBins = c(0, 24, 48, 72, 96, 120))
-  plotVPC(project="RsmlxDemo1.mlxtran", stratifier=stratifier)
-  plotVPC(project="RsmlxDemo1.mlxtran", settings=settings)
-  plotVPC(project="RsmlxDemo1.mlxtran", settings=list(xlabel = "timeSinceLastDose"))
+  p <- vpc(
+    project = "RsmlxDemo1.mlxtran",
+    stratSplit = c("sex", "wt"),
+    stratFilter = list("age" = 1),
+    stratScale = list("age" = c(65), "wt" = c(70))
+  )
+  p <- vpc(project = "RsmlxDemo1.mlxtran",
+      xBins.useFixedBins = TRUE,
+      xBins.fixedBins = c(0, 24, 48, 72, 96, 120)
+  )
+  p <- vpc(project = "RsmlxDemo1.mlxtran", time = "timeSinceLastDose")
+  vpcPerc <- vpc(project = "RsmlxDemo1.mlxtran", plot = FALSE)
+  p <- vpc(project = "RsmlxDemo1.mlxtran", plot = TRUE,
+      continuousDisplay = c("censoredData", "empiricalPercentiles", "predictionInterval", "outlierAreas")
+  )
 }
 }
 \seealso{
-\link{createVpcTheme}
+\link{vpcStats} \link{createVpcTheme} \link{plotVPC}
 }
