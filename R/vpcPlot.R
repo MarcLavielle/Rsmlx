@@ -1,9 +1,59 @@
-plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL, minLog = 0.0) {
-  # transform dataset (normalize continuous, discrete and event names)
-  vpcData <- .prepareVpcData(vpcData)
+#' Plot VPC
+#'
+#' @param vpcData (dataframe) dataframe with bins, vpc empirical and theoretical data.
+#' @param obsData (dataframe) dataframe with observed data.
+#' @param obsName (str) Name of observation in dataset header.
+#' @param timeName (str) Name of time in dataset header.
+#' @param settings [optional] a list of settings for plot
+#' \itemize{
+#' \item \code{observedData} [optional][continuous data] (boolean) Add/remove observed data (default FALSE). 
+#' \item \code{censoredData} [optional][continuous data] (boolean) Add/remove censored data (default FALSE). 
+#' \item \code{empiricalData} [optional] (boolean) Add/remove empirical data (default FALSE). 
+#' empirical percentiles where continuous data /
+#' empirical probability where discrete data /
+#' empirical curve where event data
+#' \item \code{theoreticalData} [optional] (boolean) Add/remove theoreticalData data (default FALSE). 
+#' predicted percentiles where continuous data /
+#' theoreticalData probability where discrete data /
+#' \item \code{predictionInterval} [optional] (boolean) Display Prediction interval (default FALSE)
+#' \item \code{survivalCurve} [optional][event data] (boolean) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
+#' \item \code{meanNumberEventsCurve} [optional][event data] (boolean) Add/remove plot for mean number of events per individual (default FALSE).
+#' \item \code{outliersDots} [optional] (boolean) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
+#' \item \code{outlierAreas} [optional] (boolean) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
+#' \item \code{legend} [optional] (boolean) Add/remove legend (default FALSE).
+#' \item \code{grid} [optional] (boolean) Add/remove grid (default FALSE).
+#' \item \code{xlogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
+#' \item \code{ylogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
+#' \item \code{linearInterpolation} [optional] (boolean) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
+#' \item \code{xlab} [optional] (str) Time label (default "time" if time = "time", "time since last dose" if time = "timeSinceLastDose").
+#' \item \code{ylab} [optional] (str) y label (default observation name).
+#' \item \code{binLimits} [optional] (boolean) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
+#' }
+#' @param vpcTheme [optional] theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()
+#' @return a ggplot2 object
+#' @importFrom ggplot2 ggplot element_rect element_line geom_ribbon geom_point
+#'             geom_rect geom_line theme aes xlab ylab facet_wrap facet_grid
+#'             alpha scale_color_manual scale_shape_manual scale_fill_manual
+#'             guide_legend
+#' @export
+#' @seealso \link{vpcStats} \link{createVpcTheme} \link{plotVPC}
+plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL, minLog = 0.0) {
+  settingsName <- c(
+    "empiricalData", "theoreticalData", "predictionInterval", "outliersDots",
+    "outlierAreas", "survivalCurve", "meanNumberEventsCurve"
+  )
+  for (s in setdiff(settingsName, names(settings))) {
+      print(s)
+      settings[s] <- FALSE
+  }
+
   if(is.null(theme) || (class(theme) != "vpc_theme")) {
     theme <- createVpcTheme()
   }
+  
+  # transform dataset (normalize continuous, discrete and event names)
+  vpcData <- .prepareVpcData(vpcData)
+  
   p <- ggplot(vpcData) + xlab(settings$xlab) + ylab(settings$ylab) +
     theme(
       panel.background = element_rect(fill = "white", colour = "white",
@@ -58,20 +108,21 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
   }
   
   if (settings$censoredData) {
-    color <- rgb(212, 66, 66, maxColorValue = 255)
-    p <- p + geom_point(
-      data = subset(obsData, censored != 0),
-      aes(x = get(timeName), y = get(obsName), color = "c2", shape = "c2"),
-      size = theme$cens_size
-    )
-    legendData = rbind(
-      legendData,
-      list(id = "c2", label = theme$cens_legend, color = theme$cens_color,
-           linetype = NA, shape = theme$cens_shape, fill = NA, alpha = NA
-      ))
+    if (nrow(subset(obsData, censored != 0)) > 0) {
+      p <- p + geom_point(
+        data = subset(obsData, censored != 0),
+        aes(x = get(timeName), y = get(obsName), color = "c2", shape = "c2"),
+        size = theme$cens_size
+      )
+      legendData = rbind(
+        legendData,
+        list(id = "c2", label = theme$cens_legend, color = theme$cens_color,
+             linetype = NA, shape = theme$cens_shape, fill = NA, alpha = NA
+        ))
+    }
   }
   
-  if (settings$empiricalStats) {
+  if (settings$empiricalData) {
     if (is.element("empirical_median", names(vpcData))) {
       p <- p +
         geom_line(
@@ -106,7 +157,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
       )
     }
   }
-  if (settings$theoricalMedian) {
+  if (settings$theoreticalData) {
     if (is.element("theoretical_median_median", names(vpcData))) {
       p <- p +
         geom_line(
@@ -157,7 +208,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         p <- p +
           geom_rect(
             aes(xmin = bins_start, xmax = bins_stop,
-                ymin = theoretical_median_lower, ymax = theoretical_median_upper,
+                ymin = theoretical_median_piLower, ymax = theoretical_median_piUpper,
                 fill="c5"
             ),
             color = alpha(theme$theo_pi_median_color, theme$theo_pi_median_alpha)
@@ -166,8 +217,8 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         p <- p +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_median_lower,
-                ymax = theoretical_median_upper, fill="c5"
+            aes(x = bins_middle, ymin = theoretical_median_piLower,
+                ymax = theoretical_median_piUpper, fill="c5"
             ),
             color = alpha(theme$theo_pi_median_color, theme$theo_pi_median_alpha)
           )
@@ -186,14 +237,14 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         p <- p +
           geom_rect(
             aes(xmin = bins_start, xmax = bins_stop,
-                ymin = theoretical_lower_lower, ymax = theoretical_lower_upper,
+                ymin = theoretical_lower_piLower, ymax = theoretical_lower_piUpper,
                 fill="c6"
             ),
             color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
           ) +
             geom_rect(
               aes(xmin = bins_start, xmax = bins_stop,
-                  ymin = theoretical_upper_lower, ymax = theoretical_upper_upper,
+                  ymin = theoretical_upper_piLower, ymax = theoretical_upper_piUpper,
                   fill="c6"
               ),
               color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
@@ -202,15 +253,15 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         p <- p +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_lower_lower,
-                ymax = theoretical_lower_upper, fill="c6"
+            aes(x = bins_middle, ymin = theoretical_lower_piLower,
+                ymax = theoretical_lower_piUpper, fill="c6"
             ),
             color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
           ) +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_upper_lower,
-                ymax = theoretical_upper_upper, fill="c6"
+            aes(x = bins_middle, ymin = theoretical_upper_piLower,
+                ymax = theoretical_upper_piUpper, fill="c6"
             ),
             color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
           )
@@ -246,7 +297,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(theoretical_median_upper, empirical_median),
+              ymin = pmin(theoretical_median_piUpper, empirical_median),
               ymax = empirical_median, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
@@ -254,8 +305,8 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(empirical_median, theoretical_median_lower),
-              ymax = theoretical_median_lower, fill = "c7"
+              ymin = pmin(empirical_median, theoretical_median_piLower),
+              ymax = theoretical_median_piLower, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
         )
@@ -265,7 +316,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(theoretical_lower_upper, empirical_lower),
+              ymin = pmin(theoretical_lower_piUpper, empirical_lower),
               ymax = empirical_lower, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
@@ -273,15 +324,15 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(empirical_lower, theoretical_lower_lower),
-              ymax = theoretical_lower_lower, fill = "c7"
+              ymin = pmin(empirical_lower, theoretical_lower_piLower),
+              ymax = theoretical_lower_piLower, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
         ) +
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(theoretical_upper_upper, empirical_upper),
+              ymin = pmin(theoretical_upper_piUpper, empirical_upper),
               ymax = empirical_upper, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
@@ -289,8 +340,8 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
         geom_ribbon(
           data = vpcDataInterp,
           aes(x = bins_middle,
-              ymin = pmin(empirical_upper, theoretical_upper_lower),
-              ymax = theoretical_upper_lower, fill = "c7"
+              ymin = pmin(empirical_upper, theoretical_upper_piLower),
+              ymax = theoretical_upper_piLower, fill = "c7"
           ),
           color = alpha(theme$outlier_areas_color, theme$outlier_areas_alpha)
         )
@@ -307,15 +358,15 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
   if (settings$outliersDots) {
     dataOutliersLower <- subset(
       vpcData,
-      theoretical_lower_upper < empirical_lower | theoretical_lower_lower > empirical_lower
+      theoretical_lower_piUpper < empirical_lower | theoretical_lower_piLower > empirical_lower
     )
     dataOutliersUpper <- subset(
       vpcData,
-      theoretical_upper_upper < empirical_upper | theoretical_upper_lower > empirical_upper
+      theoretical_upper_piUpper < empirical_upper | theoretical_upper_piLower > empirical_upper
     )
     dataOutliersMedian <- subset(
       vpcData,
-      theoretical_median_upper < empirical_median | theoretical_median_lower > empirical_median
+      theoretical_median_piUpper < empirical_median | theoretical_median_piLower > empirical_median
     )
     if (nrow(dataOutliersLower) > 0)
       p <- p +
@@ -405,19 +456,35 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings, theme = NULL,
   return(p)
 }
 
+.interpolate <- function(data, xName, yNames, xInterp = NULL) {
+  if (is.null(xInterp)) {
+    x_range <- range(data[[xName]])
+    x <- seq(x_range[1], x_range[2], length.out = 10000)
+  } else {
+    x <- xInterp
+  }
+  dfOut <- NULL
+  for (i in seq(1, length(yNames))) {
+    df <- as.data.frame(approx(data[[xName]], data[[yNames[i]]], x))
+    names(df) <- c(xName, yNames[i])
+    if (is.null(dfOut)) dfOut <- df else dfOut <- merge(dfOut, df, by = c(xName))
+  }
+  return(dfOut)
+}
+
 .prepareVpcData <- function(vpcData) {
   vpcData <- .renameColumns(vpcData, "propCategory_empirical", "empirical_median")
   vpcData <- .renameColumns(vpcData, "propCategory_median", "theoretical_median_median")
-  vpcData <- .renameColumns(vpcData, "propCategory_lower", "theoretical_median_lower")
-  vpcData <- .renameColumns(vpcData, "propCategory_upper", "theoretical_median_upper")
+  vpcData <- .renameColumns(vpcData, "propCategory_piLower", "theoretical_median_piLower")
+  vpcData <- .renameColumns(vpcData, "propCategory_piUpper", "theoretical_median_piUpper")
   vpcData <- .renameColumns(vpcData, "survivalFunction", "empirical_median")
   vpcData <- .renameColumns(vpcData, "survivalFunction_median", "theoretical_median_median")
-  vpcData <- .renameColumns(vpcData, "survivalFunction_lower", "theoretical_median_lower")
-  vpcData <- .renameColumns(vpcData, "survivalFunction_upper", "theoretical_median_upper")
+  vpcData <- .renameColumns(vpcData, "survivalFunction_piLower", "theoretical_median_piLower")
+  vpcData <- .renameColumns(vpcData, "survivalFunction_piUpper", "theoretical_median_piUpper")
   vpcData <- .renameColumns(vpcData, "averageEventNumber", "empirical_median")
   vpcData <- .renameColumns(vpcData, "averageEventNumber_median", "theoretical_median_median")
-  vpcData <- .renameColumns(vpcData, "averageEventNumber_lower", "theoretical_median_lower")
-  vpcData <- .renameColumns(vpcData, "averageEventNumber_upper", "theoretical_median_upper")
+  vpcData <- .renameColumns(vpcData, "averageEventNumber_piLower", "theoretical_median_piLower")
+  vpcData <- .renameColumns(vpcData, "averageEventNumber_piUpper", "theoretical_median_piUpper")
   vpcData <- .renameColumns(vpcData, "time", "bins_middle")
   if (!is.element("bins_start", names(vpcData))) {
     vpcData$bins_start <- vpcData$bins_middle

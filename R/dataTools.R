@@ -189,7 +189,7 @@ getDoseInformation <- function() {
   }
   for (cov in stratifiers) {
     strat <- .stratify(
-      covData[[cov]], covTypes[[cov]], breaks[[cov]], covName = cov,
+      covData[[cov]], covtypes[[cov]], breaks[[cov]], covName = cov,
       filtering = filtering, filterGroup = filterGroups[[cov]]
     )
     if (!filtering) {

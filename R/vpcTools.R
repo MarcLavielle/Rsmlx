@@ -18,7 +18,7 @@ computeContinuousVPC <- function(obsDf, obsName, simDf, simName, higherPercentil
     function(df) {
       res <- as.data.frame(sapply(
         df[!names(df) %in% c("bins", "rep")],
-        .stats, (100 - level) / 2
+        .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), bins = unique(df$bins)), res)
       res <- reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
@@ -50,7 +50,7 @@ computeDiscreteVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=
     function(df) {
       res <- as.data.frame(sapply(
         df[!names(df) %in% c("bins", "rep", "category")],
-        .stats, (100 - level) / 2
+        .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), bins = unique(df$bins)), res)
       res <- reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
@@ -64,7 +64,8 @@ computeDiscreteVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=
   res <- merge(empiricalData, theoreticalData, by = c("bins", "category"))
 }
 
-computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType, nbDataPoints = 100, level = 90, averageEventNumber = FALSE) {
+computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
+                            nbDataPoints = 100, level = 90, averageEventNumber = FALSE) {
   exact <- (eventType == "exactEvent")
   
   tRange <- range(obsDf$time)
@@ -91,7 +92,7 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
     function(df) {
       res <- as.data.frame(sapply(
         df[!names(df) %in% c(timeName, "rep")],
-        .stats, (100 - level) / 2
+        .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), time = unique(df$time)), res)
       res <- reshape(res, idvar = c(timeName), timevar = "stat", direction = "wide")
@@ -108,8 +109,9 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
 
 .discreteDataProba <- function(data, discreteName, categories = NULL, name = NULL) {
   res <- as.data.frame(tapply(data[[discreteName]], list(data$binIndex, data$category), length))
+  nbBins <- length(data$binIndex)
   if (!is.null(categories))
-    for (c in setdiff(categories, names(res))) res[c] <- 0
+    for (cat in setdiff(categories, names(res))) res[as.character(cat)] <- 0
   res[is.na(res)] <- 0
   res <- res / rowSums(res)
   name <- ifelse(is.null(name), "propCategory", paste0("propCategory_", name))
@@ -121,14 +123,16 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
   return(res)
 }
 
-.stats <- function(x, higherPerc, header = NULL) {
+.stats <- function(x, higherPerc, header = NULL,
+                   medianName = "median", lowerName = "lower", upperName = "upper") {
   percentiles = sort(c(1 - higherPerc /100, higherPerc /100))
+  percNames <- list(median = medianName, lower = lowerName, upper = upperName)
   st <- c(
     median = median(x),
     lower = quantile(x, percentiles[1], type = 5)[[1]],
     upper = quantile(x, percentiles[2], type = 5)[[1]]
   )
-  names(st) <- sapply(names(st), function(s) paste(c(header, s), collapse = "_"))
+  names(st) <- sapply(names(st), function(s) paste(c(header, percNames[[s]]), collapse = "_"))
   return(st)
 }
 
