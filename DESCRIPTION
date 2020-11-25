@@ -35,6 +35,13 @@ Collate: mlxConnectors.R
          pkbuild.R
          pkpopini.R
          whichPKmodel.R
+         dataTools.R
+         tte.R
+         vpc.R
+         vpcPlot.R
+         vpcStats.R
+         vpcTheme.R
+         vpcTools.R
 License: BSD_2_clause + file LICENSE
 Copyright: Inria
 NeedsCompilation: no
