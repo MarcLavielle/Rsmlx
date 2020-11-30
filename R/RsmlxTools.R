@@ -73,14 +73,8 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 }
 
 
-
-
-
-
-
 #' Initialize Rsmlx library
 #' 
-#' Initialize Rsmlx library
 #' @return A list:
 #' \itemize{
 #'   \item \code{software}: the software that is used (should be monolix with Rsmlx)
@@ -391,5 +385,42 @@ read.res <- function(file) {
   return(d)
 }
 
+check_file <- function(filename, fileType = "File") {
+  if (!file.exists(filename))
+    stop(fileType, " ", filename, " does not exist.", call. = FALSE)
+  filename <- normalizePath(filename)
+  return(filename)
+}
 
+check_integer <- function(int, arg_name) {
+  if (!(is.numeric(int)))
+    stop("`", arg_name, "` must be a positive integer.", call. = FALSE)
+  if (int <= 0 | !as.integer(int) == int)
+    stop("`", arg_name, "` must be a positive integer.", call. = FALSE)
+  return(int)
+}  
 
+check_double <- function(d, arg_name) {
+  if (!is.numeric(d))
+    stop("`", arg_name, "` must be a double.", call. = FALSE)
+  return(d)
+}
+
+check_pos_double <- function(d, arg_name) {
+  if (!is.numeric(d) | d <= 0)
+    stop("`", arg_name, "` must be a positive double.", call. = FALSE)
+  return(d)
+}
+
+check_char <- function(str, arg_name) {
+  if (!is.character(str)) {
+    stop("`", arg_name, "` must be a string.", call. = FALSE)
+  }
+  return(str)
+}
+
+check_bool <- function(bool, arg_name) {
+  if (!is.logical(bool))
+    stop("Argument `", arg_name, "` must be logical.", call. = FALSE)
+  return(bool)
+}

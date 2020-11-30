@@ -6,30 +6,31 @@
 #' @param timeName (str) Name of time in dataset header.
 #' @param settings [optional] a list of settings for plot
 #' \itemize{
-#' \item \code{observedData} [optional][continuous data] (boolean) Add/remove observed data (default FALSE). 
-#' \item \code{censoredData} [optional][continuous data] (boolean) Add/remove censored data (default FALSE). 
-#' \item \code{empiricalData} [optional] (boolean) Add/remove empirical data (default FALSE). 
+#' \item \code{observedData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove observed data (default FALSE). 
+#' \item \code{censoredData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove censored data (default FALSE). 
+#' \item \code{empiricalData} (\emph{bool}) (\emph{optional}) Add/remove empirical data (default FALSE). 
 #' empirical percentiles where continuous data /
 #' empirical probability where discrete data /
 #' empirical curve where event data
-#' \item \code{theoreticalData} [optional] (boolean) Add/remove theoreticalData data (default FALSE). 
+#' \item \code{theoreticalData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove theoreticalData data (default FALSE). 
 #' predicted percentiles where continuous data /
 #' theoreticalData probability where discrete data /
-#' \item \code{predictionInterval} [optional] (boolean) Display Prediction interval (default FALSE)
-#' \item \code{survivalCurve} [optional][event data] (boolean) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
-#' \item \code{meanNumberEventsCurve} [optional][event data] (boolean) Add/remove plot for mean number of events per individual (default FALSE).
-#' \item \code{outliersDots} [optional] (boolean) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
-#' \item \code{outlierAreas} [optional] (boolean) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
-#' \item \code{legend} [optional] (boolean) Add/remove legend (default FALSE).
-#' \item \code{grid} [optional] (boolean) Add/remove grid (default FALSE).
-#' \item \code{xlogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
-#' \item \code{ylogScale} [optional] (boolean) Add/remove log scale for x axis (default FALSE).
-#' \item \code{linearInterpolation} [optional] (boolean) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
-#' \item \code{xlab} [optional] (str) Time label (default "time" if time = "time", "time since last dose" if time = "timeSinceLastDose").
-#' \item \code{ylab} [optional] (str) y label (default observation name).
-#' \item \code{binLimits} [optional] (boolean) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
+#' \item \code{predictionInterval} (\emph{bool}) (\emph{optional}) Display Prediction interval (default FALSE)
+#' \item \code{survivalCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
+#' \item \code{meanNumberEventsCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for mean number of events per individual (default FALSE).
+#' \item \code{outliersDots} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
+#' \item \code{outlierAreas} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
+#' \item \code{legend} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove legend (default FALSE).
+#' \item \code{grid} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove grid (default FALSE).
+#' \item \code{xlogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
+#' \item \code{ylogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
+#' \item \code{linearInterpolation} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
+#' \item \code{xlab} (\emph{string}) (\emph{optional}) Time label
+#' (default "time" if timeName = "time", "time since last dose" if timeName = "timeSinceLastDose").
+#' \item \code{ylab} (\emph{string}) (\emph{optional}) y label (default observation name).
+#' \item \code{binLimits} (\emph{bool}) (\emph{optional}) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
 #' }
-#' @param vpcTheme [optional] theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()
+#' @param theme (\emph{vpc_theme}) (\emph{optional}) theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()
 #' @return a ggplot2 object
 #' @importFrom ggplot2 ggplot element_rect element_line geom_ribbon geom_point
 #'             geom_rect geom_line theme aes xlab ylab facet_wrap facet_grid
@@ -37,19 +38,14 @@
 #'             guide_legend
 #' @export
 #' @seealso \link{vpcStats} \link{createVpcTheme} \link{plotVPC}
-plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL, minLog = 0.0) {
+plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL) {
   settingsName <- c(
     "empiricalData", "theoreticalData", "predictionInterval", "outliersDots",
     "outlierAreas", "survivalCurve", "meanNumberEventsCurve"
   )
-  for (s in setdiff(settingsName, names(settings))) {
-      print(s)
-      settings[s] <- FALSE
-  }
+  for (s in setdiff(settingsName, names(settings))) settings[s] <- FALSE
 
-  if(is.null(theme) || (class(theme) != "vpc_theme")) {
-    theme <- createVpcTheme()
-  }
+  if(is.null(theme) || (class(theme) != "vpc_theme")) theme <- createVpcTheme()
   
   # transform dataset (normalize continuous, discrete and event names)
   vpcData <- .prepareVpcData(vpcData)

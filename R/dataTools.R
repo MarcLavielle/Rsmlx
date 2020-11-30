@@ -4,7 +4,7 @@
 #' \dontrun{
 #' readmlxDataset()
 #' }
-readmlxDataset <-function(obsid = NULL) {
+readmlxDataset <-function() {
   filename <- mlx.getData()$dataFile
   df <- .readDataset(filename)
   names(df) <- mlx.getData()$header

@@ -7,19 +7,19 @@
 stratifyCovariates(split = c(), filter = list(), scaling = list())
 }
 \arguments{
-\item{split}{emph{[Optional]} vector of covariate names used to split dataset (no split by default).}
+\item{split}{(\emph{vector(string)}) (\emph{optional}) vector of covariate names used to split dataset (no split by default).}
 
-\item{filter}{emph{[Optional]} list of covariate names used to filter vpc plot
+\item{filter}{(\emph{list}) (\emph{optional}) list of covariate names used to filter vpc plot
 names are covariate names; values are category name in case of categorical covariate
 and group id in case of continuous covariate.
 (no filter by default).}
 
-\item{scaling}{emph{[Optional]} list of continuous covariate scaling
+\item{scaling}{(\emph{list}) (\emph{optional}) list of continuous covariate scaling
 Names are continuous covariate names; values are vector of break doubles.
 If not scaling defined, by default break is defined at the median.}
 }
 \value{
-covStratClass object
+covariate dataframe with additional filter and split columns
 }
 \description{
 Generate stratification by covariates

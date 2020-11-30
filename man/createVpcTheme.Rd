@@ -2,9 +2,18 @@
 % Please edit documentation in R/vpcTheme.R
 \name{createVpcTheme}
 \alias{createVpcTheme}
+\alias{continuous_theme}
+\alias{discrete_theme}
+\alias{event_theme}
 \title{Create a customized VPC theme}
 \usage{
 createVpcTheme(update = NULL)
+
+continuous_theme()
+
+discrete_theme()
+
+event_theme()
 }
 \arguments{
 \item{update}{list containing the plot elements to be updated. Run `create_vpc_theme()` with no arguments to show an overview of default plot elements.}
@@ -14,6 +23,12 @@ A list with vpc theme specifiers
 }
 \description{
 Create a customized VPC theme
+
+`continuous_theme()` returns a default VPC theme for continuous_theme data
+
+`discrete_theme()` returns a default VPC theme for discrete data
+
+`event_theme()` returns a default VPC theme for event data
 }
 \details{
 This function creates a theme that customizes how the VPC looks, i.e. legend, colors, fills, transparencies, linetypes an sizes, etc. The following arguments can be specified in the input list:
@@ -62,7 +77,4 @@ theme <- new_vpc_theme(update = list(
   cens_color = rgb(70, 130, 180, maxColorValue = 255),
   theo_pi_median_alpha = 0.3
 ))
-}
-\seealso{
-\link{continuous_theme}, \link{discrete_theme}, \link{event_theme}
 }

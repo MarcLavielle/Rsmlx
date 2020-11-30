@@ -38,6 +38,7 @@ Collate: mlxConnectors.R
          dataTools.R
          tte.R
          vpc.R
+         vpcBins.R
          vpcPlot.R
          vpcStats.R
          vpcTheme.R

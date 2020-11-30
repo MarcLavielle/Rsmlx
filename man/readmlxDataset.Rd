@@ -4,7 +4,7 @@
 \alias{readmlxDataset}
 \title{Read pkanalix input dataset}
 \usage{
-readmlxDataset(obsid = NULL)
+readmlxDataset()
 }
 \value{
 Input dataset in dataframe format. Headers are renamed to match mlx names

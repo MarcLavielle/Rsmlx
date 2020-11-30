@@ -50,7 +50,6 @@
 #'   cens_color = rgb(70, 130, 180, maxColorValue = 255),
 #'   theo_pi_median_alpha = 0.3
 #' ))
-#' @seealso \link{continuous_theme}, \link{discrete_theme}, \link{event_theme}
 createVpcTheme <- function (update = NULL) {
   default <- structure(list(  
     obs_color = rgb(70, 130, 180, maxColorValue = 255),
@@ -119,24 +118,16 @@ createVpcTheme <- function (update = NULL) {
   return(theme)
 }
 
-#' Get default VPC theme for continuous data
-#' 
-#' @return A list with vpc theme specifiers
+#' `continuous_theme()` returns a default VPC theme for continuous_theme data
 #' @export
-#' @examples 
-#' theme <- continuous_theme()
-#' @seealso \link{createVpcTheme}, \link{discrete_theme}, \link{event_theme}
+#' @rdname createVpcTheme
 continuous_theme <- function() {
   return(createVpcTheme())
 }
 
-#' Get default VPC theme for discrete data
-#' 
-#' @return A list with vpc theme specifiers
+#' `discrete_theme()` returns a default VPC theme for discrete data
 #' @export
-#' @examples 
-#' theme <- continuous_theme()
-#' @seealso \link{createVpcTheme}, \link{continuous_theme}, \link{event_theme}
+#' @rdname createVpcTheme
 discrete_theme <- function() {
   update <- list(
     emp_perc_legend = "Empirical probability",
@@ -150,13 +141,9 @@ discrete_theme <- function() {
   return(createVpcTheme(update))
 }
 
-#' Get default VPC theme for event data
-#' 
-#' @return A list with vpc theme specifiers
+#' `event_theme()` returns a default VPC theme for event data
 #' @export
-#' @examples 
-#' theme <- continuous_theme()
-#' @seealso \link{createVpcTheme}, \link{discrete_theme}, \link{continuous_theme}
+#' @rdname createVpcTheme
 event_theme <- function() {
   update <- list(
     emp_perc_legend = "Empirical",

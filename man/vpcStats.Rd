@@ -23,50 +23,61 @@ vpcStats(
 )
 }
 \arguments{
-\item{project}{Monolix project}
+\item{project}{(\emph{string}) Monolix project}
 
-\item{time}{emph{[Optional]} in {`time`, `timeSinceLastDose`} (default `time`).
+\item{time}{(\emph{string}) (\emph{optional}) in {`time`, `timeSinceLastDose`} (default `time`).
 `timeSinceLastDose` only possible when there is an `amount` column in the dataset}
 
-\item{obsName}{emph{[Optional]} observation name. By default the first observation is considered.
+\item{obsName}{(\emph{string}) (\emph{optional}) observation name. By default the first observation is considered.
 
 \strong{parameters startification}}
 
-\item{stratSplit}{emph{[Optional]} vector of covariate names used to split vpc plot.
+\item{stratSplit}{(\emph{vector(string)}) (\emph{optional}) vector of covariate names used to split vpc plot.
 (no split by default).}
 
-\item{stratFilter}{emph{[Optional]} list of covariate names used to filter vpc plot
+\item{stratFilter}{(\emph{list}) (\emph{optional}) list of covariate names used to filter vpc plot
 names are covariate names and values are category name in case of categorical covariate
 and group id in case of continuous covariate.
 (no filter by default).}
 
-\item{stratScale}{emph{[Optional]} list of continuous covariate scaling
+\item{stratScale}{(\emph{list}) (\emph{optional}) list of continuous covariate scaling
 Names are continuous covariate names and values are vector of break doubles.
 If not scaling defined, by default break is defined at the median.
 
 \strong{parameters for vpc computation}}
 
-\item{level}{emph{[Optional]} (integer) level for prediction intervals computation (default 90).}
+\item{level}{(\emph{int}) (\emph{optional}) level for prediction intervals computation (default 90).}
 
-\item{higherPercentile}{emph{[Optional]}[continuous data] (integer)
+\item{higherPercentile}{(\emph{int}) (\emph{optional}) (\emph{continuous data}) (integer)
 Higher percentile for empirical and predicted percentiles computation (default 90). For continuous data only.}
 
-\item{useCorrpred}{emph{[Optional]}[continuous data] (boolean) if TRUE, pcVPC are computed using Uppsala prediction correction (default FALSE). For continuous data only.}
+\item{useCorrpred}{(\emph{bool}) (\emph{optional}) (\emph{continuous data}) if TRUE, pcVPC are computed using Uppsala prediction correction (default FALSE).
+For continuous data only.}
 
-\item{useCensored}{emph{[Optional]}[continuous data] (boolean) Choose to use BLQ data or to ignore it to compute the VPC (default TRUE). For continuous data only.}
+\item{useCensored}{(\emph{bool}) (\emph{optional}) (\emph{continuous data}) Choose to use BLQ data or to ignore it to compute the VPC (default TRUE).
+For continuous data only.}
 
-\item{censoring}{emph{[Optional]}[continuous data] in {`simulated`, `loq`}, BLQ data can be simulated, or can be equal to the limit of quantification (LOQ) (default `simulated`). For continuous data only.}
+\item{censoring}{(\emph{string}) (\emph{optional}) (\emph{continuous data}) in {`simulated`, `loq`}, BLQ data can be simulated, or can be equal to the limit of quantification (LOQ) (default `simulated`). For continuous data only.}
 
-\item{event.averageNumberEvents}{emph{[Optional]}[event data] (boolean) If TRUE compute average number events in addition to survival curve (default FALSE)
+\item{event.averageNumberEvents}{(\emph{bool}) (\emph{optional}) (\emph{event data}) If TRUE compute average number events in addition to survival curve (default FALSE)
 If you do not need it, leave it to FALSE, it will speed up computations
 
 \strong{parameters for x-axis  bins}}
 
-\item{xBinsSettings}{emph{[Optional]}[continuous and discrete data] a binSettingsClass object \link{binsSettings}.
+\item{xBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{continuous and discrete data}) a binSettingsClass object \link{binsSettings}.
 a list of settings for time axis binning.}
 
-\item{yBinsSettings}{emph{[Optional]}[countable discrete data] a binsSettingsClass object \link{binsSettings}.
+\item{yBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{countable discrete data}) a binsSettingsClass object \link{binsSettings}.
 a list of settings for y axis binning.}
+}
+\value{
+A list:
+\itemize{
+  \item \code{vpcPercentiles}: a dataframe with vpc percentiles (bins, empirical and theorical vpc) 
+  \item \code{observations}: a dataframe with observations
+  \item \code{obsName}: Name of observation
+  \item \code{timeName}: Name of time
+}
 }
 \description{
 Generate statistics for Visual Predictive Check
