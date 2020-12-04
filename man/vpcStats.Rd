@@ -64,10 +64,10 @@ If you do not need it, leave it to FALSE, it will speed up computations
 
 \strong{parameters for x-axis  bins}}
 
-\item{xBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{continuous and discrete data}) a binSettingsClass object \link{binsSettings}.
+\item{xBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{continuous and discrete data}) a binSettingsClass object \link{getBinsSettings}.
 a list of settings for time axis binning.}
 
-\item{yBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{countable discrete data}) a binsSettingsClass object \link{binsSettings}.
+\item{yBinsSettings}{(\emph{binSettingsClass}) (\emph{optional}) (\emph{countable discrete data}) a binsSettingsClass object \link{getBinsSettings}.
 a list of settings for y axis binning.}
 }
 \value{
@@ -89,12 +89,13 @@ Creates data to further plot VPC from monolix project
   stratFilter = list("age" = 1)
   stratScale = list(age = c(65), wt = c(70))
   xBinsSettings <- getBinsSettings(is.fixedBins = TRUE, fixedBins = c(0, 24, 48, 72, 96, 120))
-  vpcStats(project="RsmlxDemo1.mlxtran", stratSplit=stratSplit, stratFilter=stratFilter, stratScale=stratScale)
+  vpcStats(project="RsmlxDemo1.mlxtran", stratSplit=stratSplit,
+           stratFilter=stratFilter, stratScale=stratScale)
   vpcStats(project="RsmlxDemo1.mlxtran", xBinsSettings=xBinsSettings)
   vpcStats(project="RsmlxDemo1.mlxtran", time = "timeSinceLastDose")
 }
 
 }
 \seealso{
-\link{vpc} \link{plotVPC}
+\link{vpc} \link{plotVpc}
 }

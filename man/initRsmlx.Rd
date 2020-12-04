@@ -6,6 +6,10 @@
 \usage{
 initRsmlx(path = NULL)
 }
+\arguments{
+\item{path}{(\emph{optional}) path to the installation directory of the Lixoft suite
+If no path is given, the one written in the <user home>/lixoft/lixoft.ini file is used}
+}
 \value{
 A list:
 \itemize{

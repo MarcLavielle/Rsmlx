@@ -96,7 +96,7 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   
   params <- list(
     useFixedBins = binsSettings$is.fixedBins, fixedBins = binsSettings$fixedBins,
-    binsSettings$criteria, useFixedNbBins = binsSettings$is.fixedNbBins,
+    criteria = binsSettings$criteria, useFixedNbBins = binsSettings$is.fixedNbBins,
     nbBins = binsSettings$nbBins, binRange = binsSettings$binRange,
     nbBinData = binsSettings$nbBinData
   )
@@ -142,8 +142,8 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
       # bins data
       factor <- cut(data, breaks = b, include.lowest=TRUE)
       binsData <- data.frame(list(
-        bins_start = head(b, -1),
-        bins_stop = tail(b, -1),
+        bins_start = utils::head(b, -1),
+        bins_stop = utils::tail(b, -1),
         bins_middle = as.vector(tapply(data, factor, mean)),
         bins = seq(1, length(b) - 1)
       ))
@@ -151,13 +151,13 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
       # get bins
       options <- list(
         criteria = settings$criteria, usefixednb = settings$useFixedNbBins,
-        fixednb = settings$fixedNbBins,
+        fixednb = settings$nbBins,
         estimatednb = settings$binRange, nbbindata = settings$nbBinData
       )
       binsList <- mlx.computeBins(data = data, options = options)
       binsData <- data.frame(list(
-        bins_start = head(binsList$values, -1),
-        bins_stop = tail(binsList$values, -1),
+        bins_start = utils::head(binsList$values, -1),
+        bins_stop = utils::tail(binsList$values, -1),
         bins_middle = binsList$middles,
         bins = seq(1, length(binsList$values) - 1)
       ))
@@ -183,7 +183,7 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
         } else {
           df[binName] <- cut(
             df[[columnName]],
-            breaks = c(bins$bins_start, tail(bins$bins_stop, 1)),
+            breaks = c(bins$bins_start, utils::tail(bins$bins_stop, 1)),
             include.lowest=TRUE, labels = F
           )
         }

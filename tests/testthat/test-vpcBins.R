@@ -2,7 +2,7 @@ context("Virtual Predictive Check Binning")
 
 test_that(".addBinsIndex returns error when innapropriate columnName", {
   data <- data.frame(id = c(rep(1, 6), rep(2, 6)), time = c(seq_len(6), seq_len(6)))
-  expect_error(.addBinsIndex(data, columnName = "okjoj"))
+  expect_error(.addBinsIndex(data, columnName = "another_name"))
 })
 
 test_that(".addBinsIndex returns a input dataset when binsValue is NULL", {
@@ -62,9 +62,7 @@ test_that(".getBins returns result of computeBins function when no fixed bins", 
     useFixedBins = FALSE, criteria = "toto", useFixedNbBins = "tata",
     fixedNbBins = "titi", binRange = "tonton", nbBinData = "tutu"
   )
-  local_mock(
-    mlx.computeBins = function(data, options) list(values = c(1, 7, 40), middles = c(10, 74))
-  )
+  mockery::stub(.getBins, "mlx.computeBins", list(values = c(1, 7, 40), middles = c(10, 74)))
   expectedBins <- data.frame(
     bins_start = c(1, 7), bins_stop = c(7, 40),
     bins_middle = c(10, 74), bins = seq_len(2)
@@ -111,8 +109,10 @@ test_that("getBinsSettings output take into account argument values", {
 })
 
 test_that("computeVpcBins returns error when inapropriate arguments", {
-  local_mock(
-    .getBins = function(data, settings = NULL, bycat = FALSE, categories = c()) {
+  mockery::stub(
+    computeVpcBins,
+    '.getBins',
+    function(data, settings = NULL, bycat = FALSE, categories = c()) {
       if (bycat) {
         return(data.frame(type = "categorical"))
       } else {
@@ -136,8 +136,10 @@ test_that("computeVpcBins returns error when inapropriate arguments", {
 test_that("computeVpcBins returns continuous bins by split when type = continuous", {
   data <- c(1, 2, 3, 1, 1, 2, 5, 5, 3)
   split <- c(1, 2, 1, 2, 1, 2, 2, 2, 1)
-  local_mock(
-    .getBins = function(data, settings = NULL, bycat = FALSE, categories = c()) {
+  mockery::stub(
+    computeVpcBins,
+    ".getBins",
+    function(data, settings = NULL, bycat = FALSE, categories = c()) {
       if (bycat) {
         return(data.frame(type = "categorical"))
       } else {
@@ -146,7 +148,6 @@ test_that("computeVpcBins returns continuous bins by split when type = continuou
     }
   )
   expectedBins <-  data.frame(type = c("continuous", "continuous"), split = c(1, 2))
-  res <- computeVpcBins(data = data, split = split)
   expect_equal(computeVpcBins(data = data, split = split), expectedBins)
 
 })

@@ -4,53 +4,85 @@
 #' @param obsData (dataframe) dataframe with observed data.
 #' @param obsName (str) Name of observation in dataset header.
 #' @param timeName (str) Name of time in dataset header.
-#' @param settings [optional] a list of settings for plot
+#' @param curvesDisplay (\emph{vector(string)}) (\emph{optional}) (\emph{discrete data}) List of data curves to display in VPC plots.
+#' (by default curvesDisplay = c("empiricalData", "predictionInterval"))
+#' You must choose among the following curves:
 #' \itemize{
-#' \item \code{observedData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove observed data (default FALSE). 
-#' \item \code{censoredData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove censored data (default FALSE). 
-#' \item \code{empiricalData} (\emph{bool}) (\emph{optional}) Add/remove empirical data (default FALSE). 
-#' empirical percentiles where continuous data /
-#' empirical probability where discrete data /
-#' empirical curve where event data
-#' \item \code{theoreticalData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove theoreticalData data (default FALSE). 
-#' predicted percentiles where continuous data /
-#' theoreticalData probability where discrete data /
-#' \item \code{predictionInterval} (\emph{bool}) (\emph{optional}) Display Prediction interval (default FALSE)
-#' \item \code{survivalCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
-#' \item \code{meanNumberEventsCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for mean number of events per individual (default FALSE).
-#' \item \code{outliersDots} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
-#' \item \code{outlierAreas} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
-#' \item \code{legend} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove legend (default FALSE).
-#' \item \code{grid} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove grid (default FALSE).
-#' \item \code{xlogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
-#' \item \code{ylogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
-#' \item \code{linearInterpolation} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
-#' \item \code{xlab} (\emph{string}) (\emph{optional}) Time label
-#' (default "time" if timeName = "time", "time since last dose" if timeName = "timeSinceLastDose").
-#' \item \code{ylab} (\emph{string}) (\emph{optional}) y label (default observation name).
-#' \item \code{binLimits} (\emph{bool}) (\emph{optional}) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
+#' \item \code{observedData} (\emph{continuous data}) Observed data. Specific to continuous data.
+#' \item \code{censoredData} (\emph{continuous data}) Censored data. Specific to continuous data.
+#' \item \code{empiricalData} Empirical data: 
+#' empirical percentiles for continuous data; empirical probability for discrete data;
+#' empirical curve for event data
+#' \item \code{theoreticalData} TheoreticalData data. 
+#' predicted percentiles for continuous data; theoretical probability for discrete data;
+#' empiricalCurve for event data
+#' \item \code{predictionInterval} Prediction interval.
+#' \item \code{outliersDots} Add red dots indicating empirical percentiles that are outside prediction intervals.
+#' \item \code{outlierAreas} Add red areas indicating empirical percentiles that are outside prediction intervals.
 #' }
+#' @param legend (\emph{bool}) (\emph{optional}) Add/remove legend (default FALSE).
+#' @param grid (\emph{bool}) (\emph{optional}) Add/remove grid (default FALSE).
+#' @param xlogScale (\emph{bool}) (\emph{optional}) Add/remove log scale for x axis (default FALSE).
+#' @param ylogScale (\emph{bool}) (\emph{optional}) Add/remove log scale for x axis (default FALSE).
+#' @param linearInterpolation (\emph{bool}) (\emph{optional}) If TRUE set piece wise display for prediction intervals,
+#' else show bins as rectangular (default TRUE).
+#' @param xlab (\emph{string}) (\emph{optional}) x-axis label. (`timeName` by default).
+#' @param ylab (\emph{string}) (\emph{optional}) y-axis label. (`obsName` by default).
+#' @param binLimits (\emph{bool}) (\emph{optional}) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
 #' @param theme (\emph{vpc_theme}) (\emph{optional}) theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()
 #' @return a ggplot2 object
 #' @importFrom ggplot2 ggplot element_rect element_line geom_ribbon geom_point
 #'             geom_rect geom_line theme aes xlab ylab facet_wrap facet_grid
 #'             alpha scale_color_manual scale_shape_manual scale_fill_manual
-#'             guide_legend
+#'             guide_legend geom_vline scale_x_log10 scale_y_log10 element_blank
+#'             unit
 #' @export
-#' @seealso \link{vpcStats} \link{createVpcTheme} \link{plotVPC}
-plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL) {
-  settingsName <- c(
-    "empiricalData", "theoreticalData", "predictionInterval", "outliersDots",
-    "outlierAreas", "survivalCurve", "meanNumberEventsCurve"
-  )
-  for (s in setdiff(settingsName, names(settings))) settings[s] <- FALSE
+#' @examples
+#' \dontrun{
+#'   stats <- vpcStats(project="RsmlxDemo1.mlxtran")
+#'   p <- plotVpc(stats$vpcPercentiles, stats$observations,
+#'                stats$obsName, stats$timeName,
+#'                curvesDisplay = c("empiricalData", "predictionInterval", "outlierAreas"),
+#'                grid = TRUE, ylab = "concentration", xlab = "time (in hour)")
+#' }
+#' 
+#' @seealso \link{vpcStats} \link{createVpcTheme} \link{vpc}
+plotVpc <- function(vpcData, obsData, obsName, timeName,
+                    curvesDisplay = c("empiricalData", "predictionInterval"),
+                    legend = FALSE, grid = FALSE, xlogScale = FALSE, ylogScale = FALSE,
+                    binLimits = FALSE, linearInterpolation = TRUE,
+                    xlab = NULL, ylab = NULL, theme = NULL) {
 
-  if(is.null(theme) || (class(theme) != "vpc_theme")) theme <- createVpcTheme()
+  # Check arguments ------------------------------------------------------------
+  allowedCurves <- c("observedData", "censoredData", "empiricalData",
+                     "theoreticalData", "predictionInterval",
+                     "outliersDots", "outlierAreas")
+  curvesDisplay <- check_display(curvesDisplay, "curvesDisplay", allowedCurves)
+  displayList <- get_display_list(curvesDisplay, allowedCurves)
+  
+  check_bool(legend, "legend")
+  check_bool(grid, "grid")
+  check_bool(xlogScale, "xlogScale")
+  check_bool(ylogScale, "ylogScale")
+  check_bool(binLimits, "binLimits")
+  check_bool(linearInterpolation, "linearInterpolation")
+  
+  if (is.null(xlab)) xlab <- timeName
+  if (is.null(ylab)) ylab <- obsName
+
+  if(is.null(theme)) theme <- createVpcTheme()
+  check_theme(theme)
   
   # transform dataset (normalize continuous, discrete and event names)
   vpcData <- .prepareVpcData(vpcData)
   
-  p <- ggplot(vpcData) + xlab(settings$xlab) + ylab(settings$ylab) +
+  ## PLot ----------------------------------------------------------------------
+  censored <- bins_middle <- bins_start <- bins_stop <- NULL
+  empirical_median <- empirical_lower <- empirical_upper <- NULL
+  theoretical_median_median <- theoretical_lower_median <- theoretical_upper_median <- NULL
+  theoretical_median_piLower <- theoretical_upper_piLower <- theoretical_lower_piLower <- NULL
+  theoretical_median_piUpper <- theoretical_upper_piUpper <- theoretical_lower_piUpper <- NULL
+  p <- ggplot(vpcData) + xlab(xlab) + ylab(ylab) +
     theme(
       panel.background = element_rect(fill = "white", colour = "white",
                                       size = 2, linetype = "solid"),
@@ -81,7 +113,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
   legendProp <- c("id", "label", "color", "linetype", "shape", "fill", "alpha")
   legendData <- as.data.frame(matrix(ncol = length(legendProp), nrow = 0, dimnames = list(NULL, legendProp)))
   
-  if (settings$grid) {
+  if (grid) {
     p <- p + theme(
       panel.grid.major = element_line(size = 0.1, linetype = 'solid',
                                       colour = "grey"),
@@ -90,7 +122,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     )
   }
   
-  if (settings$observedData) {
+  if (displayList$observedData) {
     p <- p + geom_point(
       data = subset(obsData, censored == 0),
       aes(x = get(timeName), y = get(obsName), color = "c1", shape = "c1"),
@@ -103,7 +135,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     ))
   }
   
-  if (settings$censoredData) {
+  if (displayList$censoredData) {
     if (nrow(subset(obsData, censored != 0)) > 0) {
       p <- p + geom_point(
         data = subset(obsData, censored != 0),
@@ -118,7 +150,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     }
   }
   
-  if (settings$empiricalData) {
+  if (displayList$empiricalData) {
     if (is.element("empirical_median", names(vpcData))) {
       p <- p +
         geom_line(
@@ -153,7 +185,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
       )
     }
   }
-  if (settings$theoreticalData) {
+  if (displayList$theoreticalData) {
     if (is.element("theoretical_median_median", names(vpcData))) {
       p <- p +
         geom_line(
@@ -186,13 +218,13 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
            shape = NA, fill = NA, alpha = NA
     ))
   }
-  if (settings$predictionInterval) {
+  if (displayList$predictionInterval) {
     extremesDf <- do.call(rbind, by(
       vpcData, vpcData$split,
       function(df) {
         df <- df[order(df$bins_start),]
         rowf <- df[1,]
-        rowl <- tail(df, n=1)
+        rowl <- utils::tail(df, n=1)
         rowf$bins_middle <- rowf$bins_start
         rowl$bins_middle <- rowl$bins_stop
         df <- rbind(rowf, df, rowl)
@@ -200,7 +232,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
       }
     ))
     if (is.element("theoretical_median_median", names(vpcData))) {
-      if (!settings$linearInterpolation) {
+      if (!linearInterpolation) {
         p <- p +
           geom_rect(
             aes(xmin = bins_start, xmax = bins_stop,
@@ -229,7 +261,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
 
     }
     if (all(is.element(c("theoretical_lower_median", "theoretical_upper_median"), names(vpcData)))) {
-      if (!settings$linearInterpolation) {
+      if (!linearInterpolation) {
         p <- p +
           geom_rect(
             aes(xmin = bins_start, xmax = bins_stop,
@@ -273,7 +305,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     }
   }
 
-  if (settings$outlierAreas & settings$linearInterpolation) {
+  if (displayList$outlierAreas & linearInterpolation) {
     # interpolation
     vpcDataInterp <- do.call(rbind, by(
       vpcData,
@@ -351,7 +383,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
       ))
   }
   
-  if (settings$outliersDots) {
+  if (displayList$outliersDots) {
     dataOutliersLower <- subset(
       vpcData,
       theoretical_lower_piUpper < empirical_lower | theoretical_lower_piLower > empirical_lower
@@ -396,11 +428,10 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
         ))
   }
   
-  if (settings$binLimits) {
-    color <- rgb(255, 0, 0, maxColorValue = 255)
+  if (binLimits) {
     datavlines = do.call(rbind, by(
-      subset(stats, select = c("bins_middle", "split")),
-      stats$split,
+      subset(vpcData, select = c("bins_middle", "split")),
+      vpcData$split,
       function(df) data.frame(bins_middle = unique(df$bins_middle), split = unique(df$split))
     ))
     p <- p + geom_vline(
@@ -417,14 +448,14 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
       ))
   }
   
-  if (settings$ylogScale) p <- p + scale_y_log10()
-  if (settings$xlogScale) p <- p + scale_x_log10()
+  if (ylogScale) p <- p + scale_y_log10()
+  if (xlogScale) p <- p + scale_x_log10()
   
   # legend
-  colors <- setNames(legendData[is.na(legendData$fill),]$color, legendData[is.na(legendData$fill),]$id)
-  shapes <- setNames(as.double(legendData[is.na(legendData$fill),]$shape), legendData[is.na(legendData$fill),]$id)
-  labels <- setNames(legendData[is.na(legendData$fill),]$label, legendData[is.na(legendData$fill),]$id)
-  linetypes <- setNames(legendData[is.na(legendData$fill),]$linetype, legendData[is.na(legendData$fill),]$id)
+  colors <- stats::setNames(legendData[is.na(legendData$fill),]$color, legendData[is.na(legendData$fill),]$id)
+  shapes <- stats::setNames(as.double(legendData[is.na(legendData$fill),]$shape), legendData[is.na(legendData$fill),]$id)
+  labels <- stats::setNames(legendData[is.na(legendData$fill),]$label, legendData[is.na(legendData$fill),]$id)
+  linetypes <- stats::setNames(legendData[is.na(legendData$fill),]$linetype, legendData[is.na(legendData$fill),]$id)
   linetypes[is.na(linetypes)] <- "blank"
   alphas <- as.double(legendData[!is.na(legendData$fill),]$alpha)
   p <- p +
@@ -435,12 +466,12 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     ) +
     scale_shape_manual(values = shapes, guide=F)
 
-  fills <- setNames(legendData[!is.na(legendData$fill),]$fill, legendData[!is.na(legendData$fill),]$id)
+  fills <- stats::setNames(legendData[!is.na(legendData$fill),]$fill, legendData[!is.na(legendData$fill),]$id)
   p <- p + scale_fill_manual(
     name = "", values = fills, labels = legendData[!is.na(legendData$fill),]$label,
     guide = guide_legend(title = "legend", override.aes = list(alpha = alphas))
   )
-  if (!settings$legend) {
+  if (!legend) {
     p <- p + theme(legend.position = "none")
   } else {
     p <- p + theme(
@@ -461,7 +492,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
   }
   dfOut <- NULL
   for (i in seq(1, length(yNames))) {
-    df <- as.data.frame(approx(data[[xName]], data[[yNames[i]]], x))
+    df <- as.data.frame(stats::approx(data[[xName]], data[[yNames[i]]], x))
     names(df) <- c(xName, yNames[i])
     if (is.null(dfOut)) dfOut <- df else dfOut <- merge(dfOut, df, by = c(xName))
   }
@@ -489,4 +520,33 @@ plotVpc <- function(vpcData, obsData, obsName, timeName, settings = NULL, theme 
     vpcData$bins_stop <- vpcData$bins_middle
   }
   return(vpcData)
+}
+
+get_display_list <- function(display, allowedCurves) {
+  displayList <- list()
+  for (curve in allowedCurves) {
+    if (curve %in% display) {
+      displayList[curve] <- TRUE
+    } else {
+      displayList[curve] <- FALSE
+    }
+  }
+  return(displayList)
+}
+
+check_display <- function(display, argname, allowedCurves) {
+  if (!is.vector(display))
+    stop("`", argname, "` must be a vector.", call. = FALSE)
+  if (!all(is.element(display, allowedCurves)))
+    warning("`", argname, "` values must be in {",
+            paste(allowedCurves, collapse = ", "),
+            "}. Invalid curves are ignored.", call. = FALSE)
+  display <- display[display %in% allowedCurves]
+  return(display)
+}
+
+check_theme <- function(theme, arg_name) {
+  if(class(theme) != "vpc_theme")
+    stop("`", arg_name, "` must be a `vpc_theme` object.", call. = FALSE)
+  return(theme)
 }

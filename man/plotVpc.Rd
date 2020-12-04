@@ -4,7 +4,22 @@
 \alias{plotVpc}
 \title{Plot VPC}
 \usage{
-plotVpc(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL)
+plotVpc(
+  vpcData,
+  obsData,
+  obsName,
+  timeName,
+  curvesDisplay = c("empiricalData", "predictionInterval"),
+  legend = FALSE,
+  grid = FALSE,
+  xlogScale = FALSE,
+  ylogScale = FALSE,
+  binLimits = FALSE,
+  linearInterpolation = TRUE,
+  xlab = NULL,
+  ylab = NULL,
+  theme = NULL
+)
 }
 \arguments{
 \item{vpcData}{(dataframe) dataframe with bins, vpc empirical and theoretical data.}
@@ -15,32 +30,39 @@ plotVpc(vpcData, obsData, obsName, timeName, settings = NULL, theme = NULL)
 
 \item{timeName}{(str) Name of time in dataset header.}
 
-\item{settings}{[optional] a list of settings for plot
+\item{curvesDisplay}{(\emph{vector(string)}) (\emph{optional}) (\emph{discrete data}) List of data curves to display in VPC plots.
+(by default curvesDisplay = c("empiricalData", "predictionInterval"))
+You must choose among the following curves:
 \itemize{
-\item \code{observedData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove observed data (default FALSE). 
-\item \code{censoredData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove censored data (default FALSE). 
-\item \code{empiricalData} (\emph{bool}) (\emph{optional}) Add/remove empirical data (default FALSE). 
-empirical percentiles where continuous data /
-empirical probability where discrete data /
-empirical curve where event data
-\item \code{theoreticalData} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove theoreticalData data (default FALSE). 
-predicted percentiles where continuous data /
-theoreticalData probability where discrete data /
-\item \code{predictionInterval} (\emph{bool}) (\emph{optional}) Display Prediction interval (default FALSE)
-\item \code{survivalCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for survival function (Kapan-Meier plot) (default TRUE).
-\item \code{meanNumberEventsCurve} (\emph{bool}) (\emph{optional}) (\emph{event data}) Add/remove plot for mean number of events per individual (default FALSE).
-\item \code{outliersDots} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red dots indicating empirical percentiles that are outside prediction intervals (default TRUE).
-\item \code{outlierAreas} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove red areas indicating empirical percentiles that are outside prediction intervals (default TRUE).
-\item \code{legend} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove legend (default FALSE).
-\item \code{grid} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove grid (default FALSE).
-\item \code{xlogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
-\item \code{ylogScale} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) Add/remove log scale for x axis (default FALSE).
-\item \code{linearInterpolation} (\emph{bool}) (\emph{optional}) (\emph{continuous data}) If TRUE set piece wise display for prediction intervals, else show bins as rectangular (default TRUE).
-\item \code{xlab} (\emph{string}) (\emph{optional}) Time label
-(default "time" if timeName = "time", "time since last dose" if timeName = "timeSinceLastDose").
-\item \code{ylab} (\emph{string}) (\emph{optional}) y label (default observation name).
-\item \code{binLimits} (\emph{bool}) (\emph{optional}) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).
+\item \code{observedData} (\emph{continuous data}) Observed data. Specific to continuous data.
+\item \code{censoredData} (\emph{continuous data}) Censored data. Specific to continuous data.
+\item \code{empiricalData} Empirical data: 
+empirical percentiles for continuous data; empirical probability for discrete data;
+empirical curve for event data
+\item \code{theoreticalData} TheoreticalData data. 
+predicted percentiles for continuous data; theoretical probability for discrete data;
+empiricalCurve for event data
+\item \code{predictionInterval} Prediction interval.
+\item \code{outliersDots} Add red dots indicating empirical percentiles that are outside prediction intervals.
+\item \code{outlierAreas} Add red areas indicating empirical percentiles that are outside prediction intervals.
 }}
+
+\item{legend}{(\emph{bool}) (\emph{optional}) Add/remove legend (default FALSE).}
+
+\item{grid}{(\emph{bool}) (\emph{optional}) Add/remove grid (default FALSE).}
+
+\item{xlogScale}{(\emph{bool}) (\emph{optional}) Add/remove log scale for x axis (default FALSE).}
+
+\item{ylogScale}{(\emph{bool}) (\emph{optional}) Add/remove log scale for x axis (default FALSE).}
+
+\item{binLimits}{(\emph{bool}) (\emph{optional}) Add/remove vertical lines on the scatter plots to indicate the bins (default FALSE).}
+
+\item{linearInterpolation}{(\emph{bool}) (\emph{optional}) If TRUE set piece wise display for prediction intervals,
+else show bins as rectangular (default TRUE).}
+
+\item{xlab}{(\emph{string}) (\emph{optional}) x-axis label. (`timeName` by default).}
+
+\item{ylab}{(\emph{string}) (\emph{optional}) y-axis label. (`obsName` by default).}
 
 \item{theme}{(\emph{vpc_theme}) (\emph{optional}) theme to be used in VPC. Expects list of class vpc_theme created with function createVpcTheme()}
 }
@@ -50,6 +72,16 @@ a ggplot2 object
 \description{
 Plot VPC
 }
+\examples{
+\dontrun{
+  stats <- vpcStats(project="RsmlxDemo1.mlxtran")
+  p <- plotVpc(stats$vpcPercentiles, stats$observations,
+               stats$obsName, stats$timeName,
+               curvesDisplay = c("empiricalData", "predictionInterval", "outlierAreas"),
+               grid = TRUE, ylab = "concentration", xlab = "time (in hour)")
+}
+
+}
 \seealso{
-\link{vpcStats} \link{createVpcTheme} \link{plotVPC}
+\link{vpcStats} \link{createVpcTheme} \link{vpc}
 }

@@ -24,8 +24,3 @@ covariate dataframe with additional filter and split columns
 \description{
 Generate stratification by covariates
 }
-\examples{
-\dontrun{
-  
-}
-}

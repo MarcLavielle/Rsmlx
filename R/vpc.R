@@ -32,11 +32,11 @@
 #' (by default eventDisplay = c("survivalCurve", "empiricalCurve", "predictionInterval"))
 #' You must choose among the following curves:
 #' \itemize{
-#' \item \code{survivalCurve} Add plot for survival function (Kapan-Meier plot) (default TRUE).
-#' \item \code{meanNumberEventsCurve} Add plot for mean number of events per individual (default FALSE).
-#' \item \code{empiricalCurve} Add empirical curve (default TRUE).
-#' \item \code{predictedMedian} Add predicted median (default FALSE).
-#' \item \code{predictionInterval} Add prediction intervals given by the model (default TRUE).
+#' \item \code{survivalCurve} Add plot for survival function (Kapan-Meier plot).
+#' \item \code{meanNumberEventsCurve} Add plot for mean number of events per individual.
+#' \item \code{empiricalCurve} Add empirical curve.
+#' \item \code{predictedMedian} Add predicted median.
+#' \item \code{predictionInterval} Add prediction intervals given by the model.
 #' }
 #' @param discreteDisplay (\emph{vector(string)}) (\emph{optional}) (\emph{discrete data}) List of discrete data curves to display in VPC plots.
 #' (by default discreteDisplay = c("empiricalProbability", "predictionInterval"))
@@ -51,8 +51,8 @@
 #' (by default continuousDisplay = c("empiricalPercentiles", "predictionInterval", "outliersDots", "outlierAreas"))
 #' You must choose among the following curves:
 #' \itemize{
-#' \item \code{observedData} Add observed data (default FALSE).
-#' \item \code{censoredData} Add BLQ data if present (default FALSE).
+#' \item \code{observedData} Add observed data.
+#' \item \code{censoredData} Add BLQ data if present.
 #' \item \code{empiricalPercentiles} Add empirical percentiles for the 10%, 50% and 90% quantiles.
 #' \item \code{predictedPercentiles} Add theoretical percentiles for the 10% and 90% quantiles.
 #' \item \code{predictionInterval} Add prediction intervals given by the model for the 10% and 90% quantiles (in blue) and the 50% quantile (in pink).
@@ -113,11 +113,14 @@
 #'   )
 #'   p <- vpc(project = "RsmlxDemo1.mlxtran", time = "timeSinceLastDose")
 #'   vpcPerc <- vpc(project = "RsmlxDemo1.mlxtran", plot = FALSE)
+#'   
+#'   continuousDisplay = c("censoredData", "empiricalPercentiles",
+#'                         "predictionInterval", "outlierAreas")
 #'   p <- vpc(project = "RsmlxDemo1.mlxtran", plot = TRUE,
-#'       continuousDisplay = c("censoredData", "empiricalPercentiles", "predictionInterval", "outlierAreas")
+#'       continuousDisplay = continuousDisplay
 #'   )
 #' }
-#' @seealso \link{vpcStats} \link{createVpcTheme} \link{plotVPC}
+#' @seealso \link{vpcStats} \link{createVpcTheme} \link{plotVpc}
 vpc <- function(
   project, time = "time", obsName = NULL, plot = TRUE,
   stratSplit = c(), stratFilter = list(), stratScale = list(),
@@ -209,14 +212,6 @@ vpc <- function(
     xBins.nbBinData <- c(5, 30)
 
   displaySettings <- list(
-    binLimits = binLimits,
-    grid = grid,
-    legend = legend,
-    xlogScale = xlogScale,
-    ylogScale = ylogScale,
-    linearInterpolation = linearInterpolation,
-    xlab = xlab,
-    ylab = ylab,
     observedData = "observedData" %in% continuousDisplay,
     censoredData = "censoredData" %in% continuousDisplay,
     empiricalData = any(
@@ -237,11 +232,12 @@ vpc <- function(
     outliersDots = "outliersDots" %in% continuousDisplay,
     outlierAreas = any(
       "outlierAreas" %in% continuousDisplay, "outlierAreas" %in% discreteDisplay
-    ),
-    survivalCurve = "survivalCurve" %in% eventDisplay,
-    meanNumberEventsCurve = "meanNumberEventsCurve" %in% eventDisplay
+    )
   )
+  curvesDisplay <- names(displaySettings[displaySettings == TRUE])
 
+  ## Generate Chart data -------------------------------------------------------
+  
   xBinsSettings <- getBinsSettings(
     is.fixedBins = xBins.useFixedBins, fixedBins = xBins.fixedBins,
     criteria = xBins.criteria, is.fixedNbBins = xBins.useFixedNbBins,
@@ -253,30 +249,40 @@ vpc <- function(
     criteria = yBins.criteria, is.fixedNbBins = yBins.useFixedNbBins,
     nbBins = yBins.nbBins, binRange = yBins.binRange, nbBinData = yBins.nbBinData
   )
+  
   vpcStats <- vpcStats(
     project, time = time, obsName = obsName,
     stratSplit = stratSplit, stratFilter = stratFilter, stratScale = stratScale,
     level = level, higherPercentile = higherPercentile,
     useCorrpred = useCorrpred, useCensored = useCensored, censoring = censoring,
-    event.averageNumberEvents = displaySettings$meanNumberEventsCurve,
+    event.averageNumberEvents = "averageEventNumber" %in% eventDisplay,
     xBinsSettings = xBinsSettings, yBinsSettings = yBinsSettings
   )
 
-  # Plot VPC -------------------------------------------------------------------
+  ## Plot VPC -------------------------------------------------------------------
   if (!plot) return(vpcStats)
 
   if (dataType %in% c("discrete", "continuous")) {
     p <- plotVpc(
       vpcStats$vpcPercentiles, vpcStats$observations, vpcStats$obsName,
-      vpcStats$timeName, displaySettings, vpcTheme
+      vpcStats$timeName, curvesDisplay = curvesDisplay, legend = legend,
+      grid = grid, xlogScale = xlogScale, ylogScale = ylogScale,
+      binLimits = binLimits, linearInterpolation = linearInterpolation,
+      xlab = xlab, ylab = ylab, theme = vpcTheme
     )
   } else {
-    p <- plotEvent(vpcStats, displaySettings, vpcTheme)
+    survivalCurve <- "survivalCurve" %in% eventDisplay
+    averageEventNumber <- "averageEventNumber" %in% eventDisplay
+    p <- plotEvent(vpcStats, survivalCurve = survivalCurve, averageEventNumber = averageEventNumber,
+                   curvesDisplay = curvesDisplay, legend = legend,
+                   grid = grid, xlogScale = xlogScale, ylogScale = ylogScale,
+                   binLimits = binLimits, linearInterpolation = linearInterpolation,
+                   xlab = xlab, theme = vpcTheme)
   }
   return(p)
 }
 
-plotEvent <- function(vpcStats, settings, theme) {
+plotEvent <- function(vpcStats, survivalCurve, averageEventNumber, ...) {
   vpcData <- vpcStats$vpcPercentiles
   dataSF <- subset(
     vpcData,
@@ -288,27 +294,24 @@ plotEvent <- function(vpcStats, settings, theme) {
     select = c("split", vpcStats$timeName,
                names(vpcData)[grepl("averageEventNumber", names(vpcData))])
   )
-  if (settings$survivalCurve) {
-    settings$ylab <- "Survival Function"
+  if (survivalCurve) {
     p1 <- plotVpc(
       dataSF, vpcStats$observations, vpcStats$obsName, vpcStats$timeName,
-      settings, theme
+      ylab = "Survival Function", ...
     )
-    if (settings$meanNumberEventsCurve) {
-      settings$ylab <- "Mean number of events per subject"
+    if (averageEventNumber) {
       p2 <- plotVpc(
         dataAEN, vpcStats$observations, vpcStats$obsName, vpcStats$timeName,
-        settings, theme
+        ylab = "Mean number of events per subject", ...
       )
-      p <- grid.arrange(p1, p2, vp, sc, ncol=2)
+      p <- grid.arrange(p1, p2, ncol=2)
     } else {
       p <- p1
     }
-  } else if (settings$meanNumberEventsCurve) {
-    settings$ylab <- "Mean number of events per subject"
+  } else if (averageEventNumber) {
     p <- plotVpc(
       dataAEN, vpcStats$observations, vpcStats$obsName, vpcStats$timeName,
-      settings, theme
+      ylab = "Mean number of events per subject", ...
     )
   }
   return(p)
@@ -326,21 +329,4 @@ check_arg_on_condition <- function(arg, argName, condition) {
     arg <- NULL
   }
   return(arg)
-}
-
-check_display <- function(display, argname, allowedCurves) {
-  if (!is.vector(display))
-    stop("`", argname, "` must be a vector.", call. = FALSE)
-  if (!all(is.element(display, allowedCurves)))
-    warning("`", argname, "` values must be in {",
-            paste(allowedCurves, collapse = ", "),
-            "}. Invalid curves are ignored.", call. = FALSE)
-  display <- display[display %in% allowedCurves]
-  return(display)
-}
-
-check_theme <- function(theme, arg_name) {
-  if(class(theme) != "vpc_theme")
-    stop("`", arg_name, "` must be a `vpc_theme` object.", call. = FALSE)
-  return(theme)
 }

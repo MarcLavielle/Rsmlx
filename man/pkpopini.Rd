@@ -4,8 +4,14 @@
 \alias{pkpopini}
 \title{Compute initial population PK parameters}
 \usage{
-pkpopini(data = NULL, project = NULL, parameter = NULL,
-  new.project = NULL, new.dir = NULL, par.ini = NULL)
+pkpopini(
+  data = NULL,
+  project = NULL,
+  parameter = NULL,
+  new.project = NULL,
+  new.dir = NULL,
+  par.ini = NULL
+)
 }
 \arguments{
 \item{data}{a list with fields

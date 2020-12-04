@@ -17,8 +17,9 @@ URL: http://rsmlx.webpopix.org
 SystemRequirements: 'Monolix' (<http://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
 Imports: tools, methods, graphics, grDevices, utils, stats, tcltk, MASS, ggplot2, gridExtra
-Suggests: mlxR, testthat
+Suggests: mlxR, testthat, mockery
 Collate: mlxConnectors.R
+	 data.R
          bootstrap.R
          buildmlx.R
          confintmlx.R
@@ -43,6 +44,7 @@ Collate: mlxConnectors.R
          vpcStats.R
          vpcTheme.R
          vpcTools.R
+LazyData: true
 License: BSD_2_clause + file LICENSE
 Copyright: Inria
 NeedsCompilation: no

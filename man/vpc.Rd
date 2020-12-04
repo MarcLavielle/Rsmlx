@@ -91,11 +91,11 @@ If not scaling defined, by default break is defined at the median.
 (by default eventDisplay = c("survivalCurve", "empiricalCurve", "predictionInterval"))
 You must choose among the following curves:
 \itemize{
-\item \code{survivalCurve} Add plot for survival function (Kapan-Meier plot) (default TRUE).
-\item \code{meanNumberEventsCurve} Add plot for mean number of events per individual (default FALSE).
-\item \code{empiricalCurve} Add empirical curve (default TRUE).
-\item \code{predictedMedian} Add predicted median (default FALSE).
-\item \code{predictionInterval} Add prediction intervals given by the model (default TRUE).
+\item \code{survivalCurve} Add plot for survival function (Kapan-Meier plot).
+\item \code{meanNumberEventsCurve} Add plot for mean number of events per individual.
+\item \code{empiricalCurve} Add empirical curve.
+\item \code{predictedMedian} Add predicted median.
+\item \code{predictionInterval} Add prediction intervals given by the model.
 }}
 
 \item{discreteDisplay}{(\emph{vector(string)}) (\emph{optional}) (\emph{discrete data}) List of discrete data curves to display in VPC plots.
@@ -112,8 +112,8 @@ You must choose among the following curves:
 (by default continuousDisplay = c("empiricalPercentiles", "predictionInterval", "outliersDots", "outlierAreas"))
 You must choose among the following curves:
 \itemize{
-\item \code{observedData} Add observed data (default FALSE).
-\item \code{censoredData} Add BLQ data if present (default FALSE).
+\item \code{observedData} Add observed data.
+\item \code{censoredData} Add BLQ data if present.
 \item \code{empiricalPercentiles} Add empirical percentiles for the 10%, 50% and 90% quantiles.
 \item \code{predictedPercentiles} Add theoretical percentiles for the 10% and 90% quantiles.
 \item \code{predictionInterval} Add prediction intervals given by the model for the 10% and 90% quantiles (in blue) and the 50% quantile (in pink).
@@ -201,11 +201,14 @@ Creates a VPC plot from monolix project
   )
   p <- vpc(project = "RsmlxDemo1.mlxtran", time = "timeSinceLastDose")
   vpcPerc <- vpc(project = "RsmlxDemo1.mlxtran", plot = FALSE)
+  
+  continuousDisplay = c("censoredData", "empiricalPercentiles",
+                        "predictionInterval", "outlierAreas")
   p <- vpc(project = "RsmlxDemo1.mlxtran", plot = TRUE,
-      continuousDisplay = c("censoredData", "empiricalPercentiles", "predictionInterval", "outlierAreas")
+      continuousDisplay = continuousDisplay
   )
 }
 }
 \seealso{
-\link{vpcStats} \link{createVpcTheme} \link{plotVPC}
+\link{vpcStats} \link{createVpcTheme} \link{plotVpc}
 }

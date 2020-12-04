@@ -21,7 +21,7 @@ computeContinuousVPC <- function(obsDf, obsName, simDf, simName, higherPercentil
         .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), bins = unique(df$bins)), res)
-      res <- reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
+      res <- stats::reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
       return(res)
     }
   ))
@@ -53,7 +53,7 @@ computeDiscreteVPC <- function(obsDf, obsName, simDf, simName, higherPercentile=
         .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), bins = unique(df$bins)), res)
-      res <- reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
+      res <- stats::reshape(res, idvar = c("bins"), timevar = "stat", direction = "wide")
       res$category <- unique(df$category)
       return(res)
     }
@@ -95,7 +95,7 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
         .stats, (100 - level) / 2, upperName = "piUpper", lowerName = "piLower"
       ))
       res <- cbind(list(stat = rownames(res), time = unique(df$time)), res)
-      res <- reshape(res, idvar = c(timeName), timevar = "stat", direction = "wide")
+      res <- stats::reshape(res, idvar = c(timeName), timevar = "stat", direction = "wide")
       return(res)
     }
   ))
@@ -115,7 +115,7 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
   res[is.na(res)] <- 0
   res <- res / rowSums(res)
   name <- ifelse(is.null(name), "propCategory", paste0("propCategory_", name))
-  res <- reshape(
+  res <- stats::reshape(
     res, idvar = "bins", ids = row.names(res), times = names(res),
     timevar = "category", varying = names(res),
     v.names = name, direction = "long"
@@ -136,7 +136,7 @@ computeEventVPC <- function(obsDf, obsName, simDf, simName, timeName, eventType,
   return(st)
 }
 
-.applyCorrectedPrediction <- function(obsData, simData) {
+.applyCorrectedPrediction <- function(obsData, simData, obsName, simName) {
   subjocc <- .getSubjocc()
   predFilename <- paste0(mlx.getProjectSettings()$directory, "/predictions.txt")
   predData <- subset(.readDataset(predFilename), select = c(subjocc, "time", "popPred"))

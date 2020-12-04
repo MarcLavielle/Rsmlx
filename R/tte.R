@@ -76,7 +76,7 @@ computeSurvivalCurves <- function(data, timeName, eventName, timeGrid, exact, av
       bounds,
       apply(subset(bounds, select = c(subjocc)), 1, function(x) all(x==c(so)))
     )
-    weights[i, head(tau,- 1) >= df$lb & tail(tau, -1) <= df$ub] <- 1
+    weights[i, utils::head(tau,- 1) >= df$lb & utils::tail(tau, -1) <= df$ub] <- 1
   }
   difference <- abs(Q - intervalProbabilities)
   
@@ -128,7 +128,7 @@ computeSurvivalCurves <- function(data, timeName, eventName, timeGrid, exact, av
 .addEventIdColumn <- function(data, eventName) {
   subjocc <- intersect(c(.getSubjocc(), "rep"), names(data))
   data$nEvent <- 0
-  data <- data[order(subset(data, select = time)),]
+  data <- data[order(subset(data, select = "time")),]
   data <- do.call(rbind, by(
     data,
     subset(data, select = subjocc),
@@ -142,7 +142,7 @@ computeSurvivalCurves <- function(data, timeName, eventName, timeGrid, exact, av
 
 .addTTECensoredColumn <- function(data, eventName) {
   subjocc <- .getSubjocc()
-  data <- data[order(subset(data, select = time)),]
+  data <- data[order(subset(data, select = "time")),]
   data$censored <- 0
   data <- do.call(rbind, by(
     data,

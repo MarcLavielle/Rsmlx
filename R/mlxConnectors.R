@@ -20,6 +20,7 @@ mlx.setStructuralModel <- function(modelFile = NULL) {
 }
 
 mlx.getStructuralModel <- function() {
+  r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getStructuralModel()'))
   return(r)
 }

@@ -75,6 +75,8 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 
 #' Initialize Rsmlx library
 #' 
+#' @param path  (\emph{optional}) path to the installation directory of the Lixoft suite
+#' If no path is given, the one written in the <user home>/lixoft/lixoft.ini file is used
 #' @return A list:
 #' \itemize{
 #'   \item \code{software}: the software that is used (should be monolix with Rsmlx)

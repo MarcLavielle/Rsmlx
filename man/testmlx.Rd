@@ -4,8 +4,13 @@
 \alias{testmlx}
 \title{Statistical tests for model assessment}
 \usage{
-testmlx(project, tests = c("covariate", "randomEffect", "correlation",
-  "residual"), plot = FALSE, adjust = "edf", n.sample = NULL)
+testmlx(
+  project,
+  tests = c("covariate", "randomEffect", "correlation", "residual"),
+  plot = FALSE,
+  adjust = "edf",
+  n.sample = NULL
+)
 }
 \arguments{
 \item{project}{a Monolix project}

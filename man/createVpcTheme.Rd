@@ -72,9 +72,11 @@ This function creates a theme that customizes how the VPC looks, i.e. legend, co
 }
 }
 \examples{
-theme <- new_vpc_theme(update = list(
-  obs_color = "red",
-  cens_color = rgb(70, 130, 180, maxColorValue = 255),
-  theo_pi_median_alpha = 0.3
-))
+\dontrun{
+  theme <- new_vpc_theme(update = list(
+    obs_color = "red",
+    cens_color = rgb(70, 130, 180, maxColorValue = 255),
+    theo_pi_median_alpha = 0.3
+  ))
+}
 }

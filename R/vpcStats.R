@@ -30,9 +30,9 @@
 #' If you do not need it, leave it to FALSE, it will speed up computations
 #' 
 #' \strong{parameters for x-axis  bins}
-#' @param xBinsSettings (\emph{binSettingsClass}) (\emph{optional}) (\emph{continuous and discrete data}) a binSettingsClass object \link{binsSettings}.
+#' @param xBinsSettings (\emph{binSettingsClass}) (\emph{optional}) (\emph{continuous and discrete data}) a binSettingsClass object \link{getBinsSettings}.
 #' a list of settings for time axis binning.
-#' @param yBinsSettings (\emph{binSettingsClass}) (\emph{optional}) (\emph{countable discrete data}) a binsSettingsClass object \link{binsSettings}.
+#' @param yBinsSettings (\emph{binSettingsClass}) (\emph{optional}) (\emph{countable discrete data}) a binsSettingsClass object \link{getBinsSettings}.
 #' a list of settings for y axis binning.
 #' @return A list:
 #' \itemize{
@@ -48,12 +48,13 @@
 #'   stratFilter = list("age" = 1)
 #'   stratScale = list(age = c(65), wt = c(70))
 #'   xBinsSettings <- getBinsSettings(is.fixedBins = TRUE, fixedBins = c(0, 24, 48, 72, 96, 120))
-#'   vpcStats(project="RsmlxDemo1.mlxtran", stratSplit=stratSplit, stratFilter=stratFilter, stratScale=stratScale)
+#'   vpcStats(project="RsmlxDemo1.mlxtran", stratSplit=stratSplit,
+#'            stratFilter=stratFilter, stratScale=stratScale)
 #'   vpcStats(project="RsmlxDemo1.mlxtran", xBinsSettings=xBinsSettings)
 #'   vpcStats(project="RsmlxDemo1.mlxtran", time = "timeSinceLastDose")
 #' }
 #' 
-#' @seealso \link{vpc} \link{plotVPC}
+#' @seealso \link{vpc} \link{plotVpc}
 vpcStats <- function(project, time = "time", obsName = NULL, 
                      stratSplit = NULL, stratFilter = NULL, stratScale = NULL,
                      level = 90, higherPercentile = 90,
@@ -110,13 +111,14 @@ vpcStats <- function(project, time = "time", obsName = NULL,
   simData <- simData[, !names(simData) %in% c("split", "filter", "color")]
   
   if (dataType == "continuous") {
-    if (useCensored & length(unique(obsData$censored)) == 1)
-      useCensored <- FALSE
-    if (useCensored & !is.null(censoring) & length(unique(obsData$censored)) > 1){
-      loq <- max(obsData[obsName][obsData$censored == 1,])
-      simData$censored <- simData[simName] < loq
-      if (censoring == "simulated")
+    # censored data
+    if (length(unique(obsData$censored)) > 1) {
+      if (useCensored & censoring == "simulated") {
         obsName <- paste0(obsName, "_simBlq")
+      }
+    }
+    else {
+      useCensored <- FALSE
     }
   }
   
@@ -143,6 +145,7 @@ vpcStats <- function(project, time = "time", obsName = NULL,
     simData$split <- rep("All", nrow(simData))
     simData$filter <- rep(FALSE, nrow(simData))
   }
+  filter <- FALSE
   obsData <- subset(obsData, filter == FALSE)
   simData <- subset(simData, filter == FALSE)
   
@@ -151,6 +154,7 @@ vpcStats <- function(project, time = "time", obsName = NULL,
   simDataCensored <- simData
   if (dataType == "continuous") {
     if (is.element("censored", names(obsData)) & !useCensored) {
+      censored <- FALSE
       obsDataCensored <- subset(obsData, censored == 0)
       simDataCensored <- subset(simData, censored == 0)
     }
@@ -161,7 +165,7 @@ vpcStats <- function(project, time = "time", obsName = NULL,
     xBins <- computeVpcBins(obsDataCensored[[timeName]], split = obsDataCensored$split,
                             type = "continuous", binsSettings = xBinsSettings)
   } else {
-      xBins <- NULL
+    xBins <- NULL
   }
   obsDataCensored <- .addBinsIndex(obsDataCensored, timeName, xBins, "binIndex")
   simDataCensored <- .addBinsIndex(simDataCensored, timeName, xBins, "binIndex")
@@ -172,15 +176,15 @@ vpcStats <- function(project, time = "time", obsName = NULL,
     yBins <- computeVpcBins(obsDataCensored[[obsName]], split = obsDataCensored$split,
                             type = type, binsSettings = yBinsSettings,
                             is.binsName = TRUE, dataName = obsName)
+    obsDataCensored <- .addBinsIndex(obsDataCensored, obsName, yBins, "category")
+    simDataCensored <- .addBinsIndex(simDataCensored, simName, yBins, "category")
   } else {
     yBins <- NULL
   }
-  obsDataCensored <- .addBinsIndex(obsDataCensored, obsName, yBins, "category")
-  simDataCensored <- .addBinsIndex(simDataCensored, simName, yBins, "category")
 
   # Corrected Prediction -------------------------------------------------------
   if (useCorrpred) {
-    res <- .applyCorrectedPrediction(obsDataCensored, simDataCensored)
+    res <- .applyCorrectedPrediction(obsDataCensored, simDataCensored, obsName, simName)
     obsDataCensored <- res$obs
     simDataCensored <- res$sim
     obsName <- paste0(obsName, "_pc")
@@ -315,10 +319,6 @@ check_obs <- function(obs, argname) {
 #' If not scaling defined, by default break is defined at the median.
 #' 
 #' @return covariate dataframe with additional filter and split columns
-#' @examples
-#' \dontrun{
-#'   
-#' }
 stratifyCovariates <- function(split = c(), filter = list(), scaling = list()) {
   ## Get covariates information ------------------------------------------------
   covList <- mlx.getCovariateInformation()
@@ -406,7 +406,7 @@ stratifyCovariates <- function(split = c(), filter = list(), scaling = list()) {
     )
     if (! file.exists(obsFilename)) {
       # Get VPC chart data files
-      message("Download Charts data.")
+      message("[INFO] Download Charts data.")
       s = mlx.getScenario()
       s$plotList = c(s$plotList, "vpc")
       mlx.setScenario(s)

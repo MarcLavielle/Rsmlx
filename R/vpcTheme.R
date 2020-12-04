@@ -43,13 +43,16 @@
 #'  \item{bins_legend} legend name for bin limits
 #' }
 #' @return A list with vpc theme specifiers
+#' @importFrom grDevices rgb
 #' @export
-#' @examples 
-#' theme <- new_vpc_theme(update = list(
-#'   obs_color = "red",
-#'   cens_color = rgb(70, 130, 180, maxColorValue = 255),
-#'   theo_pi_median_alpha = 0.3
-#' ))
+#' @examples
+#' \dontrun{
+#'   theme <- new_vpc_theme(update = list(
+#'     obs_color = "red",
+#'     cens_color = rgb(70, 130, 180, maxColorValue = 255),
+#'     theo_pi_median_alpha = 0.3
+#'   ))
+#' }
 createVpcTheme <- function (update = NULL) {
   default <- structure(list(  
     obs_color = rgb(70, 130, 180, maxColorValue = 255),
@@ -128,6 +131,7 @@ continuous_theme <- function() {
 #' `discrete_theme()` returns a default VPC theme for discrete data
 #' @export
 #' @rdname createVpcTheme
+#' @importFrom grDevices rgb
 discrete_theme <- function() {
   update <- list(
     emp_perc_legend = "Empirical probability",
@@ -144,6 +148,7 @@ discrete_theme <- function() {
 #' `event_theme()` returns a default VPC theme for event data
 #' @export
 #' @rdname createVpcTheme
+#' @importFrom grDevices rgb
 event_theme <- function() {
   update <- list(
     emp_perc_legend = "Empirical",
