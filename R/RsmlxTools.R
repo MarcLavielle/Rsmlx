@@ -62,7 +62,7 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
     if(!file.exists(project))
       stop(paste0("Project '", project, "' does not exist"), call.=FALSE)
     
-    lp <- mlx.loadProject(project) 
+    lp <- mlx.loadProject(project)
     if (!lp) 
       stop(paste0("Could not load project '", project, "'"), call.=FALSE)
     res <- NULL
@@ -397,7 +397,7 @@ check_file <- function(filename, fileType = "File") {
 check_integer <- function(int, arg_name) {
   if (!(is.numeric(int)))
     stop("`", arg_name, "` must be a positive integer.", call. = FALSE)
-  if (int <= 0 | !as.integer(int) == int)
+  if (any(int <= 0) | !all(as.integer(int) == int))
     stop("`", arg_name, "` must be a positive integer.", call. = FALSE)
   return(int)
 }  
@@ -409,9 +409,15 @@ check_double <- function(d, arg_name) {
 }
 
 check_pos_double <- function(d, arg_name) {
-  if (!is.numeric(d) | d <= 0)
+  if (!is.numeric(d) | any(d <= 0))
     stop("`", arg_name, "` must be a positive double.", call. = FALSE)
   return(d)
+}
+
+check_range <- function(r, arg_name) {
+  if (length(r) != 2)
+    stop("`", arg_name, "` must be a vector of size 2.", call. = FALSE)
+  return(r)
 }
 
 check_char <- function(str, arg_name) {
@@ -423,6 +429,28 @@ check_char <- function(str, arg_name) {
 
 check_bool <- function(bool, arg_name) {
   if (!is.logical(bool))
-    stop("Argument `", arg_name, "` must be logical.", call. = FALSE)
+    stop("`", arg_name, "` must be logical.", call. = FALSE)
   return(bool)
+}
+
+check_in_vector <- function(arg, arg_name, allowed_args, type = "error") {
+  if (!all(is.element(arg, allowed_args))) {
+    if (type == "error") {
+      stop("Invalid `", arg_name, "`. Available elements: \n  - ",
+           paste(allowed_args, collapse="\n  - "),
+           call. = FALSE)
+    } else if (type == "warning") {
+      warning("Invalid `", arg_name, "`. Available elements: \n  - ",
+              paste(allowed_args, collapse="\n  - "),
+              call. = FALSE)
+    }
+  }
+  arg <- arg[arg %in% allowed_args]
+  return(arg)
+}
+
+check_object_class <- function(arg, arg_name, arg_class) {
+  if (any(class(arg) != arg_class))
+    stop("`", arg_name, "` must be a `", arg_class, "` object.")
+  return(arg)
 }

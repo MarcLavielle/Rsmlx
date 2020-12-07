@@ -1,4 +1,4 @@
-context("Virtual Predictive Check statistics")
+context("Virtual Predictive Check statistics 1")
 
 test_that(".addDoseRelTime returns the same dataset with an additional column", {
   data <- data.frame(id = c(rep(1, 6), rep(2, 6)), time = c(seq_len(6), seq_len(6)))

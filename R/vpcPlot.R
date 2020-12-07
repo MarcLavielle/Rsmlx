@@ -71,13 +71,13 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
   if (is.null(ylab)) ylab <- obsName
 
   if(is.null(theme)) theme <- createVpcTheme()
-  check_theme(theme)
+  check_object_class(theme, "theme", "vpc_theme")
   
   # transform dataset (normalize continuous, discrete and event names)
   vpcData <- .prepareVpcData(vpcData)
   
   ## PLot ----------------------------------------------------------------------
-  censored <- bins_middle <- bins_start <- bins_stop <- NULL
+  censored <- bins_middles <- bins_start <- bins_stop <- NULL
   empirical_median <- empirical_lower <- empirical_upper <- NULL
   theoretical_median_median <- theoretical_lower_median <- theoretical_upper_median <- NULL
   theoretical_median_piLower <- theoretical_upper_piLower <- theoretical_lower_piLower <- NULL
@@ -154,27 +154,27 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
     if (is.element("empirical_median", names(vpcData))) {
       p <- p +
         geom_line(
-          aes(x = bins_middle, y = empirical_median, color = "c3"),
+          aes(x = bins_middles, y = empirical_median, color = "c3"),
           linetype = theme$emp_perc_linetype
         )
       if (theme$emp_perc_point)
         p <- p +
-          geom_point(aes(x = bins_middle, y = empirical_median), color = theme$emp_perc_color)
+          geom_point(aes(x = bins_middles, y = empirical_median), color = theme$emp_perc_color)
     }
     if (all(is.element(c("empirical_lower", "empirical_upper"), names(vpcData)))) {
       p <- p +
         geom_line(
-          aes(x = bins_middle, y = empirical_lower, color = "c3"),
+          aes(x = bins_middles, y = empirical_lower, color = "c3"),
           linetype = theme$emp_perc_linetype
         ) +
         geom_line(
-          aes(x = bins_middle, y = empirical_upper, color = "c3"),
+          aes(x = bins_middles, y = empirical_upper, color = "c3"),
           linetype = theme$emp_perc_linetype
         )
       if (theme$emp_perc_point)
         p <- p +
-        geom_point(aes(x = bins_middle, y = empirical_upper), color = theme$emp_perc_color) +
-        geom_point(aes(x = bins_middle, y = empirical_lower), color = theme$emp_perc_color)
+        geom_point(aes(x = bins_middles, y = empirical_upper), color = theme$emp_perc_color) +
+        geom_point(aes(x = bins_middles, y = empirical_lower), color = theme$emp_perc_color)
     }
     if (any(is.element(c("empirical_lower", "empirical_upper", "empirical_median"), names(vpcData)))) {
       legendData = rbind(
@@ -189,27 +189,27 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
     if (is.element("theoretical_median_median", names(vpcData))) {
       p <- p +
         geom_line(
-          aes(x = bins_middle, y = theoretical_median_median, color = "c4"),
+          aes(x = bins_middles, y = theoretical_median_median, color = "c4"),
           linetype = theme$theo_perc_linetype
         )
       if (theme$theo_perc_point)
         p <- p +
-          geom_point(aes(x = bins_middle, y = theoretical_median_median), color = theme$theo_perc_color)
+          geom_point(aes(x = bins_middles, y = theoretical_median_median), color = theme$theo_perc_color)
     }
     if (all(is.element(c("theoretical_lower_median", "theoretical_upper_median"), names(vpcData)))) {
       p <- p +
         geom_line(
-          aes(x = bins_middle, y = theoretical_lower_median, color = "c4"),
+          aes(x = bins_middles, y = theoretical_lower_median, color = "c4"),
           linetype = theme$theo_perc_linetype
         ) +
         geom_line(
-          aes(x = bins_middle, y = theoretical_upper_median, color = "c4"),
+          aes(x = bins_middles, y = theoretical_upper_median, color = "c4"),
           linetype = theme$theo_perc_linetype
         )
       if (theme$theo_perc_point)
         p <- p +
-          geom_point(aes(x = bins_middle, y = theoretical_upper_median), color = theme$theo_perc_color) +
-          geom_point(aes(x = bins_middle, y = theoretical_lower_median), color = theme$theo_perc_color)
+          geom_point(aes(x = bins_middles, y = theoretical_upper_median), color = theme$theo_perc_color) +
+          geom_point(aes(x = bins_middles, y = theoretical_lower_median), color = theme$theo_perc_color)
     }
     legendData = rbind(
       legendData,
@@ -225,8 +225,8 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         df <- df[order(df$bins_start),]
         rowf <- df[1,]
         rowl <- utils::tail(df, n=1)
-        rowf$bins_middle <- rowf$bins_start
-        rowl$bins_middle <- rowl$bins_stop
+        rowf$bins_middles <- rowf$bins_start
+        rowl$bins_middles <- rowl$bins_stop
         df <- rbind(rowf, df, rowl)
         return(df)
       }
@@ -245,7 +245,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         p <- p +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_median_piLower,
+            aes(x = bins_middles, ymin = theoretical_median_piLower,
                 ymax = theoretical_median_piUpper, fill="c5"
             ),
             color = alpha(theme$theo_pi_median_color, theme$theo_pi_median_alpha)
@@ -281,14 +281,14 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         p <- p +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_lower_piLower,
+            aes(x = bins_middles, ymin = theoretical_lower_piLower,
                 ymax = theoretical_lower_piUpper, fill="c6"
             ),
             color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
           ) +
           geom_ribbon(
             data = extremesDf,
-            aes(x = bins_middle, ymin = theoretical_upper_piLower,
+            aes(x = bins_middles, ymin = theoretical_upper_piLower,
                 ymax = theoretical_upper_piUpper, fill="c6"
             ),
             color = alpha(theme$theo_pi_perc_color, theme$theo_pi_perc_alpha),
@@ -312,9 +312,9 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       subset(vpcData, select = intersect(c("split", "category"), names(vpcData))),
       function(df) {
         yNames <- names(df)[!(names(df) %in% c("category", "split") | grepl("bins", names(df)))]
-        r <- subset(df, select = c("bins_middle", "split", yNames))
+        r <- subset(df, select = c("bins_middles", "split", yNames))
         if (nrow(df) > 1)
-          r <- .interpolate(df, "bins_middle", yNames)
+          r <- .interpolate(df, "bins_middles", yNames)
         r$split <- unique(df$split)
         if (!is.null(df$category)) r$category <- unique(df$category)
         return(r)
@@ -324,7 +324,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       p <- p +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(theoretical_median_piUpper, empirical_median),
               ymax = empirical_median, fill = "c7"
           ),
@@ -332,7 +332,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         ) +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(empirical_median, theoretical_median_piLower),
               ymax = theoretical_median_piLower, fill = "c7"
           ),
@@ -343,7 +343,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       p <- p +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(theoretical_lower_piUpper, empirical_lower),
               ymax = empirical_lower, fill = "c7"
           ),
@@ -351,7 +351,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         ) +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(empirical_lower, theoretical_lower_piLower),
               ymax = theoretical_lower_piLower, fill = "c7"
           ),
@@ -359,7 +359,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         ) +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(theoretical_upper_piUpper, empirical_upper),
               ymax = empirical_upper, fill = "c7"
           ),
@@ -367,7 +367,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
         ) +
         geom_ribbon(
           data = vpcDataInterp,
-          aes(x = bins_middle,
+          aes(x = bins_middles,
               ymin = pmin(empirical_upper, theoretical_upper_piLower),
               ymax = theoretical_upper_piLower, fill = "c7"
           ),
@@ -400,7 +400,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       p <- p +
       geom_point(
         data = dataOutliersLower,
-        aes(x = bins_middle, y = empirical_lower, color = "c8", shape = "c8"),
+        aes(x = bins_middles, y = empirical_lower, color = "c8", shape = "c8"),
         size = theme$outlier_dots_size
       ) 
     
@@ -408,7 +408,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       p <- p +
       geom_point(
         data = dataOutliersMedian,
-        aes(x = bins_middle, y = empirical_median, color = "c8", shape = "c8"),
+        aes(x = bins_middles, y = empirical_median, color = "c8", shape = "c8"),
         size = theme$outlier_dots_size
       )
     
@@ -416,7 +416,7 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
       p <- p +
       geom_point(
         data = dataOutliersUpper,
-        aes(x = bins_middle, y = empirical_upper, color = "c8", shape = "c8"),
+        aes(x = bins_middles, y = empirical_upper, color = "c8", shape = "c8"),
         size = theme$outlier_dots_size
       ) 
     
@@ -430,13 +430,13 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
   
   if (binLimits) {
     datavlines = do.call(rbind, by(
-      subset(vpcData, select = c("bins_middle", "split")),
+      subset(vpcData, select = c("bins_middles", "split")),
       vpcData$split,
-      function(df) data.frame(bins_middle = unique(df$bins_middle), split = unique(df$split))
+      function(df) data.frame(bins_middles = unique(df$bins_middles), split = unique(df$split))
     ))
     p <- p + geom_vline(
       data = datavlines,
-      aes(xintercept = bins_middle, color = "c9"),
+      aes(xintercept = bins_middles, color = "c9"),
       linetype = theme$bins_linetype,
       size = theme$bins_size
     )
@@ -512,12 +512,12 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
   vpcData <- .renameColumns(vpcData, "averageEventNumber_median", "theoretical_median_median")
   vpcData <- .renameColumns(vpcData, "averageEventNumber_piLower", "theoretical_median_piLower")
   vpcData <- .renameColumns(vpcData, "averageEventNumber_piUpper", "theoretical_median_piUpper")
-  vpcData <- .renameColumns(vpcData, "time", "bins_middle")
+  vpcData <- .renameColumns(vpcData, "time", "bins_middles")
   if (!is.element("bins_start", names(vpcData))) {
-    vpcData$bins_start <- vpcData$bins_middle
+    vpcData$bins_start <- vpcData$bins_middles
   }
   if (!is.element("bins_stop", names(vpcData))) {
-    vpcData$bins_stop <- vpcData$bins_middle
+    vpcData$bins_stop <- vpcData$bins_middles
   }
   return(vpcData)
 }
@@ -537,16 +537,7 @@ get_display_list <- function(display, allowedCurves) {
 check_display <- function(display, argname, allowedCurves) {
   if (!is.vector(display))
     stop("`", argname, "` must be a vector.", call. = FALSE)
-  if (!all(is.element(display, allowedCurves)))
-    warning("`", argname, "` values must be in {",
-            paste(allowedCurves, collapse = ", "),
-            "}. Invalid curves are ignored.", call. = FALSE)
+  disaply <- check_in_vector(display, argname, allowedCurves, type = "warning")
   display <- display[display %in% allowedCurves]
   return(display)
-}
-
-check_theme <- function(theme, arg_name) {
-  if(class(theme) != "vpc_theme")
-    stop("`", arg_name, "` must be a `vpc_theme` object.", call. = FALSE)
-  return(theme)
 }

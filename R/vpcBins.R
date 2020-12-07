@@ -23,27 +23,17 @@ getBinsSettings <- function(is.fixedBins = FALSE, fixedBins = c(),
   if ("fixedBins" %in% names(params) & ! "is.fixedBins"  %in% names(params)) is.fixedBins <- TRUE
   if ("nbBins" %in% names(params) & ! "is.fixedNbBins"  %in% names(params)) is.fixedNbBins <- TRUE
   
-  if (!is.logical(is.fixedBins)) stop("`is.fixedBins` must be logical")
-  if (is.fixedBins) {
-    if(!is.vector(fixedBins) | !all(is.double(fixedBins)) | !all(fixedBins >= 0))
-      stop("`fixedBins` must be a vector of positive doubles")
-  }
-  if (!is.element(criteria, c("equalwidth", "equalsize", "leastsquare")))
-    stop("`criteria` must be in {`equalwidth`, `equalsize`, `leastsquare`}")
-  if (!is.logical(is.fixedNbBins)) stop("`is.fixedNbBins` must be logical")
-  if (!is.double(nbBins) | !nbBins > 0) stop("`nbBins` must a positive integer")
-  if (!as.integer(nbBins) == nbBins) stop("`nbBins` must a positive integer")
-  if (length(binRange) != 2 | !all(is.double(binRange)) | !all(binRange >= 0))
-    stop("`binRange` must a range of two positive integer")
-  if (!all(as.integer(binRange) == binRange))
-    stop("`binRange` must a range of two positive integer")
-  if (length(nbBinData) != 2 | !all(is.double(nbBinData)) | !all(nbBinData >= 0))
-    stop("`nbBinData` must a range of two positive integer")
-  if (!all(as.integer(nbBinData) == nbBinData))
-    stop("`nbBinData` must a range of two positive integer")
-  if (!is.double(nbDataPoints) | !nbDataPoints > 0) stop("`nbDataPoints` must a positive integer")
-  if (!as.integer(nbDataPoints) == nbDataPoints) stop("`nbDataPoints` must a positive integer")
-  
+  check_bool(is.fixedBins, "is.fixedBins")
+  if (is.fixedBins) check_pos_double(fixedBins, "fixedBins")
+  check_in_vector(criteria, "criteria", c("equalwidth", "equalsize", "leastsquare"))
+  check_bool(is.fixedNbBins, "is.fixedNbBins")
+  check_integer(nbBins, "nbBins")
+  check_range(binRange, "binRange")
+  check_integer(binRange, "binRange")
+  check_range(nbBinData, "nbBinData")
+  check_integer(nbBinData, "nbBinData")
+  check_integer(nbDataPoints, "nbDataPoints")
+
   structure(list(
     is.fixedBins = is.fixedBins[1], fixedBins = fixedBins,
     criteria = criteria[1], is.fixedNbBins = is.fixedNbBins[1],
@@ -73,27 +63,15 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   ## Check Arguments -----------------------------------------------------------
   params <- as.list(match.call(expand.dots = TRUE))[-1]
   if ("dataName" %in% names(params) & ! "is.binsName"  %in% names(params)) is.binsName <- TRUE
-  if (missing(data)) stop("`data` is missing.")
-  if (!is.vector(data)) stop("`data` must be a vector of doubles")
-  if (!all(is.double(data) | is.integer(data))) stop("`data` must be a vector of doubles")
+  check_double(data, "data")
   if (is.null(split)) split <- rep("All", length(data))
-  if (length(data) != length(split)) stop("`data` and `split` must have the same length.")
-  if (!is.element(type, c("continuous", "categorical"))) {
-    warning("type must be either `continuous` or `categorical`. Set type to continuous.")
-    type <- "continuous"
-  }
-  if (is.null(binsSettings)) binsSettings <- getBinsSettings()
-  if (!class(binsSettings) == "binSettingsClass")
-    stop("`binsSettings` must be a binSettingsClass object.")
-  if (!is.logical(is.binsName)) {
-    warning("is.binsName must be logical. Set is.binsName to FALSE.")
-    is.binsName <- FALSE
-  }
-  if (!is.character(dataName)) {
-    warning("dataName must be a string. Set dataName to `obs`.")
-    dataName <- "obs"
-  }
-  
+  check_length(data, "data", split, "split")
+  check_in_vector(type, "type", c("continuous", "categorical"), type = "warning")
+  if (is.null(type)) type <- "continuous"
+  binsSettings <- check_bins(binsSettings, "binsSettings")
+  check_bool(is.binsName, "is.binsName")
+  check_char(dataName, "dataName")
+
   params <- list(
     useFixedBins = binsSettings$is.fixedBins, fixedBins = binsSettings$fixedBins,
     criteria = binsSettings$criteria, useFixedNbBins = binsSettings$is.fixedNbBins,
@@ -113,14 +91,14 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   }
   if (is.binsName) {
     bins$binsName <- bins$bins
-    bins[bins$bins_start == bins$bins_middle,]$binsName <- sapply(
-      bins[bins$bins_start == bins$bins_middle,]$bins_start,
+    bins[bins$bins_start == bins$bins_middles,]$binsName <- sapply(
+      bins[bins$bins_start == bins$bins_middles,]$bins_start,
       function(x) paste0("P(", dataName, "=", x, ")")
     )
-    bins[bins$bins_start < bins$bins_middle,]$binsName <- mapply(
+    bins[bins$bins_start < bins$bins_middles,]$binsName <- mapply(
       function(x, y) paste0("P(", ceiling(x), "<=", dataName, "<=", trunc(y), ")"),
-      bins[bins$bins_start < bins$bins_middle,]$bins_start,
-      bins[bins$bins_start < bins$bins_middle,]$bins_stop
+      bins[bins$bins_start < bins$bins_middles,]$bins_start,
+      bins[bins$bins_start < bins$bins_middles,]$bins_stop
     )
   }
   return(bins)
@@ -131,7 +109,7 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
     if (length(categories) == 0) categories <- unique(data)
     binsData <- data.frame(list(
       bins_start = categories, bins_stop = categories,
-      bins_middle = categories, bins = seq(1, length(categories))
+      bins_middles = categories, bins = seq(1, length(categories))
     ))
   } else if (!is.null(settings)) {
     if (settings$useFixedBins){
@@ -144,7 +122,7 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
       binsData <- data.frame(list(
         bins_start = utils::head(b, -1),
         bins_stop = utils::tail(b, -1),
-        bins_middle = as.vector(tapply(data, factor, mean)),
+        bins_middles = as.vector(tapply(data, factor, mean)),
         bins = seq(1, length(b) - 1)
       ))
     } else {
@@ -158,7 +136,7 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
       binsData <- data.frame(list(
         bins_start = utils::head(binsList$values, -1),
         bins_stop = utils::tail(binsList$values, -1),
-        bins_middle = binsList$middles,
+        bins_middles = binsList$middles,
         bins = seq(1, length(binsList$values) - 1)
       ))
     }
@@ -195,4 +173,17 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   #   data[binName] <- 1
   # }
   return(data)
+}
+
+check_bins <- function(binsSettings, argname) {
+  if (is.null(binsSettings)) {
+    binsSettings <- getBinsSettings()
+  }
+  check_object_class(binsSettings, "binsSettings", "binSettingsClass")
+  return(binsSettings)
+}
+
+check_length <- function(arg1, arg1name, arg2, arg2name) {
+  if (length(arg1) != length(arg2))
+    stop("`", arg1name, "` and `", arg2name, "` must have the same length.", .call = FALSE)
 }

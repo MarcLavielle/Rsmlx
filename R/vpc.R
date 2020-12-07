@@ -206,8 +206,8 @@ vpc <- function(
     )
     vpcTheme <- defaultTheme[[dataType]]
   }
-  check_theme(vpcTheme, "vpcTheme")
-  
+  check_object_class(vpcTheme, "vpcTheme", "vpc_theme")
+
   if (!"xBins.nbBinData" %in% params & dataType == "discrete")
     xBins.nbBinData <- c(5, 30)
 
@@ -272,7 +272,7 @@ vpc <- function(
     )
   } else {
     survivalCurve <- "survivalCurve" %in% eventDisplay
-    averageEventNumber <- "averageEventNumber" %in% eventDisplay
+    averageEventNumber <- "meanNumberEventsCurve" %in% eventDisplay
     p <- plotEvent(vpcStats, survivalCurve = survivalCurve, averageEventNumber = averageEventNumber,
                    curvesDisplay = curvesDisplay, legend = legend,
                    grid = grid, xlogScale = xlogScale, ylogScale = ylogScale,
@@ -294,6 +294,8 @@ plotEvent <- function(vpcStats, survivalCurve, averageEventNumber, ...) {
     select = c("split", vpcStats$timeName,
                names(vpcData)[grepl("averageEventNumber", names(vpcData))])
   )
+  print(survivalCurve)
+  print(averageEventNumber)
   if (survivalCurve) {
     p1 <- plotVpc(
       dataSF, vpcStats$observations, vpcStats$obsName, vpcStats$timeName,

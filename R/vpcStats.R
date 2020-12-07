@@ -209,7 +209,7 @@ vpcStats <- function(project, time = "time", obsName = NULL,
       }
     ))
     vpcData <- merge(xBins, vpcData, by=c("bins", "split"))
-    vpcData <- vpcData[order(vpcData$split, vpcData$bins_middle),]
+    vpcData <- vpcData[order(vpcData$split, vpcData$bins_middles),]
     
   } else if (dataType == "discrete") {
     categories <- unique(obsDataCensored$category)
@@ -227,7 +227,7 @@ vpcStats <- function(project, time = "time", obsName = NULL,
       }
     ))
     vpcData <- merge(xBins, vpcData, by=c("bins", "split"))
-    vpcData <- vpcData[order(vpcData$split, vpcData$category, vpcData$bins_middle),]
+    vpcData <- vpcData[order(vpcData$split, vpcData$category, vpcData$bins_middles),]
     vpcData$category <- sapply(vpcData$category, function(cat) yBins$binsName[yBins$bins == cat])
     
   } else if (dataType == "event") {
@@ -256,15 +256,6 @@ vpcStats <- function(project, time = "time", obsName = NULL,
 }
 
 ## Check -----------------------------------------------------------------------
-check_bins <- function(binsSettings, argname) {
-  if (is.null(binsSettings)) {
-    binsSettings <- getBinsSettings()
-  }
-  if(class(binsSettings) != "binSettingsClass")
-    stop("`", argname, "` must be a `binSettingsClass` object.", call. = FALSE)
-  return(binsSettings)
-}
-
 check_perc <- function(perc, argname) {
   if (!is.numeric(perc) | perc < 0 | perc > 100)
     stop("`", argname, "` must be in [0, 100]", call. = FALSE)
@@ -273,15 +264,13 @@ check_perc <- function(perc, argname) {
 
 check_cens <- function(cens, argname) {
   if (is.null(cens)) cens <- "simulated"
-  if (!is.element(cens, c("simulated", "blq")))
-    stop("`", argname, "` must be in {`simulated`, `blq`}.", call. = FALSE)
+  check_in_vector(cens, argname, c("simulated", "blq"))
   return(cens)
 }
 
 check_time <- function(time, argname) {
   if (is.null(time)) time <- "time"
-  if (!is.element(time, c("time", "timeSinceLastDose")))
-    stop("`", argname, "` must be in {`time`, `timeSinceLastDose`}.", call. = FALSE)
+  check_in_vector(time, argname, c("time", "timeSinceLastDose"))
   # check if dose in dataset
   if (time == "timeSinceLastDose" & !is.element("amount", mlx.getData()$headerTypes))
     stop("Unexpected value encountered. `timeSinceLastDose` only valid when ",
@@ -297,10 +286,7 @@ check_obs <- function(obs, argname) {
       warning("`", argname, "` not specified. `", argname, "` set to ", obs, ".",
               call. = FALSE)
   }
-  if (!is.element(obs, obsnames)) {
-    stop("`", argname, "` must be in {", paste(obsnames, collapse = ", "), "}.",
-         call. = FALSE)
-  }
+  check_in_vector(obs, argname, obsnames)
   return(obs)
 }
 
@@ -424,7 +410,7 @@ stratifyCovariates <- function(split = c(), filter = list(), scaling = list()) {
   )
   if (! file.exists(simFilename)) {
     # Get VPC chart data files
-    message("Download Charts data.")
+    message("[INFO] Download Charts data.")
     s = mlx.getScenario()
     s$plotList = c(s$plotList, "vpc")
     mlx.setScenario(s)
