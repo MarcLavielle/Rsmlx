@@ -53,7 +53,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   if (parametric & grepl("2020",monolixPath))
     stop("Parametric bootstrap is not possible with MonolixSuite 2020")
   
-  r <- prcheck(project, f="boot", settings=settings)
+  r <- .loadProject(project, f="boot", settings=settings)
   if (r$demo)
     return(r$res)
   project <- r$project

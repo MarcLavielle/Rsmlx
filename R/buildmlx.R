@@ -66,7 +66,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
 {
   
   
-  r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
+  r <- .loadProject(project, f="build", paramToUse=paramToUse, model=model)
   if (r$demo)
     return(r$res)
   project <- r$project

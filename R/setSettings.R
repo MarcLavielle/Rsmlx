@@ -33,7 +33,7 @@ setSettings  <- function(project=NULL, new.project=NULL, level=5) {
     return()
   
   if (!is.null(project)){
-    r <- prcheck(project, f="set")
+    r <- .loadProject(project, f="set")
     if (r$demo)
       return(invisible(FALSE))
     project <- r$project

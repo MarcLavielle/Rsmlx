@@ -132,8 +132,8 @@ getDoseInformation <- function() {
   }
   lines  <- paste(readLines(modelFile, warn = FALSE), collapse = " ")
   if (obsType == "discrete") {
-    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,;]|\\s)*}"), lines, perl=TRUE))
-    m2 <- regmatches(m, regexpr("type\\s*=\\s*[a-zA-Z]*", lines, perl=TRUE))
+    m <- regmatches(lines, regexpr(paste0(obsName, "\\s*=\\s*\\{([a-zA-Z0-9]|[\\(\\)\\+\\-\\*\\./\"_.=,;{}]|\\s)*}"), lines, perl=TRUE))
+    m2 <- regmatches(m, regexpr("type\\s*=\\s*[a-zA-Z]*", m, perl=TRUE))
     subType <- gsub("type\\s*=\\s*", "", m2)
   } else if (obsType == "event") {
     subType <- "exactEvent"

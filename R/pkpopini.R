@@ -40,7 +40,7 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
     return()
   
   if (!is.null(project)) {
-    r <- prcheck(project)
+    r <- .loadProject(project)
     data <- mlx.getData()[c('dataFile', 'headerTypes')]
     if (is.null(parameter))
       parameter <- mlx.getIndividualParameterModel()$name

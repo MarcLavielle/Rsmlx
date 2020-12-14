@@ -143,12 +143,12 @@ vpc <- function(
   params <- as.list(match.call(expand.dots = TRUE))[-1]
   
   # load project
-  r <- prcheck(project)
+  r <- .loadProject(project)
   project <- r$project
   
-  plot <- check_bool(plot, "plot")
+  plot <- .check_bool(plot, "plot")
   
-  obsName <- check_obs(obsName, "obsName")
+  obsName <- .check_obs(obsName, "obsName")
   obsType <- .getObsType(obsName)
   dataType <- obsType$type
   dataSubType <- obsType$subType
@@ -157,18 +157,18 @@ vpc <- function(
   if (dataType == "event") {
     eventCurves <- c("survivalCurve", "meanNumberEventsCurve", "empiricalCurve",
                      "predictedMedian", "predictionInterval")
-    eventDisplay <- check_display(eventDisplay, "eventDisplay", eventCurves)
+    eventDisplay <- .check_display(eventDisplay, "eventDisplay", eventCurves)
   } else {
-    check_ignoring_arg_on_condition("eventDisplay", params, paste0(dataType, " data"))
+    .check_ignoring_arg_on_condition("eventDisplay", params, paste0(dataType, " data"))
     eventDisplay <- c()
   }
   
   if (dataType == "discrete") {
     discreteCurves <- c("empiricalProbability", "predictedMedian",
                         "predictionInterval", "outlierAreas")
-    discreteDisplay <- check_display(discreteDisplay, "discreteDisplay", discreteCurves)
+    discreteDisplay <- .check_display(discreteDisplay, "discreteDisplay", discreteCurves)
   } else {
-    check_ignoring_arg_on_condition("discreteDisplay", params, paste0(dataType, " data"))
+    .check_ignoring_arg_on_condition("discreteDisplay", params, paste0(dataType, " data"))
     discreteDisplay <- c()
   }
 
@@ -177,23 +177,23 @@ vpc <- function(
       "observedData", "censoredData", "empiricalPercentiles", "predictedPercentiles",
       "predictionInterval", "outliersDots", "outlierAreas"
     )
-    continuousDisplay <- check_display(continuousDisplay, "continuousDisplay", continuousCurves)
+    continuousDisplay <- .check_display(continuousDisplay, "continuousDisplay", continuousCurves)
   } else {
-    check_ignoring_arg_on_condition("continuousDisplay", params, paste0(dataType, " data"))
+    .check_ignoring_arg_on_condition("continuousDisplay", params, paste0(dataType, " data"))
     continuousDisplay <- c()
   }
 
   # Check and initialize plot settings
-  legend <- check_bool(legend, "legend")
-  grid <- check_bool(grid, "grid")
-  xlogScale <- check_bool(xlogScale, "xlogScale")
-  ylogScale <- check_bool(ylogScale, "ylogScale")
-  linearInterpolation <- check_bool(linearInterpolation, "linearInterpolation")
-  binLimits <- check_bool(binLimits, "binLimits")
-  xlab <- check_char(xlab, "xlab")
+  legend <- .check_bool(legend, "legend")
+  grid <- .check_bool(grid, "grid")
+  xlogScale <- .check_bool(xlogScale, "xlogScale")
+  ylogScale <- .check_bool(ylogScale, "ylogScale")
+  linearInterpolation <- .check_bool(linearInterpolation, "linearInterpolation")
+  binLimits <- .check_bool(binLimits, "binLimits")
+  xlab <- .check_char(xlab, "xlab")
   if (!"xlab" %in% names(params))
     xlab <- ifelse(time == "timeSinceLastDose", "time since last dose", "time")
-  ylab <- check_char(ylab, "ylab")
+  ylab <- .check_char(ylab, "ylab")
   if (!"ylab" %in% names(params))
     ylab <- obsName
 
@@ -206,7 +206,7 @@ vpc <- function(
     )
     vpcTheme <- defaultTheme[[dataType]]
   }
-  check_object_class(vpcTheme, "vpcTheme", "vpc_theme")
+  .check_object_class(vpcTheme, "vpcTheme", "vpc_theme")
 
   if (!"xBins.nbBinData" %in% params & dataType == "discrete")
     xBins.nbBinData <- c(5, 30)
@@ -319,13 +319,13 @@ plotEvent <- function(vpcStats, survivalCurve, averageEventNumber, ...) {
   return(p)
 }
 
-check_ignoring_arg_on_condition <- function(argName, params, condition) {
+.check_ignoring_arg_on_condition <- function(argName, params, condition) {
   if ("argName" %in% params)
     warning("When ", condition, ", `", argName, "` is ignored.", call. = FALSE)
   return(c())
 }
 
-check_arg_on_condition <- function(arg, argName, condition) {
+.check_arg_on_condition <- function(arg, argName, condition) {
   if (!is.null(arg)) {
     warning("When ", condition, " `", argName, "` is ignored.", call. = FALSE)
     arg <- NULL

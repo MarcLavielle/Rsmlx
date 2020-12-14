@@ -61,7 +61,7 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
                        linearization=TRUE, nboot=100, parametric=FALSE, settings=NULL)
 {
   
-  r <- prcheck(project, f="conf", level=level, method=method )
+  r <- .loadProject(project, f="conf", level=level, method=method )
   if (r$demo)
     return(r$res)
   project <- r$project

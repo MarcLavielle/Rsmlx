@@ -95,7 +95,7 @@ mlx.getCovariateInformation <- function() {
   sn <- setdiff(r$name,names(r$covariate))
   if (length(sn)>0) {
     d <- mlx.getProjectSettings()$directory
-    p <- read.csv(file.path(d,"individualParameters/estimatedIndividualParameters.txt"))[,c("id",sn)]
+    p <- read.csv(file.path(d, "IndividualParameters/estimatedIndividualParameters.txt"))[,c("id",sn)]
     r$covariate <- merge(r$covariate,p,by="id")
   }
   return(r)

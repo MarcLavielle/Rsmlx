@@ -32,7 +32,9 @@ Collate: mlxConnectors.R
          setSettings.R
          testmlx.R
          zzz.R
-         RsmlxTools.R
+         rsmlx-checks.R
+         rsmlx-init.R
+         rsmlx-tools.R
          pkbuild.R
          pkpopini.R
          whichPKmodel.R

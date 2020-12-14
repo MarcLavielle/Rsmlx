@@ -23,16 +23,16 @@ getBinsSettings <- function(is.fixedBins = FALSE, fixedBins = c(),
   if ("fixedBins" %in% names(params) & ! "is.fixedBins"  %in% names(params)) is.fixedBins <- TRUE
   if ("nbBins" %in% names(params) & ! "is.fixedNbBins"  %in% names(params)) is.fixedNbBins <- TRUE
   
-  check_bool(is.fixedBins, "is.fixedBins")
-  if (is.fixedBins) check_pos_double(fixedBins, "fixedBins")
-  check_in_vector(criteria, "criteria", c("equalwidth", "equalsize", "leastsquare"))
-  check_bool(is.fixedNbBins, "is.fixedNbBins")
-  check_integer(nbBins, "nbBins")
-  check_range(binRange, "binRange")
-  check_integer(binRange, "binRange")
-  check_range(nbBinData, "nbBinData")
-  check_integer(nbBinData, "nbBinData")
-  check_integer(nbDataPoints, "nbDataPoints")
+  .check_bool(is.fixedBins, "is.fixedBins")
+  if (is.fixedBins) .check_pos_double(fixedBins, "fixedBins")
+  .check_in_vector(criteria, "criteria", c("equalwidth", "equalsize", "leastsquare"))
+  .check_bool(is.fixedNbBins, "is.fixedNbBins")
+  .check_integer(nbBins, "nbBins")
+  .check_range(binRange, "binRange")
+  .check_integer(binRange, "binRange")
+  .check_range(nbBinData, "nbBinData")
+  .check_integer(nbBinData, "nbBinData")
+  .check_integer(nbDataPoints, "nbDataPoints")
 
   structure(list(
     is.fixedBins = is.fixedBins[1], fixedBins = fixedBins,
@@ -63,14 +63,14 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   ## Check Arguments -----------------------------------------------------------
   params <- as.list(match.call(expand.dots = TRUE))[-1]
   if ("dataName" %in% names(params) & ! "is.binsName"  %in% names(params)) is.binsName <- TRUE
-  check_double(data, "data")
+  .check_double(data, "data")
   if (is.null(split)) split <- rep("All", length(data))
-  check_length(data, "data", split, "split")
-  check_in_vector(type, "type", c("continuous", "categorical"), type = "warning")
+  .check_length(data, "data", split, "split")
+  .check_in_vector(type, "type", c("continuous", "categorical"), type = "warning")
   if (is.null(type)) type <- "continuous"
-  binsSettings <- check_bins(binsSettings, "binsSettings")
-  check_bool(is.binsName, "is.binsName")
-  check_char(dataName, "dataName")
+  binsSettings <- .check_bins(binsSettings, "binsSettings")
+  .check_bool(is.binsName, "is.binsName")
+  .check_char(dataName, "dataName")
 
   params <- list(
     useFixedBins = binsSettings$is.fixedBins, fixedBins = binsSettings$fixedBins,
@@ -175,15 +175,15 @@ computeVpcBins <- function(data, split = NULL, type = "continuous",
   return(data)
 }
 
-check_bins <- function(binsSettings, argname) {
+.check_bins <- function(binsSettings, argname) {
   if (is.null(binsSettings)) {
     binsSettings <- getBinsSettings()
   }
-  check_object_class(binsSettings, "binsSettings", "binSettingsClass")
+  .check_object_class(binsSettings, "binsSettings", "binSettingsClass")
   return(binsSettings)
 }
 
-check_length <- function(arg1, arg1name, arg2, arg2name) {
+.check_length <- function(arg1, arg1name, arg2, arg2name) {
   if (length(arg1) != length(arg2))
     stop("`", arg1name, "` and `", arg2name, "` must have the same length.", .call = FALSE)
 }

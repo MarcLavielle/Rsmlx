@@ -67,31 +67,31 @@ vpcStats <- function(project, time = "time", obsName = NULL,
 
   if (missing(project)) stop("`project` is missing")
   # load project
-  r <- prcheck(project)
+  r <- .loadProject(project)
   project <- r$project
   
-  time <- check_time(time, "time")
-  obsName <- check_obs(obsName, "obsName")
+  time <- .check_time(time, "time")
+  obsName <- .check_obs(obsName, "obsName")
   obsType <- .getObsType(obsName)
   dataType <- obsType$type
   dataSubType <- obsType$subType
   
   if ("censoring" %in% names(params) & ! "useCensored"  %in% names(params))
     useCensored <- TRUE
-  check_bool(useCorrpred, "useCorrpred")
-  check_bool(useCensored, "useCensored")
+  .check_bool(useCorrpred, "useCorrpred")
+  .check_bool(useCensored, "useCensored")
   if (useCensored)
-    censoring <- check_cens(censoring, "censoring")
+    censoring <- .check_cens(censoring, "censoring")
 
   if (dataType == "event")
-    check_bool(event.averageNumberEvents, "event.averageNumberEvents")
+    .check_bool(event.averageNumberEvents, "event.averageNumberEvents")
   
-  check_perc(level, "level")
-  check_perc(higherPercentile, "higherPercentile")
+  .check_perc(level, "level")
+  .check_perc(higherPercentile, "higherPercentile")
 
   # bins settings
-  xBinsSettings <- check_bins(xBinsSettings, "xBinsSettings")
-  yBinsSettings <- check_bins(yBinsSettings, "yBinsSettings")
+  xBinsSettings <- .check_bins(xBinsSettings, "xBinsSettings")
+  yBinsSettings <- .check_bins(yBinsSettings, "yBinsSettings")
 
   # Read Data ------------------------------------------------------------------
   simName <- paste0("sim_", obsName)
@@ -256,21 +256,21 @@ vpcStats <- function(project, time = "time", obsName = NULL,
 }
 
 ## Check -----------------------------------------------------------------------
-check_perc <- function(perc, argname) {
+.check_perc <- function(perc, argname) {
   if (!is.numeric(perc) | perc < 0 | perc > 100)
     stop("`", argname, "` must be in [0, 100]", call. = FALSE)
   return(perc)
 }
 
-check_cens <- function(cens, argname) {
+.check_cens <- function(cens, argname) {
   if (is.null(cens)) cens <- "simulated"
-  check_in_vector(cens, argname, c("simulated", "blq"))
+  .check_in_vector(cens, argname, c("simulated", "blq"))
   return(cens)
 }
 
-check_time <- function(time, argname) {
+.check_time <- function(time, argname) {
   if (is.null(time)) time <- "time"
-  check_in_vector(time, argname, c("time", "timeSinceLastDose"))
+  .check_in_vector(time, argname, c("time", "timeSinceLastDose"))
   # check if dose in dataset
   if (time == "timeSinceLastDose" & !is.element("amount", mlx.getData()$headerTypes))
     stop("Unexpected value encountered. `timeSinceLastDose` only valid when ",
@@ -278,7 +278,7 @@ check_time <- function(time, argname) {
   return(time)
 }
 
-check_obs <- function(obs, argname) {
+.check_obs <- function(obs, argname) {
   obsnames <- mlx.getObservationInformation()$name
   if (is.null(obs)) {
     obs <- obsnames[1]
@@ -286,7 +286,7 @@ check_obs <- function(obs, argname) {
       warning("`", argname, "` not specified. `", argname, "` set to ", obs, ".",
               call. = FALSE)
   }
-  check_in_vector(obs, argname, obsnames)
+  .check_in_vector(obs, argname, obsnames)
   return(obs)
 }
 

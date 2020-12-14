@@ -43,7 +43,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     return()
   
   if (!is.null(project)) {
-    r <- prcheck(project)
+    r <- .loadProject(project)
     data <- mlx.getData()[c('dataFile', 'headerTypes')]
     parameter <- mlx.getIndividualParameterModel()$name
     if ("ka" %in% parameter | "Tk0" %in% parameter)

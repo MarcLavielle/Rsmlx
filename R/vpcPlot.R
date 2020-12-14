@@ -57,21 +57,21 @@ plotVpc <- function(vpcData, obsData, obsName, timeName,
   allowedCurves <- c("observedData", "censoredData", "empiricalData",
                      "theoreticalData", "predictionInterval",
                      "outliersDots", "outlierAreas")
-  curvesDisplay <- check_display(curvesDisplay, "curvesDisplay", allowedCurves)
+  curvesDisplay <- .check_display(curvesDisplay, "curvesDisplay", allowedCurves)
   displayList <- get_display_list(curvesDisplay, allowedCurves)
   
-  check_bool(legend, "legend")
-  check_bool(grid, "grid")
-  check_bool(xlogScale, "xlogScale")
-  check_bool(ylogScale, "ylogScale")
-  check_bool(binLimits, "binLimits")
-  check_bool(linearInterpolation, "linearInterpolation")
+  .check_bool(legend, "legend")
+  .check_bool(grid, "grid")
+  .check_bool(xlogScale, "xlogScale")
+  .check_bool(ylogScale, "ylogScale")
+  .check_bool(binLimits, "binLimits")
+  .check_bool(linearInterpolation, "linearInterpolation")
   
   if (is.null(xlab)) xlab <- timeName
   if (is.null(ylab)) ylab <- obsName
 
   if(is.null(theme)) theme <- createVpcTheme()
-  check_object_class(theme, "theme", "vpc_theme")
+  .check_object_class(theme, "theme", "vpc_theme")
   
   # transform dataset (normalize continuous, discrete and event names)
   vpcData <- .prepareVpcData(vpcData)
@@ -534,10 +534,10 @@ get_display_list <- function(display, allowedCurves) {
   return(displayList)
 }
 
-check_display <- function(display, argname, allowedCurves) {
+.check_display <- function(display, argname, allowedCurves) {
   if (!is.vector(display))
     stop("`", argname, "` must be a vector.", call. = FALSE)
-  disaply <- check_in_vector(display, argname, allowedCurves, type = "warning")
+  disaply <- .check_in_vector(display, argname, allowedCurves, type = "warning")
   display <- display[display %in% allowedCurves]
   return(display)
 }

@@ -53,7 +53,7 @@ testmlx <- function(project,
                     plot=FALSE, adjust="edf", n.sample=NULL) 
 {
 
-  r <- prcheck(project, f="test", tests=tests)
+  r <- .loadProject(project, f="test", tests=tests)
   if (r$demo)
     return(r$res)
   project <- r$project

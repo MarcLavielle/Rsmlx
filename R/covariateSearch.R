@@ -64,7 +64,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   ###################################################################################
   # Check the validity of the project
   
-  r <- prcheck(project, f="cov", paramToUse=paramToUse, method=method)
+  r <- .loadProject(project, f="cov", paramToUse=paramToUse, method=method)
   if (r$demo)
     return(r$res)
   project <- r$project

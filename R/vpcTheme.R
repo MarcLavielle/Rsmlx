@@ -55,52 +55,52 @@
 #' }
 createVpcTheme <- function (update = NULL) {
   args_check <- list(
-    obs_color = check_char,
-    obs_size = check_pos_double,
-    obs_shape = check_integer,
-    obs_legend = check_char,
+    obs_color = .check_char,
+    obs_size = .check_pos_double,
+    obs_shape = .check_integer,
+    obs_legend = .check_char,
     
-    cens_color = check_char,
-    cens_size = check_pos_double,
-    cens_shape = check_integer,
-    cens_legend = check_char,
+    cens_color = .check_char,
+    cens_size = .check_pos_double,
+    cens_shape = .check_integer,
+    cens_legend = .check_char,
     
-    emp_perc_color = check_char,
-    emp_perc_linetype = check_char,
-    emp_perc_size = check_pos_double,
-    emp_perc_point = check_bool,
-    emp_perc_legend = check_char,
+    emp_perc_color = .check_char,
+    emp_perc_linetype = .check_char,
+    emp_perc_size = .check_pos_double,
+    emp_perc_point = .check_bool,
+    emp_perc_legend = .check_char,
     
-    theo_perc_color = check_char,
-    theo_perc_linetype = check_char,
-    theo_perc_size = check_pos_double,
-    theo_perc_point = check_bool,
-    theo_perc_legend = c(check_na_or_object, check_char),
+    theo_perc_color = .check_char,
+    theo_perc_linetype = .check_char,
+    theo_perc_size = .check_pos_double,
+    theo_perc_point = .check_bool,
+    theo_perc_legend = c(.check_na_or_object, .check_char),
     
-    theo_pi_median_color = c(check_na_or_object, check_char),
-    theo_pi_median_fill = c(check_na_or_object, check_char),
-    theo_pi_median_alpha = check_pos_double,
-    theo_pi_median_legend = c(check_na_or_object, check_char),
+    theo_pi_median_color = c(.check_na_or_object, .check_char),
+    theo_pi_median_fill = c(.check_na_or_object, .check_char),
+    theo_pi_median_alpha = .check_pos_double,
+    theo_pi_median_legend = c(.check_na_or_object, .check_char),
     
-    theo_pi_perc_color = c(check_na_or_object, check_char),
-    theo_pi_perc_fill = c(check_na_or_object, check_char),
-    theo_pi_perc_alpha = check_pos_double,
-    theo_pi_perc_legend = c(check_na_or_object, check_char),
+    theo_pi_perc_color = c(.check_na_or_object, .check_char),
+    theo_pi_perc_fill = c(.check_na_or_object, .check_char),
+    theo_pi_perc_alpha = .check_pos_double,
+    theo_pi_perc_legend = c(.check_na_or_object, .check_char),
     
-    outlier_areas_color = c(check_na_or_object, check_char),
-    outlier_areas_fill = c(check_na_or_object, check_char),
-    outlier_areas_alpha = check_pos_double,
-    outlier_areas_legend = c(check_na_or_object, check_char),
+    outlier_areas_color = c(.check_na_or_object, .check_char),
+    outlier_areas_fill = c(.check_na_or_object, .check_char),
+    outlier_areas_alpha = .check_pos_double,
+    outlier_areas_legend = c(.check_na_or_object, .check_char),
     
-    outlier_dots_color = check_char,
-    outlier_dots_legend = c(check_na_or_object, check_char),
-    outlier_dots_size = check_pos_double,
-    outlier_dots_shape = check_integer,
+    outlier_dots_color = .check_char,
+    outlier_dots_legend = c(.check_na_or_object, .check_char),
+    outlier_dots_size = .check_pos_double,
+    outlier_dots_shape = .check_integer,
     
-    bins_color = check_char,
-    bins_linetype = check_char,
-    bins_size = check_pos_double,
-    bins_legend = c(check_na_or_object, check_char)
+    bins_color = .check_char,
+    bins_linetype = .check_char,
+    bins_size = .check_pos_double,
+    bins_legend = c(.check_na_or_object, .check_char)
   )
 
   default <- structure(list(  
@@ -220,7 +220,7 @@ event_theme <- function() {
   return(createVpcTheme(update))
 }
 
-check_na_or_object <- function(arg, argname, check_function, ...) {
+.check_na_or_object <- function(arg, argname, check_function, ...) {
   if (!is.na(arg)) check_function(arg, argname, ...)
   return(arg)
 }
