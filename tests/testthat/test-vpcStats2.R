@@ -32,7 +32,7 @@ test_that("vpcStats returns same results as Monolix Chartdata for projects with 
     mlx_df <- .readDataset(paste0(p$mlx_vpc_path, "/", p$obs_name, "_percentiles.txt"))
     for (n in names(mlx_df)) {
       expect_true(n %in% names(vpcData$vpcPercentiles))
-      # expect_equal(mlx_df[[n]], vpcData$vpcPercentiles[[n]], tolerance=1e-4)
+      expect_equal(mlx_df[[n]], vpcData$vpcPercentiles[[n]], tolerance=1e-4)
     }
   }
 })

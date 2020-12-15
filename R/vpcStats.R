@@ -113,6 +113,9 @@ vpcStats <- function(project, time = "time", obsName = NULL,
   if (dataType == "continuous") {
     # censored data
     if (length(unique(obsData$censored)) > 1) {
+      # in case of censoring data reorder columns to buid the right simulated dataset
+      # ONLY FOR 2020R1 version !
+      simData <- .reorderCensoredSimulations(simData, simName)
       if (useCensored & censoring == "simulated") {
         obsName <- paste0(obsName, "_simBlq")
       }

@@ -265,3 +265,33 @@ read.res <- function(file) {
     d <- read.csv(file, sep="\t")
   return(d)
 }
+
+#-------------------------------------------------------------------------------
+# IN 2020R1 censoring vpc simulations dataset is corrupted in case of censored data
+# 1. reorder columns in order to get the correct dataset
+# 2. reconstruct censoring column^
+.reorderCensoredSimulations <- function(simData, simName) {
+  if (!"censored" %in% names(simData)) return(simData)
+  subjocc = .getSubjocc()
+  simData = do.call(rbind, by(
+    simData,
+    subset(simData, select = c("rep", subjocc)),
+    function(df) {
+      df[[simName]] = df[[simName]][order(order(df$time))]
+      return(df)
+    }
+  ))
+  censoredInterval <- .getCensoredInterval()
+  simData$censored <- 0
+  if (!is.null(censoredInterval$leftCensored)) {
+    simData[simData[simName] <= censoredInterval$leftCensored[2], "censored"] <- 1
+  }
+  if (!is.null(censoredInterval$rightCensored)) {
+    simData[simData[simName] >= censoredInterval$rightCensored[1], "censored"] <- -1
+  }
+  if (!is.null(censoredInterval$intervalCensored)) {
+    simData[simData[simName] >= censoredInterval$intervalCensored[1] & simData[simName] <= censoredInterval$intervalCensored[2], "censored"] <- 1
+  }
+  return(simData)
+}
+

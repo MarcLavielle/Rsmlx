@@ -201,3 +201,35 @@ getDoseInformation <- function() {
   covData[columnName] <- stratCol
   return(covData)
 }
+
+.getCensoredInterval <- function() {
+  data <- readmlxDataset()
+  if (is.element("cens", names(data))) {
+    cens <- data[data$observation != "." & data$cens != 0,]
+    if (!is.element("limit", names(data))) {
+      intervalCensored <- NULL
+      if (nrow(cens[cens$cens == 1,])) {
+        leftCensored <- c(-Inf, max(cens[cens$cens == 1,]$observation))
+        leftCensored <- as.numeric(leftCensored)
+      } else {
+        leftCensored <- NULL
+      }
+      if (nrow(cens[cens$cens == -1,])) {
+        rightCensored <- c(min(cens[cens$cens == -1,]$observation), Inf)
+        rightCensored <- as.numeric(rightCensored)
+      } else {
+        rightCensored <- NULL
+      }
+    } else {
+      intervalCensored <- c(min(cens[cens$cens == 1,]$limit), max(cens[cens$cens == 1,]$observation))
+      intervalCensored <- as.numeric(intervalCensored)
+      leftCensored <- NULL
+      rightCensored <- NULL
+    }
+  }
+  return(list(
+    leftCensored = leftCensored,
+    rightCensored = rightCensored,
+    intervalCensored = intervalCensored
+  ))
+}
