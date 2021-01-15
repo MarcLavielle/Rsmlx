@@ -441,7 +441,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       mlx.saveProject(final.project)
       if (dir.exists(final.dir))
         unlink(final.dir, recursive=TRUE)
-      loadProject(final.project)
+      mlx.loadProject(final.project)
       
       if (max.iter>0) {
         
