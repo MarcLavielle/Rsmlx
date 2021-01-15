@@ -393,5 +393,88 @@ read.res <- function(file) {
   return(d)
 }
 
+# Get the extension of a file --------------------------------------------------
+.getFileExt <- function(filename) {
+  ext <- utils::tail(strsplit(filename, "\\.")[[1]], n=1)
+  if (ext == filename) ext <- NULL
+  return(ext)
+}
 
+# Round dataframe --------------------------------------------------------------
+.roundDataframe <- function(df, nbDigits) {
+  for (n in names(df)) {
+    df[n] <- sapply(
+      df[[n]],
+      function(x, nbDigits) {
+        if (suppressWarnings(!is.na(as.numeric(x)))) x <- round(as.numeric(x), nbDigits)
+        return(x)
+      },
+      nbDigits
+    )
+  }
+  return(df)
+}
 
+# Get the separator of a file --------------------------------------------------
+.getDelimiter <- function(fileName, sep = NULL){
+  L <- suppressMessages(suppressWarnings(readLines(fileName, n = 1)))
+  sepToCheck = c(' ', '\t', ',', ';')
+  if (!is.null(sep)) sepToCheck <- unique(c(sep, sepToCheck))
+  nSepToCheck <- length(sepToCheck)
+  numfields <- vector(length = nSepToCheck)
+  for(index in 1:nSepToCheck){
+    numfields[index] <- utils::count.fields(textConnection(L), sep = sepToCheck[index])
+  }
+  if (all(numfields == 0)) {
+    sep <- NULL
+  } else {
+    sep <- sepToCheck[min(which.max(numfields))]
+  }
+  return(sep)
+}
+
+# Rename dataframe column ------------------------------------------------------
+.renameColumns <- function(df, oldName, newName){
+  if (length(oldName) != length(newName)) {
+    message("[ERROR] vector of old names and new names must match in size")
+    return(df)
+  }
+  for (i in seq_along(oldName)) {
+    old <- oldName[i]
+    new <- newName[i]
+    if (old %in% names(df)) {
+      names(df)[names(df) == old] <- new
+    }
+  }
+  return(df)
+}
+
+################################################################################
+# Set lixoft connectors options
+################################################################################
+set_options <- function(errors = NULL, warnings = NULL, info = NULL) {
+  options_list <- list(errors = errors, warnings = warnings, info = info)
+  options_list <- options_list[!unlist(lapply(options_list, is.null))]
+  op <- getOption("lixoft_notificationOptions")
+  for (i in seq_along(options_list)) {
+    oname <- names(options_list)[[i]]
+    oval <- options_list[[i]]
+    if (!is.null(oval)) {
+      if (!oval) {
+        op[[oname]] <- 1
+      } else {
+        op[[oname]] <- 0
+      }
+    }
+  }
+  options(lixoft_notificationOptions = op)
+  return(invisible(TRUE))
+}
+
+get_lixoft_options <- function() {
+  op <- getOption("lixoft_notificationOptions")
+  errors <- ifelse(op$errors == 1, FALSE, TRUE)
+  warnings <- ifelse(op$warnings == 1, FALSE, TRUE)
+  info <- ifelse(op$info == 1, FALSE, TRUE)
+  return(list(errors = errors, warnings = warnings, info = info))
+}
