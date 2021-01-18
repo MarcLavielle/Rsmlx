@@ -1,11 +1,11 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 2.0.5
+Version: 3.0.0
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
-    person( "Jonathan", "Chauvin", role = c("aut"), email = "Jonathan.Chauvin@lixoft.com" ),
-    person( "Duc-Dung", "Tran", role = c("ctb"), email = "duc-dung.tran@polytechnique.edu" ))
+    person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
+    person( "Clémence", "Pinaud", role = c("ctb"), email = "Clemence.Pinaud@lixoft.com" ))
 Description: Provides methods for model building and model evaluation of mixed effects models using 
     'Monolix' <http://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
     modeling that must have been installed in order to use 'Rsmlx'. 
