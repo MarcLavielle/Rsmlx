@@ -249,7 +249,7 @@ mlx.runPopulationParameterEstimation <- function() {
   .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation()'))
 }
 
-mlx.runLogLikelihoodEstimation <- function(linearization = NULL) {
+mlx.runLogLikelihoodEstimation <- function(linearization = FALSE) {
   .hiddenCall(paste0('r <- lixoftConnectors::runLogLikelihoodEstimation(linearization = linearization)'))
 }
 
