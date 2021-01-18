@@ -64,6 +64,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   #lambda='cv', glmnet.settings=NULL)
 {
   
+  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   
   r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
   if (r$demo)

@@ -4,7 +4,7 @@
 \alias{whichPKmodel}
 \title{Find a Monolix PK model}
 \usage{
-whichPKmodel(parameter, mlxPath = NULL, pkPath = NULL)
+whichPKmodel(parameter, mlxPath = NULL, pkPath = NULL, lib = FALSE)
 }
 \arguments{
 \item{parameter}{a vector of PK parameter names}
@@ -12,6 +12,8 @@ whichPKmodel(parameter, mlxPath = NULL, pkPath = NULL)
 \item{mlxPath}{path to Monolix install}
 
 \item{pkPath}{path to the Monolix PK library}
+
+\item{lib}{boolean to define if the absolute path is returned}
 }
 \description{
 Return the path of the Monolix PK model defined by a list of parameter names

@@ -4,9 +4,16 @@
 \alias{pkbuild}
 \title{Automatic PK model building}
 \usage{
-pkbuild(data = NULL, project = NULL, stat = FALSE,
-  param = "clearance", new.dir = ".", MM = FALSE, level = NULL,
-  settings.stat = NULL)
+pkbuild(
+  data = NULL,
+  project = NULL,
+  stat = FALSE,
+  param = "clearance",
+  new.dir = ".",
+  MM = FALSE,
+  level = NULL,
+  settings.stat = NULL
+)
 }
 \arguments{
 \item{data}{a list with fields

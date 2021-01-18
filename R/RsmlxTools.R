@@ -1,6 +1,7 @@
 prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
                     parameters=NULL, level=NULL, tests=NULL, nboot=NULL, method=NULL) {
   #prcheck <- function(project) {
+  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   if (identical(substr(project,1,9),"RsmlxDemo")) {
     RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
     rm(RsmlxDemo1.project, RsmlxDemo2.project, warfarin.data, resMonolix)
@@ -83,6 +84,7 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 #' Initialize Rsmlx library
 #' 
 #' Initialize Rsmlx library
+#' @param path Monolix path 
 #' @return A list:
 #' \itemize{
 #'   \item \code{software}: the software that is used (should be monolix with Rsmlx)

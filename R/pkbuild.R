@@ -42,6 +42,8 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
   if (!initRsmlx()$status)
     return()
   
+  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  
   if (!is.null(project)) {
     r <- prcheck(project)
     data <- mlx.getData()[c('dataFile', 'headerTypes')]

@@ -4,9 +4,16 @@
 \alias{covariateSearch}
 \title{Covariate model building}
 \usage{
-covariateSearch(project, final.project = NULL, method = NULL,
-  covToTest = NULL, covToTransform = NULL, paramToUse = NULL,
-  testRelations = NULL, settings = NULL)
+covariateSearch(
+  project,
+  final.project = NULL,
+  method = NULL,
+  covToTest = NULL,
+  covToTransform = NULL,
+  paramToUse = NULL,
+  testRelations = NULL,
+  settings = NULL
+)
 }
 \arguments{
 \item{project}{a Monolix project}

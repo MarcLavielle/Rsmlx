@@ -4,11 +4,24 @@
 \alias{buildmlx}
 \title{Automatic model building}
 \usage{
-buildmlx(project, final.project = NULL, model = "all",
-  paramToUse = "all", covToTest = "all", covToTransform = "none",
-  criterion = "BICc", direction = NULL, max.iter = 20,
-  print = TRUE, nb.model = 1, linearization = FALSE, seqcc = FALSE,
-  p.max = 1, steps = 1000, exp.iter = 2)
+buildmlx(
+  project,
+  final.project = NULL,
+  model = "all",
+  paramToUse = "all",
+  covToTest = "all",
+  covToTransform = "none",
+  criterion = "BICc",
+  direction = NULL,
+  max.iter = 20,
+  print = TRUE,
+  nb.model = 1,
+  linearization = FALSE,
+  seqcc = FALSE,
+  p.max = 1,
+  steps = 1000,
+  exp.iter = 2
+)
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}

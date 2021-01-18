@@ -4,8 +4,16 @@
 \alias{confintmlx}
 \title{Confidence intervals for population parameters}
 \usage{
-confintmlx(project, parameters = "all", method = "fim", level = 0.9,
-  linearization = TRUE, nboot = 100, settings = NULL)
+confintmlx(
+  project,
+  parameters = "all",
+  method = "fim",
+  level = 0.9,
+  linearization = TRUE,
+  nboot = 100,
+  parametric = FALSE,
+  settings = NULL
+)
 }
 \arguments{
 \item{project}{a Monolix project}
@@ -20,6 +28,8 @@ confintmlx(project, parameters = "all", method = "fim", level = 0.9,
 or the profile likelihood  is based on a linearization of the model (default=TRUE)}
 
 \item{nboot}{number of bootstrat replicates (default=100, used when method="bootstrap")}
+
+\item{parametric}{boolean to define if parametric bootstrap is performed (new data is drawn from the model), (default: false)}
 
 \item{settings}{a list of settings for the profile likelihood method:
 \itemize{

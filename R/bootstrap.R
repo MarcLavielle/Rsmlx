@@ -25,6 +25,7 @@
 #' }
 #' @return a data frame with the bootstrap estimates
 #' @examples
+#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -38,6 +39,7 @@
 #' # Proportions of males and females in the original dataset will be preserved   
 #' # in each replicate:
 #' r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
+#' }
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
@@ -50,7 +52,8 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     settings = NULL){
 
   monolixPath <- mlx.getLixoftConnectorsState()$path
-
+  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  
   r <- prcheck(project, f="boot", settings=settings)
   if (r$demo)
     return(r$res)
