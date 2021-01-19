@@ -16,7 +16,7 @@ Description: Provides methods for model building and model evaluation of mixed e
 URL: http://rsmlx.webpopix.org
 SystemRequirements: 'Monolix' (<http://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
-Imports: tools, methods, graphics, grDevices, utils, stats, tcltk, MASS, ggplot2, gridExtra
+Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra
 Suggests: mlxR, 
 Collate: mlxConnectors.R
          bootstrap.R
