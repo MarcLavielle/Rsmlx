@@ -76,6 +76,13 @@ buildmlx <- function(project, final.project=NULL, model="all",
     return(r$res)
   project <- r$project
   
+  launched.tasks <- mlx.getLaunchedTasks()
+  if (!launched.tasks[["populationParameterEstimation"]]) {
+    lineDisplay <- "\nEstimation of the population parameters using the initial model ... \n"
+    if (print) cat(lineDisplay)
+    mlx.runPopulationParameterEstimation()
+  }
+  
   r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction,
              ll, linearization)
   covToTransform <- r$covToTransform
