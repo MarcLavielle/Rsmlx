@@ -20,15 +20,19 @@
 #' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
+#' @param pen.cov penalization term for the covariate model (default=1)
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
 #' @param max.iter maximum number of iterations (default=20)
 #' @param exp.iter  number of iterations during the exploratory phase (default=1)
 #' @param print {TRUE}/FALSE display the results (default=TRUE)
 #' @param nb.model number of models to display at each iteration (default=1)
-#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
+#' @param ll  method for computing the likelihood c({"importanceSampling}, "linearization", "none")
 #' @param seqcc TRUE/{FALSE} whether the covariate model is built before the correlation model (default=FALSE) 
-#' @param p.max maximum p-value (for the correlation test) for keeping a covariate in a model  (default=1)
+#' @param p.max maximum p-value (for the t-test) for keeping a covariate in a model  (default=1)
+#' @param p.min minimum p-value (for the correlation test) for adding a correlation in a model  (default=1e-4)
 #' @param steps maximum number of iteration for stepAIC (default=1000)
+#' @param center.covariate TRUE/{FALSE} center the covariates of the final model (default=FALSE) 
+#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)
 #' @return a new Monolix project with a new statistical model.
 #' @examples
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
@@ -58,9 +62,10 @@
 #' @export
 buildmlx <- function(project, final.project=NULL, model="all", 
                      paramToUse="all", covToTest="all", covToTransform="none", 
-                     criterion="BICc", direction=NULL,
-                     max.iter=20, print=TRUE, nb.model=1, linearization=FALSE, 
-                     seqcc=FALSE, p.max=1, steps=1000, exp.iter=2)
+                     criterion="BICc", pen.cov=1, direction=NULL,
+                     max.iter=20, print=TRUE, nb.model=1, ll="importanceSampling",
+                     seqcc=FALSE, p.max=1, p.min=1e-4, steps=1000, exp.iter=2,
+                     center.covariate=FALSE, linearization=FALSE)
   #lambda='cv', glmnet.settings=NULL)
 {
   
@@ -71,13 +76,16 @@ buildmlx <- function(project, final.project=NULL, model="all",
     return(r$res)
   project <- r$project
   
-  r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction)
+  r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction,
+             ll, linearization)
   covToTransform <- r$covToTransform
   paramToUse <- r$paramToUse
   final.project <- r$final.project
   covToTest <- r$covToTest
   model <- r$model
   direction <- r$direction
+  iop.ll <- r$iop.ll
+  method.ll <- r$method.ll
   
   if (print) {
     if (!is.null(r$idir)) 
@@ -161,6 +169,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   covariate.model <- mlx.getIndividualParameterModel()$covariateModel
   cov.ini <- names(covariate.model[[1]])
   correlation.model <- mlx.getIndividualParameterModel()$correlationBlocks$id
+  
+  
   if (is.null(correlation.model))
     correlation.model <- list()
   
@@ -207,9 +217,9 @@ buildmlx <- function(project, final.project=NULL, model="all",
   }
   
   #----  LL & linearization
-  iop.ll <- 1
-  lin.ll <- linearization
-  method.ll <- ifelse (lin.ll,"linearization","importanceSampling")
+  # iop.ll <- F
+  lin.ll <- method.ll=="linearization"
+  # method.ll <- ifelse (lin.ll,"linearization","importanceSampling")
   if (iop.ll) {
     if (!(method.ll %in% launched.tasks[["logLikelihoodEstimation"]]))  {
       if (lin.ll & !launched.tasks[["conditionalModeEstimation"]])
@@ -254,10 +264,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   #--------------
   
   stop.test <- FALSE
-  if (seqcc==TRUE)
-    corr.test <- FALSE
-  else
-    corr.test <- TRUE
+  corr.test <- FALSE
   iter <- 0
   
   cov.names0 <- cov.names <- NULL
@@ -265,11 +272,32 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (identical(covToTest,"all"))
     covFix = NULL
   else
-  covFix <- setdiff(mlx.getCovariateInformation()$name, covToTest)
+    covFix <- setdiff(mlx.getCovariateInformation()$name, covToTest)
+  
+  go <- mlx.getObservationInformation()
+  id <- n <- NULL
+  for (yn in go$name) {
+    id <- unique(c(id, go[[yn]]$id))
+    n <- c(n, nrow(go[[yn]]))
+  }
+  N <- length(id)
+  nc <- n[which(go$type=="continuous")]
+  
+  if (criterion=="AIC") {
+    pen.coef <- rep(2, length(nc)+1)  
+  } else if (criterion=="BIC") {
+    pen.coef <- rep(log(N), length(nc)+1)
+  } else if (criterion=="BICc") {
+    pen.coef <- c(log(N), log(nc))
+  } else {
+    pen.coef <- rep(criterion, length(nc)+1)
+  }
   
   
-  ll.prev <- Inf
-  ll.new <- ll.ini
+  if (iop.ll) {
+    ll.prev <- Inf
+    ll.new <- ll.ini
+  }
   sp0 <- NULL
   while (!stop.test) {
     iter <- iter + 1
@@ -290,7 +318,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       ll0 <- ll
     
     if (iop.error) {
-      res.error <- errorModelSelection(criterion=criterion, nb.model=nb.model)
+      res.error <- errorModelSelection(pen.coef=pen.coef[-1], nb.model=nb.model)
       if (nb.model==1)
         error.model <- res.error
       else {
@@ -301,10 +329,11 @@ buildmlx <- function(project, final.project=NULL, model="all",
     }
     
     if (iop.covariate) {
-      pmax.iter <- ifelse(iter <= 1, 1, p.max) 
-      res.covariate <- covariateModelSelection(criterion=criterion, nb.model=nb.model,
+      pmax.cov <- ifelse(iter <= 1, 1, p.max) 
+      pcov <- ifelse(iter <= 1, pen.coef[1], pen.coef[1]*pen.cov) 
+      res.covariate <- covariateModelSelection(pen.coef=pcov, nb.model=nb.model,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
-                                               steps=steps, p.max=pmax.iter, paramToUse=paramToUse, sp0=sp0, iter=iter)
+                                               steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter)
       res.covariate$res <- sortCov(res.covariate$res, cov.ini)
       if (iter>exp.iter) sp0 <- res.covariate$sp
       covToTransform <- setdiff(covToTransform, res.covariate$tr0)
@@ -321,17 +350,21 @@ buildmlx <- function(project, final.project=NULL, model="all",
     
     if (iop.correlation & !corr.test) {
       if (isTRUE(all.equal(cov.names0,cov.names)) &
-          isTRUE(all.equal(error.model0,error.model))) {
+          isTRUE(all.equal(error.model0,error.model))) 
         corr.test <- TRUE
+      if (seqcc==FALSE & iter>=2)
+        corr.test <- TRUE
+      
+      if (corr.test) {
         lineDisplay <- "Start building correlation model too ... \n"
         sink(summary.file, append=TRUE); cat(lineDisplay); sink(); if (print) cat(lineDisplay)
-        
       }
     }
     
     if (iop.correlation & corr.test) {
-      res.correlation <- correlationModelSelection(e=e, criterion=criterion, nb.model=nb.model, 
-                                                   corr0=correlation.model0, seqcc=seqcc)
+      pen.corr <- ifelse(iter <= 1, pen.coef[1], pen.coef[1]) 
+      res.correlation <- correlationModelSelection(e=e, pen.coef=pen.corr, nb.model=nb.model, 
+                                                   corr0=correlation.model0, seqcc=seqcc, p.min=p.min)
       if (nb.model==1) correlation.model <- res.correlation
       else  correlation.model <- res.correlation[[1]]$block
       if (is.null(correlation.model))  correlation.model <- list()
@@ -385,7 +418,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     } 
     
     if (!stop.test) {
-      mlx.setInitialEstimatesToLastEstimates()
+      mlx.setInitialEstimatesToLastEstimates(fixedEffectsOnly = T)
       p.ini <- mlx.getPopulationParameterInformation()
       rownames(p.ini) <- p.ini$name
       p.ini[omega,] <- omega.ini
@@ -422,13 +455,15 @@ buildmlx <- function(project, final.project=NULL, model="all",
       #-------------------------------
       
       if (max.iter>0) {
-        if (ll.new > ll.prev) {
-          g <- mlx.getGeneralSettings()
-          g$autochains <- FALSE
-          g$nbchains <- g$nbchains+1
-          mlx.setGeneralSettings(g)
+        if (iop.ll) { 
+          if (ll.new > ll.prev) {
+            g <- mlx.getGeneralSettings()
+            g$autochains <- FALSE
+            g$nbchains <- g$nbchains+1
+            mlx.setGeneralSettings(g)
+          }
+          ll.prev <- ll.new
         }
-        ll.prev <- ll.new
         g=mlx.getConditionalDistributionSamplingSettings()
         g$nbminiterations <- max(100, g$nbminiterations)
         mlx.setConditionalDistributionSamplingSettings(g)
@@ -460,9 +495,9 @@ buildmlx <- function(project, final.project=NULL, model="all",
           if (lin.ll)
             mlx.runConditionalModeEstimation()
           mlx.runLogLikelihoodEstimation(linearization = lin.ll)
+          ll.new <- computecriterion(criterion, method.ll)
+          list.criterion <- c(list.criterion, ll.new)
         }
-        ll.new <- computecriterion(criterion, method.ll)
-        list.criterion <- c(list.criterion, ll.new)
         
         if (!dir.exists(buildmlx.dir.iter))
           dir.create(buildmlx.dir.iter)
@@ -475,16 +510,16 @@ buildmlx <- function(project, final.project=NULL, model="all",
         
         #mlx.loadProject(final.project)
         
-        if (stop.test)
-          ll <- ll0
-        else {
-          ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
-          names(ll)[which(names(ll)=="standardError")] <- "s.e."
-          if (is.numeric(criterion))
-            ll['criterion'] <- ll.new
-        }
-        
         if (iop.ll) {
+          if (stop.test)
+            ll <- ll0
+          else {
+            ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
+            names(ll)[which(names(ll)=="standardError")] <- "s.e."
+            if (is.numeric(criterion))
+              ll['criterion'] <- ll.new
+          }
+          
           if (print) {
             cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
             print(round(ll,2))
@@ -562,7 +597,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   }
   sink()
   test.del <- FALSE
-  if (iop.covariate) {
+  if (iop.covariate & center.covariate) {
     foo <- lapply(res.covariate$model,function(x) {which(x)})
     cov.model <- unique(unlist(lapply(foo,function(x) {names(x)})))
     cov.type <- mlx.getCovariateInformation()$type[cov.model]
@@ -577,6 +612,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       cg <- lapply(g, function(x) {foo <- x[ck]; x[ck]<-x[cck]; x[cck]=foo; return(x)})
       mlx.setCovariateModel (cg)
       test.del <- TRUE
+      covariate.model <- cg
     }
   }
   if (test.del & dir.exists(final.dir)) {
@@ -594,7 +630,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
   # write(lines, file=summary.file)
   
   mlx.loadProject(final.project)
-  if ( !mlx.getLaunchedTasks()[[1]] )   mlx.runScenario()
+  # if ( !mlx.getLaunchedTasks()[[1]] )   mlx.runScenario()
   
   res <- list(project=final.project)
   if (iop.covariate)
@@ -619,7 +655,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
 }
 
 
-check <- function(project, final.project, covToTransform, paramToUse, covToTest, model, direction) {
+check <- function(project, final.project, covToTransform, paramToUse, covToTest, model, 
+                  direction, ll, linearization) {
   
   if (is.null(final.project)) 
     final.project <- paste0(sub(pattern = "(.*)\\..*$", replacement = "\\1", project),"_built.mlxtran")
@@ -687,8 +724,21 @@ check <- function(project, final.project, covToTransform, paramToUse, covToTest,
       stop(paste0(dir0, " is not a valid direction name"), call.=FALSE)
   }
   
+  if (linearization==TRUE) {
+    warning(" 'linearization' is deprecated. Use 'll' instead", call.=FALSE)
+    ll = 'linearization'
+  }
+  
+  method.ll <- "importanceSampling"
+  iop.ll <- TRUE
+  if (ll == "none") 
+    iop.ll <- FALSE
+  else if (ll=="linearization")
+    method.ll<-"linearization"
+  
   return(list(covToTransform=covToTransform, paramToUse=paramToUse, covToTest=covToTest, 
-              final.project=final.project, model=model, direction=direction, idir=idir))
+              final.project=final.project, model=model, direction=direction, idir=idir,
+              iop.ll=iop.ll, method.ll=method.ll))
 }
 
 #------------------------

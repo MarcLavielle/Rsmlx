@@ -12,15 +12,19 @@ buildmlx(
   covToTest = "all",
   covToTransform = "none",
   criterion = "BICc",
+  pen.cov = 1,
   direction = NULL,
   max.iter = 20,
   print = TRUE,
   nb.model = 1,
-  linearization = FALSE,
+  ll = "importanceSampling",
   seqcc = FALSE,
   p.max = 1,
+  p.min = 1e-04,
   steps = 1000,
-  exp.iter = 2
+  exp.iter = 2,
+  center.covariate = FALSE,
+  linearization = FALSE
 )
 }
 \arguments{
@@ -38,6 +42,8 @@ buildmlx(
 
 \item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
 
+\item{pen.cov}{penalization term for the covariate model (default=1)}
+
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
 \item{max.iter}{maximum number of iterations (default=20)}
@@ -46,15 +52,21 @@ buildmlx(
 
 \item{nb.model}{number of models to display at each iteration (default=1)}
 
-\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
+\item{ll}{method for computing the likelihood c({"importanceSampling}, "linearization", "none")}
 
 \item{seqcc}{TRUE/{FALSE} whether the covariate model is built before the correlation model (default=FALSE)}
 
-\item{p.max}{maximum p-value (for the correlation test) for keeping a covariate in a model  (default=1)}
+\item{p.max}{maximum p-value (for the t-test) for keeping a covariate in a model  (default=1)}
+
+\item{p.min}{minimum p-value (for the correlation test) for adding a correlation in a model  (default=1e-4)}
 
 \item{steps}{maximum number of iteration for stepAIC (default=1000)}
 
 \item{exp.iter}{number of iterations during the exploratory phase (default=1)}
+
+\item{center.covariate}{TRUE/{FALSE} center the covariates of the final model (default=FALSE)}
+
+\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
 }
 \value{
 a new Monolix project with a new statistical model.

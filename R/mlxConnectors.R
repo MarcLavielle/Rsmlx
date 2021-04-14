@@ -95,8 +95,9 @@ mlx.getCovariateInformation <- function() {
   sn <- setdiff(r$name,names(r$covariate))
   if (length(sn)>0) {
     d <- mlx.getProjectSettings()$directory
-    p <- read.csv(file.path(d,"individualParameters/estimatedIndividualParameters.txt"))[,c("id",sn)]
-    r$covariate <- merge(r$covariate,p,by="id")
+    pind <- read.csv(file.path(d,"individualParameters/estimatedIndividualParameters.txt"))
+    if (all(sn %in% names(pind)))
+      r$covariate <- merge(r$covariate,pind[,c("id",sn)],by="id")
   }
   return(r)
 }
@@ -179,8 +180,8 @@ mlx.runStandardErrorEstimation <- function(linearization=NULL) {
 mlx.runScenario <- function(wait=TRUE) {
   .hiddenCall(paste0('r <- lixoftConnectors::runScenario(wait = ',wait,')'))
 }
-mlx.setInitialEstimatesToLastEstimates <- function() {
-  .hiddenCall(paste0('r <- lixoftConnectors::setInitialEstimatesToLastEstimates()'))
+mlx.setInitialEstimatesToLastEstimates <- function(fixedEffectsOnly = F) {
+  .hiddenCall(paste0('r <- lixoftConnectors::setInitialEstimatesToLastEstimates(fixedEffectsOnly=fixedEffectsOnly)'))
 }
 
 mlx.setPopulationParameterInformation <- function(a) {

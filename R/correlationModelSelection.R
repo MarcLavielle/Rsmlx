@@ -1,6 +1,7 @@
-correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0=NULL, seqcc=TRUE) {
+correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, 
+                                      seqcc=TRUE, p.min=1e-4) {
   
-  if (criterion=="BICc")  criterion="BIC"
+  # if (criterion=="BICc")  criterion="BIC"
   
   p.name <- mlx.getIndividualParameterModel()$name
   if (is.null(e)) {
@@ -25,21 +26,24 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
   e <- e[e.var]
   e <- as.data.frame(scale(e))
   n.param <- ncol(e)
+  alpha.cor <- 0.01
   if (n.param>1) {
-    
-    if (criterion=="BIC")
-      pen.bic <- log(N)
-    else if (criterion=="AIC")
-      pen.bic <- 2
-    else 
-      pen.bic <- criterion
-    
-    C <- cov(e)
-    
+    C <- cov(e) 
+    Ci <- pv <- C
+    for (i1 in (1:(n.param-1))) {
+      for (i2 in ((i1+1):n.param)) {
+        refi1 <- matrix(e[,i1],ncol=nrep)
+        refi2 <- matrix(e[,i2],ncol=nrep)
+        ri <- rowSums(refi1*refi2)
+        Ci[i1, i2] <- Ci[i2, i1] <- cor(matrix(refi1,ncol=1),matrix(refi2,ncol=1))
+        pv[i1, i2] <- pv[i2, i1] <- signif(t.test(ri)$p.value, 4)
+      }   
+    }
+    C <- (C + alpha.cor*diag(diag(C)))/(1+alpha.cor)
     ll <- sum(my.dmvnorm(e, sigma=diag(rep(1,n.param)), log=T))/nrep
     # ll <- -0.5*(sum(e^2)/nrep + N*n.param*log(2*pi))
     df <- 0
-    Ck <- diag(rep(1,n.param))
+    Ck <- Pk <- diag(rep(1,n.param))
     row.names(Ck) <- names(e)
     colnames(Ck) <- names(e)
     
@@ -47,7 +51,7 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
     A[lower.tri(A, diag=T)] <- 0
     b <- 1:n.param
     test <- FALSE
-    CC <- list(Ck)
+    CC <- PP <- list(Ck)
     k <- 1
     while (test==F){
       k <- k+1
@@ -62,16 +66,22 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
       for (j in (1:n.param)) {
         ij <- which(b==b[j])
         Ck[ij,ij] <- C[ij,ij]
+        Pk[ij,ij] <- pv[ij,ij]
       }
       llk <- sum(my.dmvnorm(e, sigma=Ck, log=T))/nrep
       dfk <- (length(which(Ck !=0))-n.param)/2
       df <- c(df, dfk)
       ll <- c(ll , llk)
       CC[[k]] <- Ck
+      PP[[k]] <- Pk
     }
-    bic <- -2*ll + pen.bic*df
+    bic <- -2*ll + pen.coef*df
     
-    if (seqcc==TRUE) {
+    pvl <- 1
+    for (k in (2:length(PP))) 
+      pvl <- c(pvl, min(PP[[k]][which(PP[[k-1]]==0 & PP[[k]]>0)]))
+    
+ #   if (seqcc==TRUE) {
       if (length(corr0)==0)
         bl=1
       else
@@ -80,13 +90,23 @@ correlationModelSelection <- function(e=NULL, criterion="BIC", nb.model=1, corr0
       bl <- bl-1
       bm <- sum(bl*(bl+1)/2)
       bic[df>bm] <- Inf
-    }
-    obic <- order(bic)
-    nb.model <- min(nb.model, length(bic))
-    E <- data.frame(ll=ll, df=df, criterion=bic)
-    E <- E[order(bic)[1:nb.model],]
-    row.names(E) <- 1:nrow(E)
+      pvl[df>bm] <- 1
+      # }
     
+    
+    obic <- order(bic)
+     if (obic[1] < length(bic)) {
+      if (pvl[obic[1]+1] < p.min) {
+        ib <- obic[1]+1
+        obic <- c(ib, setdiff(obic, ib))
+      }
+    }
+    
+    nb.model <- min(nb.model, length(bic))
+    E <- data.frame(ll=ll, df=df, criterion=bic, pv=pvl)
+   # print(E)
+    E <- E[obic[1:nb.model],]
+    row.names(E) <- 1:nrow(E)
     # rct <- cortest(C,e,pen.bic,n.param,nrep)
     
     correlation.model <- list()

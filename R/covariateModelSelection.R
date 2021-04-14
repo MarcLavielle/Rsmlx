@@ -1,9 +1,8 @@
-covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform=NULL, covFix=NULL, 
+covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NULL, covFix=NULL, 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, 
                                     sp0=NULL, iter=1) {
-
-  if (criterion=="BICc")  criterion="BIC"
-
+  
+  
   project.folder <- mlx.getProjectSettings()$directory
   sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
   
@@ -19,7 +18,7 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
     sp.df <- rbind(sp0, sp.df)
   }
   nrep <- max(sp.df$rep)
-
+  
   ind.dist <- mlx.getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
   if (identical(paramToUse,"all"))
@@ -70,9 +69,11 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
       } else {
         cov0 <- cov1 <- NULL
       }
-      r[[j]] <- lm.all(yj,covariates,tcov.names,criterion=criterion,nb.model=nb.model, 
-                       direction=direction,steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
+      r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
+                       direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
+      res[[j]][,c("ll","df","criterion")] <- NULL
+      
       names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
     } else {
       r[[j]] <- list(model="fixed")
@@ -125,7 +126,7 @@ covariateModelSelection <- function(criterion="BICc", nb.model=1, covToTransform
 
 #-----------------------------------
 
-lm.all <- function(y, x, tr.names=NULL, criterion=criterion, nb.model=nb.model,
+lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
                    direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL, iter=1) {
   if (!is.null(x$id)) {
     N <- length(unique(x$id))
@@ -144,104 +145,237 @@ lm.all <- function(y, x, tr.names=NULL, criterion=criterion, nb.model=nb.model,
     xc <- subset(x,rep==1)
     xc <- xc[order(xc$id),,drop=FALSE]
     #  xc <- x[seq(1,nrow(x),by=nrep),,drop=FALSE]
-    pjc <- NULL
     lm0 <- lm(yc ~1)
-    for (nc in nx) {
+    nxc <- setdiff(nx, cov0)
+    pjc <- NULL
+    for (nc in nxc) {
       lmc <- lm(yc ~ xc[[nc]])
       pjc <- c(pjc, signif(anova(lm0, lmc)$`Pr(>F)`[2],4))
     }
-    list.c <- which(pjc>p.max)
-
-  cov0 <- c(cov0, nx[list.c])
-  }
+    # if (length(which(pjc<p.max)) == 0)
+    #   list.c <- which(pjc<max(pjc))
+    # else
+ #   pjc <- p.adjust(pjc, method="BH")
+     list.c <- which(pjc>p.max)
+    
+    cov0 <- c(cov0, nxc[list.c])
+    direction <- ifelse(length(setdiff(nx, cov0))<=10,"full",direction)
+    # x <- x[, -which(names(x) %in% nx[list.c])]
+  } else
+    list.c <- NULL
+  
   x$id <- x$rep <- NULL
+  nx <- ncol(x)
+  l <- x
+  s <- rep("0:1", nx)
+  j.num <- which(!sapply(x, is.factor))
+  if (length(j.num)>0) {
+    if (length(j.num)==1)
+      j0 <- which(min(x[,j.num])>0)
+    else
+      j0 <- which(sapply(x[,j.num],min)>0)
+    j0.num <- j.num[j0]
+    s[j0.num] <- "0:2"
+    l[,j0.num] <- log(x[,j0.num])
+    names(l)[j0.num] <- paste0("log.",names(x)[j0.num])
+    x[,j.num] <- scale(x[j.num], scale=TRUE)
+    l[,j.num] <- scale(l[j.num], scale=TRUE)
+  } else
+    j0.num <- vector(length=0)
   
-#x <- x[,list.c,drop=FALSE]
-
-nx <- ncol(x)
-l <- x
-s <- rep("0:1", nx)
-j.num <- which(!sapply(x, is.factor))
-if (length(j.num)>0) {
-  if (length(j.num)==1)
-    j0 <- which(min(x[,j.num])>0)
-  else
-    j0 <- which(sapply(x[,j.num],min)>0)
-  j0.num <- j.num[j0]
-  s[j0.num] <- "0:2"
-  l[,j0.num] <- log(x[,j0.num])
-  names(l)[j0.num] <- paste0("log.",names(x)[j0.num])
-  x[,j.num] <- scale(x[j.num], scale=TRUE)
-  l[,j.num] <- scale(l[j.num], scale=TRUE)
-} else
-  j0.num <- vector(length=0)
-
-
-#############% stepAIC/stepBIC
-if (direction != 'full') {
-  # create a data frame with all possible covariates (all transformations)
-  l_data = data.frame(y=y[[1]])
-  # not use non transformed covariates
-  j0.num = j0.num[!names(j0.num) %in% tr.names]
-  
-  # not drop data frame to a vector!
-  
-  l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
-  
-  # apply stepAIC
-  llk = tryCatch( {
-    # stepAIC forward, backward, both
-    f.sature <- "y ~ ."
-    if (length(cov0)>0)
-      f.sature <- paste0(f.sature, "-", paste(cov0,collapse="-"))
-    f.sature <- as.formula(f.sature)
-    model.sature=lm(f.sature,l_data)
-    f.cst <- "y ~ 1"
-    if (length(cov1)>0)
-      f.cst <- paste0(f.cst, "+", paste(cov1,collapse="+"))
-    f.cst <- as.formula(f.cst)
-    model.cst=lm(f.cst,l_data)
-    #  model.sature=lm(y~.,l_data)
-    # model.cst=lm(y~1,data=l_data) 
+  #print(direction)
+  #############% stepAIC/stepBIC
+  if (direction != 'full') {
+    # create a data frame with all possible covariates (all transformations)
+    l_data = data.frame(y=y[[1]])
+    # not use non transformed covariates
+    j0.num = j0.num[!names(j0.num) %in% tr.names]
     
-    if (criterion=='BIC') k = nrep*log(N)
-    else if (criterion=='AIC') k = nrep*2
-    else k = nrep*criterion
+    # not drop data frame to a vector!
     
-    if(direction=='backward'){
-      lm.sat=stepAIC(model.sature,direction = 'backward',trace = FALSE,k=k,
-                     scope = list(upper=model.sature,lower=model.cst),steps = steps)
+    l_data = cbind.data.frame(l_data,x,l[,j0.num,drop=FALSE])
+    
+    # apply stepAIC
+    llk = tryCatch( {
+      # stepAIC forward, backward, both
+      f.sature <- "y ~ ."
+      if (length(cov0)>0)
+        f.sature <- paste0(f.sature, "-", paste(cov0,collapse="-"))
+      f.sature <- as.formula(f.sature)
+      model.sature=lm(f.sature,l_data)
+      f.cst <- "y ~ 1"
+      if (length(cov1)>0)
+        f.cst <- paste0(f.cst, "+", paste(cov1,collapse="+"))
+      f.cst <- as.formula(f.cst)
+      model.cst=lm(f.cst,l_data)
+      #  model.sature=lm(y~.,l_data)
+      # model.cst=lm(y~1,data=l_data) 
+      
+      
+      if(direction=='backward'){
+        lm.sat=stepAIC(model.sature, direction='backward', trace = FALSE, k=nrep*pen.coef,
+                       scope=list(upper=model.sature, lower=model.cst), steps=steps)
+      }
+      else {
+        lm.cst=stepAIC(model.cst, direction=direction, trace = FALSE, k=nrep*pen.coef,
+                       scope=list(upper=model.sature, lower=model.cst), steps=steps)
+      }
     }
-    else {
-      lm.cst=stepAIC(model.cst,direction = direction,trace = FALSE,k=k,
-                     scope = list(upper=model.sature,lower=model.cst),steps = steps)
+    , error=function(e) {
+      print('Error in stepAIC')
+      return(-Inf)        }      
+    )
+    ## after tryCatch
+    # Which covariates are used (written in 1-row data frame G)
+    Gnames = names(x)
+    G <- data.frame(matrix(ncol = length(Gnames), nrow = 1))
+    colnames(G) <- Gnames
+    
+    # exact used covariates (with original names of cats), fill in G
+    usedcovariates = names(llk$model)[-1] #names(coef(llk)) 
+    for (i in names(G)){
+      if (i %in% usedcovariates ) G[1,i]=1 else G[1,i]=0
+      if (paste0('log.',i) %in% usedcovariates ) G[1,i]=G[1,i]+2  
+      # = 3 if both log and non-log are used
+    }
+    
+    ll = logLik(llk)/nrep
+    df = length(coef(llk))-1 # except Intercept
+    criterion = -2*ll + df*pen.coef
+    
+    res <- data.frame(ll=round(ll,digits=3), df=df,  criterion=round(criterion,digits=3))
+    j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
+    if (length(j0.num)>0){
+      G[names(l)[j0.num]] <- 0
+      i2 <- (G[names(x)[j0.num]]==2)
+      G[names(l)[j0.num]][i2] <- 1
+      G[names(x)[j0.num]][i2] <- 0
+    }
+    res <- cbind(G==1, res)
+    #  res <- cbind(G, res)
+    
+  #  browser()
+    return(list(model=llk, res=res))
+  } 
+  
+  if (length(tr.names)>0){
+    j.newc <- which((names(x) %in% tr.names))
+    if (length(j.newc)>0)
+      s[j.newc] <- "0:1"
+  }
+  
+  if (!is.null(list.c))
+    s[list.c] <- "0"
+  s <- paste(s,collapse=",")
+  s <- paste0("G <- expand.grid(", s, ")")
+  eval(parse(text=s))
+  if (length(tr.names)>0){
+    jc <- which(!(names(x) %in% tr.names))
+    c.names <- names(x)[jc]
+    for (k in 1:length(j.newc)) {
+      jk <- which(paste0("l",c.names)==tr.names[k])
+      if (length(jk)>0) {
+        j <- which(names(x) == c.names[jk])
+        tj <- which(names(x) == tr.names[k])
+        i0 <- which(G[,j]>0 & G[,tj]>0)
+        G <- G[-i0,]
+      }
     }
   }
-  , error=function(e) {
-    print('Error in stepAIC')
-    return(-Inf)        }      
-  )
-  ## after tryCatch
+  names(G) <- names(x)
   
-  # Which covariates are used (written in 1-row data frame G)
-  Gnames = names(x)
-  G <- data.frame(matrix(ncol = length(Gnames), nrow = 1))
-  colnames(G) <- Gnames
-  
-  # exact used covariates (with original names of cats), fill in G
-  usedcovariates = names(llk$model)[-1] #names(coef(llk)) 
-  for (i in names(G)){
-    if (i %in% usedcovariates ) G[1,i]=1 else G[1,i]=0
-    if (paste0('log.',i) %in% usedcovariates ) G[1,i]=G[1,i]+2  
-    # = 3 if both log and non-log are used
+  if (length(cov0)>0) {
+    i0 <- which(rowSums(G[cov0])==0)
+    G <- G[i0,]
   }
   
-  ll = logLik(llk)/nrep
-  df = length(coef(llk))-1 # except Intercept
-  if(criterion=='BIC') criterion = -2*ll + df*log(N)
-  else criterion = -2*ll + df*2
+  if (length(cov1)>0) {
+    i1 <- which(rowSums(G[cov1]==1)==length(cov1))
+    G <- G[i1,]
+  }
   
-  res <- data.frame(ll=round(ll,digits=3), df=df,  criterion=round(criterion,digits=3))
+  ng <- nrow(G)
+  d  <- ncol(G)
+#  print(c(ng,d))
+  
+  ll <- df <- bic <- bic.cor <- NULL
+  corb <- log(iter^2/(iter^2+3))
+  
+  for (k in 1:ng) {
+    xk <- data.frame(y=y[[1]])
+    Gk <- G[k,,drop=FALSE]
+    j1 <- which(Gk==1)
+    if (length(j1)>0)
+      xk[names(x)[j1]] <- x[j1]
+    j2 <- which(Gk==2)
+    if (length(j2)>0)
+      xk[names(l)[j2]] <- l[j2]
+    llk= tryCatch( {
+      lmk <- lm(y ~ ., data=xk)
+      logLik(lmk)[1]/nrep }
+      , error=function(e) {
+        return(-Inf)        }      
+    )    
+    dfk <- sum(Gk>0)
+    bick <- -2*llk + pen.coef*dfk + any(Gk==2)*0.001
+    ll <- c(ll , llk)
+    df <- c(df, dfk)
+    bic <- c(bic , bick)
+    #  bic.cor <- c(bic.cor , bick-corb*dfk)
+    bic.cor <- c(bic.cor , bick)
+  }
+  
+  bic <- round(bic.cor, digits=3)
+  i0 <- rep(1,ng)
+  mG <- ncol(G)
+  for (k in seq_len(ng-1)) {
+    if (i0[k]==1) {
+      ik <- which(bic[(k):ng]==bic[k]) + k-1
+      sk <- .rowSums(G[ik,]==2, n=length(ik), m=mG)
+      ik0 <- ik[which(sk==0)]
+      if (length(ik0)==0)
+        ik0 <- ik[order(sk)[1]]
+      i0[ik] <- 0
+      i0[ik0] <- 1
+      i0[k] <- 1
+    }
+  }
+  res <- data.frame(ll=round(ll,digits=3), df=df, criterion=bic)
+ # print(res %>% group_by(df) %>% summarize(max(ll)))
+  res <- res[i0==1,]
+  G <- G[i0==1,,drop=FALSE]
+  bic <- bic[i0==1]
+  
+  #ill <- which(!duplicated(ll))
+  eval(parse(text=paste0(names(y)," <- y[[1]]")))
+  obic <- order(bic)
+  k.min <- obic[1]
+  # if (mG==1) 
+  #   Gkmin <- G[k.min]
+  # else
+  Gkmin <- G[k.min,]
+  
+  
+  j1 <- which(Gkmin==1)
+  j2 <- which(Gkmin==2)
+  if (length(j1)>0) {
+    for (k in (1:length(j1)))
+      eval(parse(text=paste0(names(x)[j1[k]]," <- x[[j1[k]]]")))
+  }
+  if (length(j2)>0) {
+    for (k in (1:length(j2)))
+      eval(parse(text=paste0(names(l)[j2[k]]," <- l[[j2[k]]]")))
+  }
+  list.x <- c("1",names(x)[j1],names(l)[j2])
+  form1 <- paste0(names(y), "~",  paste(list.x, collapse = "+")) 
+  eval(parse(text=paste0("lm.min <- lm(",form1,")")))
+  lm.min$covsel=Gkmin
+  
+  #if (names(y)=="log.V2") {print(cbind(G,res)); browser()}
+  
+  nb.model <- min(nb.model, length(bic))
+  res <- res[obic[1:nb.model],]
+  G <- G[obic[1:nb.model],,drop=FALSE]
   j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
   if (length(j0.num)>0){
     G[names(l)[j0.num]] <- 0
@@ -250,145 +384,10 @@ if (direction != 'full') {
     G[names(x)[j0.num]][i2] <- 0
   }
   res <- cbind(G==1, res)
-#  res <- cbind(G, res)
+  if (nb.model==1)
+    res[,c("ll","df","criterion")] <- NULL
   
-  return(list(model=llk, res=res))
-} 
-
-
-if (length(tr.names)>0){
-  j.newc <- which((names(x) %in% tr.names))
-  if (length(j.newc)>0)
-    s[j.newc] <- "0:1"
-}
-
-s <- paste(s,collapse=",")
-s <- paste0("G <- expand.grid(", s, ")")
-eval(parse(text=s))
-
-if (length(tr.names)>0){
-  jc <- which(!(names(x) %in% tr.names))
-  c.names <- names(x)[jc]
-  for (k in 1:length(j.newc)) {
-    jk <- which(paste0("l",c.names)==tr.names[k])
-    if (length(jk)>0) {
-      j <- which(names(x) == c.names[jk])
-      tj <- which(names(x) == tr.names[k])
-      i0 <- which(G[,j]>0 & G[,tj]>0)
-      G <- G[-i0,]
-    }
-  }
-}
-names(G) <- names(x)
-
-if (length(cov0)>0) {
-  i0 <- which(rowSums(G[cov0])==0)
-  G <- G[i0,]
-}
-if (length(cov1)>0) {
-  i1 <- which(rowSums(G[cov1]==1)==length(cov1))
-  G <- G[i1,]
-}
-
-ng <- nrow(G)
-d  <- ncol(G)
-
-ll <- df <- bic <- bic.cor <- NULL
-corb <- log(iter^2/(iter^2+3))
-if (criterion=="BIC")
-  pen.bic <- log(N)
-else if (criterion=="AIC")
-  pen.bic <- 2
-else 
-  pen.bic <- criterion
-
-for (k in 1:ng) {
-  xk <- data.frame(y=y[[1]])
-  Gk <- G[k,,drop=FALSE]
-  j1 <- which(Gk==1)
-  if (length(j1)>0)
-    xk[names(x)[j1]] <- x[j1]
-  j2 <- which(Gk==2)
-  if (length(j2)>0)
-    xk[names(l)[j2]] <- l[j2]
-  llk= tryCatch( {
-    lmk <- lm(y ~ ., data=xk)
-    logLik(lmk)[1]/nrep }
-    , error=function(e) {
-      return(-Inf)        }      
-  )    
-  dfk <- sum(Gk>0)
-  bick <- -2*llk + pen.bic*dfk + any(Gk==2)*0.001
-  ll <- c(ll , llk)
-  df <- c(df, dfk)
-  bic <- c(bic , bick)
-#  bic.cor <- c(bic.cor , bick-corb*dfk)
-  bic.cor <- c(bic.cor , bick)
-}
-
-bic <- round(bic.cor, digits=3)
-i0 <- rep(1,ng)
-mG <- ncol(G)
-
-for (k in seq_len(ng-1)) {
-  if (i0[k]==1) {
-    ik <- which(bic[(k):ng]==bic[k]) + k-1
-    sk <- .rowSums(G[ik,]==2, n=length(ik), m=mG)
-    ik0 <- ik[which(sk==0)]
-    if (length(ik0)==0)
-      ik0 <- ik[order(sk)[1]]
-    i0[ik] <- 0
-    i0[ik0] <- 1
-    i0[k] <- 1
-  }
-}
-res <- data.frame(ll=round(ll,digits=3), df=df, criterion=bic)
-res <- res[i0==1,]
-G <- G[i0==1,,drop=FALSE]
-bic <- bic[i0==1]
-
-#ill <- which(!duplicated(ll))
-eval(parse(text=paste0(names(y)," <- y[[1]]")))
-obic <- order(bic)
-k.min <- obic[1]
-# if (mG==1) 
-#   Gkmin <- G[k.min]
-# else
-Gkmin <- G[k.min,]
-
-
-j1 <- which(Gkmin==1)
-j2 <- which(Gkmin==2)
-if (length(j1)>0) {
-  for (k in (1:length(j1)))
-    eval(parse(text=paste0(names(x)[j1[k]]," <- x[[j1[k]]]")))
-}
-if (length(j2)>0) {
-  for (k in (1:length(j2)))
-    eval(parse(text=paste0(names(l)[j2[k]]," <- l[[j2[k]]]")))
-}
-list.x <- c("1",names(x)[j1],names(l)[j2])
-form1 <- paste0(names(y), "~",  paste(list.x, collapse = "+")) 
-eval(parse(text=paste0("lm.min <- lm(",form1,")")))
-lm.min$covsel=Gkmin
-
-#if (names(y)=="log.V2") {print(cbind(G,res)); browser()}
-
-nb.model <- min(nb.model, length(bic))
-res <- res[obic[1:nb.model],]
-G <- G[obic[1:nb.model],,drop=FALSE]
-j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
-if (length(j0.num)>0){
-  G[names(l)[j0.num]] <- 0
-  i2 <- (G[names(x)[j0.num]]==2)
-  G[names(l)[j0.num]][i2] <- 1
-  G[names(x)[j0.num]][i2] <- 0
-}
-res <- cbind(G==1, res)
-if (nb.model==1)
-  res[,c("ll","df","criterion")] <- NULL
-
-row.names(res) <- 1:nrow(res)
-
-return(list(model=lm.min, res=res))
+  row.names(res) <- 1:nrow(res)
+  
+  return(list(model=lm.min, res=res))
 }

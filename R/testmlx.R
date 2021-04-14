@@ -451,11 +451,11 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
       plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
-      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
+      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d1 <- rbind(d1,dnc)
     }
   }
-  foo <- d1[order(d1$parameter, d1$p.value),]
+  foo <- d1[order(d1$parameter, d1$p.ttest),]
   d1 <- foo[order(foo$in.model, decreasing=TRUE),]
   
   m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)
@@ -470,7 +470,7 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
       lmc <- lm(yj ~ covariates[[nc]])
       pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
       plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
-      dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
+      dnc <- data.frame(random.effect=ne,covariate=nc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d2 <- rbind(d2,dnc)
     }
   }
