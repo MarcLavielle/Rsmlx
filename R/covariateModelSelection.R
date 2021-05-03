@@ -138,7 +138,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   }
   if (is.null(x$rep)) x$rep <- 1
   
-  if (p.max<1) {
+  if (p.max<=1) {
     nx <- setdiff(names(x), c("id","rep"))
     yc <- y[[1]][order(x$rep, x$id)]
     yc <- rowMeans(matrix(yc, ncol=nrep))
@@ -156,13 +156,14 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     #   list.c <- which(pjc<max(pjc))
     # else
  #   pjc <- p.adjust(pjc, method="BH")
-     list.c <- which(pjc>p.max)
+    list.c <- which(pjc>p.max)
     
     cov0 <- c(cov0, nxc[list.c])
     direction <- ifelse(length(setdiff(nx, cov0))<=10,"full",direction)
     # x <- x[, -which(names(x) %in% nx[list.c])]
   } else
     list.c <- NULL
+ 
   
   x$id <- x$rep <- NULL
   nx <- ncol(x)

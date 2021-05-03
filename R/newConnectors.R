@@ -222,7 +222,7 @@ getSimulatedPredictions <- function() {
     parami <- subset(sip, rep==irep)[,col.el]
     fi <- mlx.computePredictions(parami)
     for (j in 1:nout) {
-      df[[j]][pred[j]] <- fi[[j]]
+      df[[j]][pred[j]] <- fi[[pred[j]]]
       df[[j]]["rep"] <- irep
       if (irep==1)
         res[[j]] <- df[[j]]

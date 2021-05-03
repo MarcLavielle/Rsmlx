@@ -382,7 +382,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     
     if (max.iter>0 | nb.model>1) {
       if (!iop.correlation | corr.test) {
-        if (isTRUE(all.equal(cov.names0,cov.names)) &
+        if (isTRUE(all.equal(cov.names0,cov.names)) & (pmax.cov == p.max) &
             isTRUE(all.equal(error.model0,error.model)) &
             isTRUE(all.equal(obs.dist0,obs.dist)) &
             isTRUE(all.equal(correlation.model0,correlation.model))) {
@@ -639,7 +639,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   mlx.loadProject(final.project)
   # if ( !mlx.getLaunchedTasks()[[1]] )   mlx.runScenario()
   
-  res <- list(project=final.project)
+  dt <- proc.time() - ptm
+  res <- list(project=final.project, niter=iter, time=dt["elapsed"])
   if (iop.covariate)
     res <- c(res, list(covariate.model=covariate.model))
   if (iop.correlation)
@@ -647,7 +648,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
   if (iop.error)
     res <- c(res, list(error.model=error.model))
   
-  dt <- proc.time() - ptm
   sink(summary.file, append=TRUE)
   cat("____________________________________________\n")
   cat(paste0("total time: ", round(dt["elapsed"], digits=1),"s\n"))
@@ -763,8 +763,15 @@ formatCovariateModel <- function(m, cov.ini=NULL) {
       colnames(mr) <- cov.names
       if (length(cov.names)==1)
         mr <- as.data.frame(mr)
-      else
-        mr <- as.data.frame(mr[,order(colnames(mr))])
+      else {
+        if (length(param.names)>1)
+          mr <- as.data.frame(mr[,order(colnames(mr))])
+        else {
+          mr <- data.frame(mr)
+          # write.table(mr,"clipboard")
+          # mr <- read.table("clipboard")
+        }
+      }
     } else {
       mr <- list()
       nr <- nrow(m[[1]])
