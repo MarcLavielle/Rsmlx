@@ -95,12 +95,12 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
     
     
     obic <- order(bic)
-     if (obic[1] < length(bic)) {
-      if (pvl[obic[1]+1] < p.min) {
-        ib <- obic[1]+1
-        obic <- c(ib, setdiff(obic, ib))
-      }
-    }
+    #  if (obic[1] < length(bic)) {
+    #   if (pvl[obic[1]+1] < p.min) {
+    #     ib <- obic[1]+1
+    #     obic <- c(ib, setdiff(obic, ib))
+    #   }
+    # }
     
     nb.model <- min(nb.model, length(bic))
     E <- data.frame(ll=ll, df=df, criterion=bic, pv=pvl)

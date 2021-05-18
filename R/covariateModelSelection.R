@@ -155,7 +155,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     # if (length(which(pjc<p.max)) == 0)
     #   list.c <- which(pjc<max(pjc))
     # else
- #   pjc <- p.adjust(pjc, method="BH")
+    #   pjc <- p.adjust(pjc, method="BH")
     list.c <- which(pjc>p.max)
     
     cov0 <- c(cov0, nxc[list.c])
@@ -163,7 +163,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     # x <- x[, -which(names(x) %in% nx[list.c])]
   } else
     list.c <- NULL
- 
+  
   
   x$id <- x$rep <- NULL
   nx <- ncol(x)
@@ -255,7 +255,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     res <- cbind(G==1, res)
     #  res <- cbind(G, res)
     
-  #  browser()
+    #  browser()
     return(list(model=llk, res=res))
   } 
   
@@ -297,27 +297,42 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   
   ng <- nrow(G)
   d  <- ncol(G)
-#  print(c(ng,d))
+  #  print(c(ng,d))
   
   ll <- df <- bic <- bic.cor <- NULL
   corb <- log(iter^2/(iter^2+3))
   
+  iop.mean <- F
+  if (iop.mean) {
+    yg <- colMeans(matrix(y[[1]], nrow=nrep))
+    xg <- x[seq(1,nrow(x),by=nrep),]
+    if (nrow(l)>0)
+      lg <- l[seq(1,nrow(l),by=nrep),]
+    nrepg <- 1
+  } else {
+    yg <- y[[1]]
+    xg <- x
+    lg <- l
+    nrepg <- nrep
+  }
+  
   for (k in 1:ng) {
-    xk <- data.frame(y=y[[1]])
+    xk <- data.frame(y=yg)
     Gk <- G[k,,drop=FALSE]
     j1 <- which(Gk==1)
     if (length(j1)>0)
-      xk[names(x)[j1]] <- x[j1]
+      xk[names(x)[j1]] <- xg[j1]
     j2 <- which(Gk==2)
     if (length(j2)>0)
-      xk[names(l)[j2]] <- l[j2]
+      xk[names(l)[j2]] <- lg[j2]
     llk= tryCatch( {
       lmk <- lm(y ~ ., data=xk)
-      logLik(lmk)[1]/nrep }
+      logLik(lmk)[1]/nrepg }
       , error=function(e) {
         return(-Inf)        }      
     )    
-    dfk <- sum(Gk>0)
+    #dfk <- sum(Gk>0)
+    dfk <- lmk$rank
     bick <- -2*llk + pen.coef*dfk + any(Gk==2)*0.001
     ll <- c(ll , llk)
     df <- c(df, dfk)
@@ -342,7 +357,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     }
   }
   res <- data.frame(ll=round(ll,digits=3), df=df, criterion=bic)
- # print(res %>% group_by(df) %>% summarize(max(ll)))
+  # print(res %>% group_by(df) %>% summarize(max(ll)))
   res <- res[i0==1,]
   G <- G[i0==1,,drop=FALSE]
   bic <- bic[i0==1]
