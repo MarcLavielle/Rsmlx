@@ -248,35 +248,29 @@ generateDataSetResample = function(project, settings, boot.folder){
   cov <- mlx.getCovariateInformation()
   datasetFile <- referenceDataset$dataFile
   refCovInfo  <- mlx.getCovariateInformation()
+  
   # Get the index in mlx.getCovariateInformation()$ of the covariates used in the statistical model
-  indexUsedCat <- NULL
-  for(indexCov in seq_len(length(refCovInfo$name))){
-    if(grepl("categorical", refCovInfo$type[indexCov], fixed=TRUE)){
-      # Is the covariate used in the covariate model
-      isUsed <- F
-      idCov <- which(names(mlx.getIndividualParameterModel()$covariateModel[[1]])==refCovInfo$name[indexCov])
-      for(indexParam in 1:length(mlx.getIndividualParameterModel()$covariateModel)){
-        isUsed <- isUsed||mlx.getIndividualParameterModel()$covariateModel[[indexParam]][idCov] 
-      }
-      if(isUsed){
-        indexUsedCat <- c(indexUsedCat, indexCov)
-      }
+  usedCat <- NULL
+  catcovariates <- names(which(sapply(refCovInfo$type, function(cov) grepl("categorical", cov))))
+  for(catcov in catcovariates){
+    # Is the covariate used in the covariate model
+    isUsed <- any(sapply(mlx.getIndividualParameterModel()$covariateModel,
+                         function(param) param[[catcov]]))
+    
+    if(isUsed){
+      usedCat <- c(usedCat, catcov)
     }
   }
-  
+
   cat("Generating data sets with initial data set resampling...\n")
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE)
   
   # Load the data set
-  dataset <- NULL
-  try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ";", dec = "."), silent = TRUE);sepBoot = ';';
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ",", dec = "."), silent = TRUE);sepBoot = ',';}
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "\t", dec = "."), silent = TRUE);sepBoot = '\t';}
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "", dec = "."), silent = TRUE);sepBoot = ' ';}
-  if(length(dataset[1,])<=1){      
-    message("WARNING: The data set can not be recognized")
-    return(invisible(FALSE))}
-  
+  sepBoot <- .getDelimiter(datasetFile)
+  dataset <- utils::read.table(file = datasetFile, sep = sepBoot,
+                               header = T, dec = ".", check.names=FALSE)
+  names(dataset) <- gsub(" ", "_", names(dataset))
+
   indexID <- which(referenceDataset$headerTypes=="id")
   nameID <- unique(dataset[, indexID])
   nbIndiv <- length(nameID)
@@ -321,8 +315,9 @@ generateDataSetResample = function(project, settings, boot.folder){
   }
   warningAlreadyDisplayed <- F
   
-  for(indexSample in 1:settings$nboot){
+  for(indexSample in seq_len(settings$nboot)){
     datasetFileName <- file.path(exportDir,boot.folder,'data', paste0('dataset_',toString(indexSample),'.csv'))
+
     if(!file.exists(datasetFileName)){
       ##################################################################################################################
       # Generate the data set
@@ -331,7 +326,7 @@ generateDataSetResample = function(project, settings, boot.folder){
       areAllModalitiesdrawn <- F
       while(!areAllModalitiesdrawn){
         sampleIDs <- NULL
-        for(indexValidID in 1:length(validID)){
+        for(indexValidID in seq_along(validID)){
           if(length(validID[[indexValidID]])==1){
             sampleIDs <- c(sampleIDs,  rep(x = validID[[indexValidID]], times = propCAT[indexValidID]) )
           }else{
@@ -341,14 +336,19 @@ generateDataSetResample = function(project, settings, boot.folder){
           sampleIDs <- c(sampleIDs, as.character(samples))
         }
         areAllModalitiesdrawn <- T
-        if(length(indexUsedCat)>0){
+        
+        # We now check not only categorical covariates used in the statistical model
+        # but all categorical covariates in order to cover origin modalities of
+        # transformed categorical covariates
+        usedCat <- catcovariates
+        if(length(usedCat) > 0){
           # Check if all used modalities are in the data set
-          for(iUsedCat in 1:length(indexUsedCat)){
-            catModalities <- unique(refCovInfo$covariate[,indexUsedCat[iUsedCat]+1])
+          for(uCat in usedCat) {
+            catModalities <- unique(refCovInfo$covariate[[uCat]])
             catSamplesModalities <- NULL
-            for(indexSamples in 1:length(sampleIDs)){
-              idIndex = which(refCovInfo$covariate[,1]==sampleIDs[indexSamples])
-              catSamplesModalities <- c(catSamplesModalities, refCovInfo$covariate[idIndex,indexUsedCat[iUsedCat]+1])
+            for(sampleID in sampleIDs){
+              modality <- refCovInfo$covariate[refCovInfo$covariate[,1] == sampleID, uCat]
+              catSamplesModalities <- c(catSamplesModalities, modality)
             }
             areAllModalitiesdrawn <- areAllModalitiesdrawn&(length(catModalities)==length(unique(catSamplesModalities)))
           }
@@ -702,11 +702,13 @@ cleanbootstrap <- function(project,boot.folder){
   bootData <- refData
   mlxHeaders <- refData$header
   mlxHeadersType <- refData$headerTypes
-  
-  if (is.null(smlxHeaders)) {
-    smlxHeaders <- names(utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), header = T))
-  }
 
+  if (is.null(smlxHeaders)) {
+    smlxHeaders <- names(utils::read.table(file = bootFile, nrow = 0,
+                                           sep = .getDelimiter(bootFile), header = T, check.names = FALSE))
+    names(smlxHeaders) <- gsub(" ", "_", names(smlxHeaders))
+    
+  }
   intersectHeaders <- intersect(smlxHeaders, mlxHeaders)
   smlxHeadersType <- rep(NA, length(smlxHeaders))
   for (h in intersectHeaders) {
