@@ -92,12 +92,10 @@ mlx.getContinuousObservationModel <- function() {
 mlx.getCovariateInformation <- function() {
   r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getCovariateInformation()'))
-  
-  # Temporary fix since transformed covariates no longer in r$covariate
   sn <- setdiff(r$name,names(r$covariate))
   if (length(sn)>0) {
     d <- mlx.getProjectSettings()$directory
-    pind <- read.csv(file.path(d,"IndividualParameters/estimatedIndividualParameters.txt"))
+    pind <- read.csv(file.path(d,"individualParameters/estimatedIndividualParameters.txt"))
     if (all(sn %in% names(pind)))
       r$covariate <- merge(r$covariate,pind[,c("id",sn)],by="id")
   }
