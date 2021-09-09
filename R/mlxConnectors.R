@@ -92,8 +92,6 @@ mlx.getContinuousObservationModel <- function() {
 mlx.getCovariateInformation <- function() {
   r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getCovariateInformation()'))
-  
-  # Temporary fix since transformed covariates no longer in r$covariate
   sn <- setdiff(r$name,names(r$covariate))
   if (length(sn)>0) {
     d <- mlx.getProjectSettings()$directory
