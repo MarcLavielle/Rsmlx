@@ -99,9 +99,12 @@ computeBIC <- function(y.obs, y.pred, pen.coef, nb.model) {
                     a.comb2^2+(b.comb2*y.pred)^2, a.expo^2)
     df <- c(1, 1, 2, 2, 1)
   } else {
-    error.model=c("constant","combined2")
-    sigma2 <- cbind(a.cons^2, a.comb2^2+(b.comb2*y.pred)^2)
-    df <- c(1, 2)
+    error.model=c("constant","combined1","combined2")
+    x.min <- nlm(e.min1,c(a.comb2,b.comb2),y.pred,y.obs)
+    a.comb1 <- x.min$estimate[1]
+    b.comb1 <- x.min$estimate[2]
+    sigma2 <- cbind(a.cons^2, (a.comb1+b.comb1*y.pred)^2, a.comb2^2+(b.comb2*y.pred)^2)
+    df <- c(1, 2, 2)
   }
   
   ll <- pen <- bic <- NULL

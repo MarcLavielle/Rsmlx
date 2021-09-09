@@ -72,7 +72,7 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
       r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
                        direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
-      res[[j]][,c("ll","df","criterion")] <- NULL
+   #   res[[j]][,c("ll","df","criterion")] <- NULL
       
       names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
     } else {

@@ -83,6 +83,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     mlx.runPopulationParameterEstimation()
   }
   
+  
   r <- check(project, final.project, covToTransform, paramToUse, covToTest, model, direction,
              ll, linearization)
   covToTransform <- r$covToTransform
@@ -95,8 +96,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   method.ll <- r$method.ll
   
   if (print) {
-    if (!is.null(r$idir)) 
-      cat(paste0('\n\ndirection = "',direction, '" will be used for the covariate search\n\n'))
+    # if (!is.null(r$idir)) 
+    #   cat(paste0('\n\ndirection = "',direction, '" will be used for the covariate search\n\n'))
     cat("____________________________________________\nInitialization:\n")
   }
   
@@ -359,7 +360,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       if (isTRUE(all.equal(cov.names0,cov.names)) &
           isTRUE(all.equal(error.model0,error.model))) 
         corr.test <- TRUE
-      if (seqcc==FALSE & iter>=2)
+      if (seqcc==FALSE & iter>=1)
         corr.test <- TRUE
       
       if (corr.test) {
@@ -392,7 +393,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
         }
       }
       
-      if (!stop.test) {
+      if (!stop.test | nb.model>1) {
         if (print) {
           if (iop.covariate) {
             cat("\nCovariate model:\n")

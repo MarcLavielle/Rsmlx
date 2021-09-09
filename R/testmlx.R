@@ -75,18 +75,12 @@ testmlx <- function(project,
   if (!any(mlx.getIndividualParameterModel()$variability$id))
     stop("\nA least one parameter with random effects is required\n", call.=FALSE)
   
-  
-  
   method.adjust <- adjust
   res <- list()
   if ("covariate" %in% tests)
     res$covariate <- covariateTest(plot=plot, n.sample=n.sample)
-  if ("residual" %in% tests) {
-    if ("occ" %in% mlx.getData()$headerTypes)
-      warning("IOV is not supported for testing the distribution of the residuals", call.=FALSE)
-    else
-      res$residual <- residualTest(plot=plot, method.adjust=method.adjust, n.sample=n.sample)
-  }
+  if ("residual" %in% tests)
+    res$residual <- residualTest(plot=plot, method.adjust=method.adjust, n.sample=n.sample)
   if ("randomEffect" %in% tests)
     res$randomEffect <- randomEffectTest(plot=plot, method.adjust = method.adjust, n.sample=n.sample)
   if ("correlation" %in% tests)
@@ -370,12 +364,6 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   if (!is.null(project)) 
     mlx.loadProject(project)
   
-  g <- mlx.getData()
-  if ("occ" %in% g$headerTypes)
-    occ.name <- g$header[which(g$headerTypes=="occ")]
-  else
-    occ.name <- NULL
-  
   cov.info <- mlx.getCovariateInformation()
   if (is.null(cov.info)) return(list())
   cov.names <- cov.info$name
@@ -387,10 +375,7 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   covariates <- cov.info$covariate
   covariates[cat.cov] <-  lapply(covariates[cat.cov],as.factor)
   #covariates["id"] <- NULL
-  if (!is.null(occ.name)) 
-    covariates <- covariates[order(covariates[["id"]],covariates[[occ.name]]),]
-  else
-    covariates <- covariates[order(covariates[["id"]]),]
+  covariates <- covariates[order(covariates$id),]
   
   # sim.randeff <- mlx.getSimulatedRandomEffects()
   # if (is.null(sim.randeff$rep)) 
@@ -431,13 +416,8 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     stop("the number of replicates n.sample should be greater than or equal to 1", call. = FALSE)
   if (n.sample>nrep)
     stop(paste0("the number of replicates should be less than or equal to  ", nrep), call. = FALSE)
-  if (!is.null(occ.name)) {
-    m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",occ.name, var.param)]
-    m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",occ.name,var.randeff)]
-  } else {
-    m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",var.param)]
-    m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",var.randeff)]
-  }
+  m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",var.param)]
+  m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",var.randeff)]
   
   g=mlx.getIndividualParameterModel()$covariateModel
   lnj <- NULL
@@ -458,17 +438,9 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     m.indparam[[nj]] <- yj
     lnj <- c(lnj, n.yj)
   }
-  if (!is.null(occ.name)) {
-    m.indparam <- aggregate(m.indparam[var.param],by=list(m.indparam[["id"]], m.indparam[[occ.name]]),mean)
-    m.indparam <- m.indparam[order(m.indparam[,1],m.indparam[,2]),]
-    m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff[["id"]], m.randeff[[occ.name]]),mean)
-    m.randeff <- m.randeff[order(m.randeff[,1],m.randeff[,2]),]
-  } else {
-    m.indparam <- aggregate(m.indparam[var.param],by=list(m.indparam$id),mean)
-    m.indparam <- m.indparam[order(m.indparam[,1]),]
-    m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)
-    m.randeff <- m.randeff[order(m.randeff[,1]),]
-  }    
+  m.indparam <- aggregate(m.indparam[var.param],list(m.indparam$id),mean)
+  m.indparam <- m.indparam[order(m.indparam[,1]),]
+  
   d1 <- NULL  
   j <- 0
   for (nj in var.param) {
@@ -486,6 +458,8 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   foo <- d1[order(d1$parameter, d1$p.ttest),]
   d1 <- foo[order(foo$in.model, decreasing=TRUE),]
   
+  m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)
+  m.randeff <- m.randeff[order(m.randeff[,1]),]
   
   d2 <- NULL
   for (ne in var.randeff) {
