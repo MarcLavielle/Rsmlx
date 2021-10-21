@@ -177,8 +177,8 @@ mlx.runConditionalModeEstimation <- function() {
 mlx.runStandardErrorEstimation <- function(linearization=NULL) {
   .hiddenCall(paste0('r <- lixoftConnectors::runStandardErrorEstimation(linearization = ',linearization,')'))
 }
-mlx.runScenario <- function(wait=TRUE) {
-  .hiddenCall(paste0('r <- lixoftConnectors::runScenario(wait = ',wait,')'))
+mlx.runScenario <- function() {
+  .hiddenCall('r <- lixoftConnectors::runScenario()')
 }
 mlx.setInitialEstimatesToLastEstimates <- function(fixedEffectsOnly = F) {
   .hiddenCall(paste0('r <- lixoftConnectors::setInitialEstimatesToLastEstimates(fixedEffectsOnly=fixedEffectsOnly)'))

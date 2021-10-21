@@ -230,7 +230,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   summary <- c(date(),'\n');  t_strat <- proc.time(); referenceOFV <- NULL;
   
   # Make a first run
-  bScenario <- mlx.runScenario(TRUE); nbRun = nbRun+1;
+  bScenario <- mlx.runScenario(); nbRun = nbRun+1;
   referenceOFV <- mlx.getEstimatedLogLikelihood()[[1]][indexLL]
   
   #############################################################################################################################
@@ -764,7 +764,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
 # Run the scenario and get the OFV
 #############################################################################################################################
 .getOFV <- function(indexLL){
-  bScenario <- mlx.runScenario(TRUE);
+  bScenario <- mlx.runScenario();
   
   if(bScenario){# The run is ok
     OFValue = mlx.getEstimatedLogLikelihood()[[1]][indexLL]
