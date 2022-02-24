@@ -22,7 +22,9 @@ llp <-function(project, parameters = NULL, settings=NULL){
   # Check if linearization is possible
   if(method=="lin"){useLinearization <- T}else{useLinearization <- F}
   # Check if linearization is possible
-  for(indexObservationModel in 1:length(mlx.getObservationInformation()$name)){useLinearization <- useLinearization & (mlx.getObservationInformation()$type[[indexObservationModel]]=="continuous")}
+  for (indexObservationModel in seq_along(mlx.getObservationInformation()$name)) {
+    useLinearization <- useLinearization & (mlx.getObservationInformation()$type[[indexObservationModel]]=="continuous")
+  }
   
   # Define the scenario
   currentScenario <- mlx.getScenario()
