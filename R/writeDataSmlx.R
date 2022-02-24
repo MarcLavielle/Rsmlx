@@ -19,8 +19,8 @@
 #' @param mapObservation (\emph{name vector}) (\emph{optional}) mapping of observation name
 #'
 #' @return a dataframe if one single simulation, a list of dataframe if multiple replicates.
-writeDataSmlx <- function(filename = "simulated_dataset.csv",
-                      sep = ",", ext = "csv", nbdigits = 5, mapObservation = NULL) {
+writeDataSmlx <- function(filename = "simulated_dataset.csv", sep = ",",
+                          ext = "csv", nbdigits = 5, mapObservation = NULL) {
   if (is.null(filename)) filename = "simulated_dataset.csv"
   if (! is.null(.getFileExt(filename))) ext <- .getFileExt(filename)
 
@@ -66,11 +66,11 @@ writeDataSmlx <- function(filename = "simulated_dataset.csv",
       if (!is.null(treatment)) treatrep <- subset(treatment, rep == r)
       if (!is.null(regressor)) regrep <- subset(regressor, rep == r)
     }
-    rdata <- .compileData(simrep, treatrep, regrep, covariates, groups)
+    rdata <- .compileData(simrep, treatrep, regrep, covariates, groups, mapObservation)
     rdata <- rdata[names(rdata) != "rep"]
 
     # rename observation name
-    rdata <- .renameColumns(rdata, names(mapObservation), unname(mapObservation))
+    # rdata <- .renameColumns(rdata, names(mapObservation), unname(mapObservation))
     res[[paste0("rep", r)]] <- rdata
   }
   
@@ -104,9 +104,9 @@ writeDataSmlx <- function(filename = "simulated_dataset.csv",
   return(res)
 }
 
-.compileData <- function(simulation, treatment, regressor, covariates, groups) {
+.compileData <- function(simulation, treatment, regressor, covariates, groups, mapObservation) {
   # Create simulation dataset
-  simData <- .convertSimulations(simulation)
+  simData <- .convertSimulations(simulation, mapObservation)
   if (length(groups) == 1) simData$group <- groups[[1]]$name
 
   # Create covariates dataset
@@ -178,15 +178,15 @@ writeDataSmlx <- function(filename = "simulated_dataset.csv",
 }
 
 # Create dataset with simulations associated to each group
-.convertSimulations <- function(simulation) { 
+.convertSimulations <- function(simulation, mapObservation) { 
   obsnames <- .getObservationNames()
   simData <- simulation$res[[obsnames[1]]]
   if (length(obsnames) > 1) {
-    simData$ytype <- 1
+    simData$ytype <- mapObservation[[obsnames[1]]]
     simData <- .renameColumns(simData, obsnames[1], "y")
     for (i in seq(2, length(obsnames))) {
       dataobs <- simulation$res[[obsnames[i]]]
-      dataobs$ytype <- i
+      dataobs$ytype <- mapObservation[[obsnames[i]]]
       dataobs <- .renameColumns(dataobs, obsnames[i], "y")
       simData <- rbind(simData, dataobs)
     }
@@ -207,7 +207,7 @@ writeDataSmlx <- function(filename = "simulated_dataset.csv",
     if (is.element("name", names(cov))) {
       gcovnames <- unique(cov$name)
     } else {
-      gcovnames <- setdiff(names(cov), subjocc)
+      gcovnames <- setdiff(names(cov), c("ID", subjocc))
     }
     gsim <- simulation$IndividualParameters[[gname]]
     gsim <- subset(gsim, select = c(subjocc, gcovnames))

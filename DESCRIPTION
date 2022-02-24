@@ -1,26 +1,28 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 3.0.4
+Version: 4.0.1
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
     person( "Clémence", "Pinaud", role = c("ctb"), email = "Clemence.Pinaud@lixoft.com" ))
 Description: Provides methods for model building and model evaluation of mixed effects models using 
-    'Monolix' <http://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
+    'Monolix' <https://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
     modeling that must have been installed in order to use 'Rsmlx'. 
     Among other tasks, 'Rsmlx' provides a powerful tool for automatic PK model building, performs 
     statistical tests for model assessment, bootstrap simulation and likelihood profiling for 
     computing confidence intervals. 'Rsmlx' also proposes several automatic covariate search methods for 
     mixed effects models. 
 URL: http://rsmlx.webpopix.org
-SystemRequirements: 'Monolix' (<http://monolix.lixoft.com>)
+SystemRequirements: 'Monolix' (<https://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
-Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra
+Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr
 Suggests: mlxR, 
 Collate: mlxConnectors.R
          bootstrap.R
          buildmlx.R
+         buildVar.R
+         buildAll.R
          confintmlx.R
          correlationModelSelection.R
          covariateModelSelection.R
@@ -41,4 +43,4 @@ Copyright: Inria
 NeedsCompilation: no
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.1.9000
+RoxygenNote: 7.1.2

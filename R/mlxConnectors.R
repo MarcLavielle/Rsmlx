@@ -25,6 +25,18 @@ mlx.getStructuralModel <- function() {
   return(r)
 }
 
+mlx.getTests <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getTests()'))
+  return(r)
+}
+
+mlx.getSAEMiterations <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getSAEMiterations()'))
+  return(r)
+}
+
 mlx.getPopulationParameterInformation <- function() {
   r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getPopulationParameterInformation()'))
@@ -120,10 +132,10 @@ mlx.getEstimatedRandomEffects <- function() {
 mlx.getEstimatedStandardErrors <- function() {
   r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getEstimatedStandardErrors()'))
-  for (k in 1:length(r)) {
-    if (is.list(r[[k]]))
-      r[[k]] <- unlist(r[[k]])
-  }
+  # for (k in 1:length(r)) {
+  #   if (is.list(r[[k]]))
+  #     r[[k]] <- unlist(r[[k]])
+  # }
   return(r)
 }
 mlx.getGeneralSettings <- function() {
@@ -177,8 +189,8 @@ mlx.runConditionalModeEstimation <- function() {
 mlx.runStandardErrorEstimation <- function(linearization=NULL) {
   .hiddenCall(paste0('r <- lixoftConnectors::runStandardErrorEstimation(linearization = ',linearization,')'))
 }
-mlx.runScenario <- function(wait=TRUE) {
-  .hiddenCall(paste0('r <- lixoftConnectors::runScenario(wait = ',wait,')'))
+mlx.runScenario <- function() {
+  .hiddenCall('r <- lixoftConnectors::runScenario()')
 }
 mlx.setInitialEstimatesToLastEstimates <- function(fixedEffectsOnly = F) {
   .hiddenCall(paste0('r <- lixoftConnectors::setInitialEstimatesToLastEstimates(fixedEffectsOnly=fixedEffectsOnly)'))
@@ -206,6 +218,9 @@ mlx.computePredictions <- function(a) {
 }
 mlx.setCovariateModel <- function(a) {
   .hiddenCall(paste0('r <- lixoftConnectors::setCovariateModel(a)'))
+}
+mlx.setIndividualParameterModel <- function(a) {
+  .hiddenCall(paste0('lixoftConnectors::setIndividualParameterModel(a)'))
 }
 
 
@@ -246,8 +261,14 @@ mlx.saveProject <- function(projectFile=NULL) {
   .hiddenCall(paste0('r <- lixoftConnectors::saveProject(projectFile = projectFile)'))
 }
 
-mlx.runPopulationParameterEstimation <- function() {
-  .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation()'))
+mlx.runPopulationParameterEstimation <- function(parameters=NULL) {
+  r <- NULL
+  if (as.numeric(substr(packageVersion("lixoftConnectors"),1,4))>=2021 & !is.null(parameters))
+  .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation(parameters=parameters)'))
+  else
+    .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation()'))
+  .hiddenCall(paste0('r0 <- lixoftConnectors::runConditionalModeEstimation()'))
+  return(r)
 }
 
 mlx.runLogLikelihoodEstimation <- function(linearization = FALSE) {

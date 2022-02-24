@@ -215,7 +215,7 @@ llp <-function(project, parameters = NULL, settings=NULL){
     eval(parse(text=paste0('lixoftConnectors::setPopulationParameterInformation(',paramName,' = list(method = "FIXED", initialValue =',as.double(paramValue),'))')))
   }
   # Run the scenario and get the LL
-  mlx.runScenario(TRUE)
+  mlx.runScenario()
   return(as.double(mlx.getEstimatedLogLikelihood()[[1]][1]))
 }
 

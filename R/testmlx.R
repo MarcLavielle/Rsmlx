@@ -283,13 +283,24 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   var.randeff <- paste0("eta_",var.param)
   col.el <- which((names(sim.randeff) %in% var.randeff))
   nel <- length(col.el)
-  if (nel>1) {
+  list.cor <- mlx.getIndividualParameterModel()$correlationBlocks$id
+  
+   if (nel>1) {
     nref <- names(sim.randeff)
     res.cor <- NULL
     for (i1 in (1:(nel-1))) {
       for (i2 in ((i1+1):nel)) {
         refi1 <- matrix(sim.randeff[,col.el[i1]],ncol=nrep)
         refi2 <- matrix(sim.randeff[,col.el[i2]],ncol=nrep)
+        nref1 <- nref[col.el[i1]]
+        nref2 <- nref[col.el[i2]]
+        in.model <- F
+        if (length(list.cor)>0) {
+          for (k.cor in 1:length(list.cor)) {
+            if (gsub("eta_","",nref1) %in% list.cor[[k.cor]] & gsub("eta_","",nref2) %in% list.cor[[k.cor]])
+              in.model <- T
+          }
+        }
         ri <- rowSums(refi1*refi2)
         ci <- cor(matrix(refi1,ncol=1),matrix(refi2,ncol=1))
         pv <- signif(t.test(ri)$p.value, 4)
@@ -297,9 +308,9 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
         # plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
         # dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
         if (is.null(res.cor))
-          res.cor <- data.frame(randomEffect.1=nref[col.el[i1]], randomEffect.2=nref[col.el[i2]], correlation=ci, p.value=pv)
+          res.cor <- data.frame(randomEffect.1=nref1, randomEffect.2=nref2, correlation=ci, p.value=pv, in.model=in.model)
         else {
-          resi <- data.frame(randomEffect.1=nref[col.el[i1]], randomEffect.2=nref[col.el[i2]], correlation=ci, p.value=pv)
+          resi <- data.frame(randomEffect.1=nref1, randomEffect.2=nref2, correlation=ci, p.value=pv, in.model=in.model)
           res.cor <- rbind(res.cor, resi)
         }
       }

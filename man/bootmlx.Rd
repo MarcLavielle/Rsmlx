@@ -38,7 +38,7 @@ within the subject (in case of IOV), it will not be taken into account.
 (default = FALSE)
 \item \code{level} level of the bootstrap confidence intervals of the population parameters
 (default = 0.90)
-#' \item \code{seed} seed for the generation of the data sets (default = NA)
+\item \code{seed} seed for the generation of the data sets (default = NA)
 }}
 }
 \value{

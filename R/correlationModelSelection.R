@@ -1,13 +1,16 @@
-correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, 
-                                      seqcc=TRUE, p.min=1e-4) {
+correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, seqmod=TRUE) {
   
   # if (criterion=="BICc")  criterion="BIC"
   
   p.name <- mlx.getIndividualParameterModel()$name
+  id <- NULL
+  e <- e0 %>% arrange(rep, id)
   if (is.null(e)) {
     project.folder <- mlx.getProjectSettings()$directory
     sp.file <- file.path(project.folder,"IndividualParameters","simulatedRandomEffects.txt")
     e <- read.res(sp.file)
+    # 
+    # browser()
     if (is.null(e$rep)) 
       e$rep <- 1
     eta.names <- paste0("eta_",p.name)
@@ -16,7 +19,6 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
   # else {
   #   e$rep <- mlx.getSimulatedRandomEffects()$rep
   # }
-  
   nrep <- max(e$rep)
   N <- nrow(e)/nrep
   e$rep <- e$id <- NULL
@@ -35,8 +37,8 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
         refi1 <- matrix(e[,i1],ncol=nrep)
         refi2 <- matrix(e[,i2],ncol=nrep)
         ri <- rowSums(refi1*refi2)
-        Ci[i1, i2] <- Ci[i2, i1] <- cor(matrix(refi1,ncol=1),matrix(refi2,ncol=1))
-        pv[i1, i2] <- pv[i2, i1] <- signif(t.test(ri)$p.value, 4)
+        Ci[i1, i2] <- Ci[i2, i1] <- cor(rowMeans(refi1),rowMeans(refi2))
+        pv[i1, i2] <- pv[i2, i1] <- signif(t.test(ri)$p.value)
       }   
     }
     C <- (C + alpha.cor*diag(diag(C)))/(1+alpha.cor)
@@ -47,12 +49,16 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
     row.names(Ck) <- names(e)
     colnames(Ck) <- names(e)
     
-    A <- abs(C)
+    Cp <- 1-pv
+    Cp <- Cp - diag(diag(Cp)) + diag(rep(1, nrow(Cp)))
+    
+    A <- abs(Cp)
     A[lower.tri(A, diag=T)] <- 0
     b <- 1:n.param
     test <- FALSE
     CC <- PP <- list(Ck)
     k <- 1
+
     while (test==F){
       k <- k+1
       m <- which(A == max(A), arr.ind = TRUE)
@@ -76,12 +82,11 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
       PP[[k]] <- Pk
     }
     bic <- -2*ll + pen.coef*df
-    
     pvl <- 1
     for (k in (2:length(PP))) 
       pvl <- c(pvl, min(PP[[k]][which(PP[[k-1]]==0 & PP[[k]]>0)]))
     
- #   if (seqcc==TRUE) {
+    if (seqmod) {
       if (length(corr0)==0)
         bl=1
       else
@@ -91,8 +96,7 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
       bm <- sum(bl*(bl+1)/2)
       bic[df>bm] <- Inf
       pvl[df>bm] <- 1
-      # }
-    
+    }
     
     obic <- order(bic)
     #  if (obic[1] < length(bic)) {
@@ -104,12 +108,12 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
     
     nb.model <- min(nb.model, length(bic))
     E <- data.frame(ll=ll, df=df, criterion=bic, pv=pvl)
-   # print(E)
+    # print(E)
     E <- E[obic[1:nb.model],]
     row.names(E) <- 1:nrow(E)
     # rct <- cortest(C,e,pen.bic,n.param,nrep)
     
-    correlation.model <- list()
+    correlation.model <- vector(mode = "list", length = nb.model)
     for (j in 1:nb.model) {
       Cj <- CC[[obic[j]]]
       u <- rep(1,n.param)
@@ -127,10 +131,9 @@ correlationModelSelection <- function(e=NULL, pen.coef=NULL, nb.model=1, corr0=N
       if (length(cm)>0) {
         for (k in 1:length(cm))
           cm[[k]] <- e.name[cm[[k]]]
+        correlation.model[[j]] <- lapply(cm, sort)
       }
-      correlation.model[[j]] <- cm
     }
-    
     if (nb.model==1) {
       return(correlation.model[[1]])
     } else {

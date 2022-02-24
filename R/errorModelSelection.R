@@ -14,6 +14,12 @@ errorModelSelection <- function(project=NULL, pen.coef=NULL, nb.model=1) {
   n.out <- length(ic)
   pred <- getSimulatedPredictions()
   
+  # while( (sum(apply(pred[[1]],2,is.nan))+sum(apply(pred[[1]],2,is.na)) + sum(apply(pred[[1]],2,is.infinite))) > 0) {
+  #   browser()
+  #   runConditionalDistributionSampling()
+  #   pred <- getSimulatedPredictions()
+  # }
+  
   # obs.model <- mlx.getContinuousObservationModel()
   # obs.names <- mlx.getData()$observationNames
   # fit.info <- mlx.getFit()
@@ -27,16 +33,33 @@ errorModelSelection <- function(project=NULL, pen.coef=NULL, nb.model=1) {
   # n.out <- length(i.contModel)
   #d <- mlx.getObservationInformation()
   
+  
   if (nb.model==1) {
     res.errorModel <- NULL
     for (i.out in (1:n.out)) {
+
       # name.predi <- obs.model$prediction[[i.contModel[i.out]]]
       # name.obsi <- names(obs.model$prediction[i.contModel[i.out]])
       # y.obsi <- d[[name.obsi]][[name.obsi]]
       # y.predi <- pred[[name.predi]][[name.predi]]
       y.obsi <- y.obs[[y.name[i.out]]][[y.name[i.out]]]
       y.predi <- pred[[y.pred[i.out]]][[y.pred[i.out]]]
-      resi <- computeBIC(y.obs=y.obsi, y.pred=y.predi, pen.coef=pen.coef[i.out], nb.model=nb.model)
+      test <- T
+      kt <- 0
+      while(test | kt<10) {
+        kt <- kt+1
+        resi <- tryCatch(computeBIC(y.obs=y.obsi, y.pred=y.predi, pen.coef=pen.coef[i.out], nb.model=nb.model),
+                         error = function(e) e)
+        if (inherits(resi, "error")) {
+          print("error !!!")
+          mlx.saveProject("foo.mlxtran")
+          mlx.loadProject("foo.mlxtran")
+          pred <- getSimulatedPredictions()
+          y.predi <- pred[[y.pred[i.out]]][[y.pred[i.out]]]
+        } else {
+          test <- F
+        }
+      }
       res.errorModel <- c(res.errorModel, as.character(resi[['error.model']]))
       names(res.errorModel)[i.out] <- y.name[i.out]
     }
@@ -49,7 +72,17 @@ errorModelSelection <- function(project=NULL, pen.coef=NULL, nb.model=1) {
       # y.predi <- pred[[name.predi]][[name.predi]]
       y.obsi <- y.obs[[y.name[i.out]]][[y.name[i.out]]]
       y.predi <- pred[[y.pred[i.out]]][[y.pred[i.out]]]
-      res.errorModel[[i.out]] <- computeBIC(y.obs=y.obsi,y.pred=y.predi, pen.coef=pen.coef[i.out], nb.model=nb.model)
+      resi <- tryCatch(computeBIC(y.obs=y.obsi, y.pred=y.predi, pen.coef=pen.coef[i.out], nb.model=nb.model),
+                       error = function(e) e)
+      if (inherits(resi, "error")) {
+        print("error !!!")
+        mlx.saveProject("foo.mlxtran")
+        mlx.loadProject("foo.mlxtran")
+        pred <- getSimulatedPredictions()
+        y.predi <- pred[[y.pred[i.out]]][[y.pred[i.out]]]
+        resi <- computeBIC(y.obs=y.obsi, y.pred=y.predi, pen.coef=pen.coef[i.out], nb.model=nb.model)
+      }
+      res.errorModel[[i.out]] <- resi
       names(res.errorModel)[i.out] <- y.name[i.out]
     }
   }
@@ -80,37 +113,41 @@ computeBIC <- function(y.obs, y.pred, pen.coef, nb.model) {
     y.pred <- y.pred[iy]
   }
   
-  a.cons <- sqrt(mean((y.obs-y.pred)^2))
+  # if (sum(is.na(y.pred))+sum(is.nan(y.pred))>0)
+  #   browser()
+  a.cons <- sqrt(mean((y.obs-y.pred)^2, na.rm=T))
   
-  x.min <- nlm(e.min2,c(a.cons,0.2),y.pred,y.obs)
+  x.min <- nlm(e.min2,c(a.cons/10,0.2),y.pred,y.obs)
   a.comb2 <- abs(x.min$estimate[1])
   b.comb2 <- abs(x.min$estimate[2])
   
-  if (y.pos == TRUE ) {
+  x.min <- nlm(e.min1,c(a.comb2,b.comb2),y.pred,y.obs)
+  a.comb1 <- x.min$estimate[1]
+  b.comb1 <- x.min$estimate[2]
+
+  x.min <- nlm(e.min2,c(a.comb1,b.comb1),y.pred,y.obs)
+  a.comb2 <- abs(x.min$estimate[1])
+  b.comb2 <- abs(x.min$estimate[2])
+
+    if (y.pos == TRUE ) {
     b.prop <- sqrt(mean(((y.obs/y.pred-1)^2)))
-    x.min <- nlm(e.min1,c(a.comb2,b.comb2),y.pred,y.obs)
-    a.comb1 <- x.min$estimate[1]
-    b.comb1 <- x.min$estimate[2]
     
     a.expo <- sqrt(mean((log(y.obs)-log(y.pred))^2))
     
     error.model=c("constant", "proportional", "combined1","combined2","exponential")
     sigma2 <- cbind(a.cons^2, (b.prop*y.pred)^2, (a.comb1+b.comb1*y.pred)^2, 
                     a.comb2^2+(b.comb2*y.pred)^2, a.expo^2)
+    sigma2 <- cbind(a.cons^2, (b.comb2*y.pred)^2, (a.comb1+b.comb1*y.pred)^2, 
+                    a.comb2^2+(b.comb2*y.pred)^2, a.expo^2)
     df <- c(1, 1, 2, 2, 1)
   } else {
     error.model=c("constant","combined1","combined2")
-    x.min <- nlm(e.min1,c(a.comb2,b.comb2),y.pred,y.obs)
-    a.comb1 <- x.min$estimate[1]
-    b.comb1 <- x.min$estimate[2]
     sigma2 <- cbind(a.cons^2, (a.comb1+b.comb1*y.pred)^2, a.comb2^2+(b.comb2*y.pred)^2)
     df <- c(1, 2, 2)
   }
   
   ll <- pen <- bic <- NULL
-  
-  ll <- NULL
-  for (k in 1:length(error.model)) {
+    for (k in 1:length(error.model)) {
     if (error.model[k] == "exponential")
       ll <- c(ll, - 0.5*sum( (log(y.obs)-log(y.pred))^2/(a.expo^2) + log(2*pi*(a.expo^2)) + 2*log(y.obs) )/nrep)
     else

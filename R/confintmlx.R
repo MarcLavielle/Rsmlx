@@ -104,21 +104,20 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   if (!linearization) {
     if (!("stochasticApproximation" %in% launched.tasks[["standardErrorEstimation"]]) ) {
       mlx.runStandardErrorEstimation(linearization=FALSE)
-      cat("Estimation of the standard errors ... \n")
     }    
-    se <- as.numeric(unlist(mlx.getEstimatedStandardErrors()$stochasticApproximation))
-    names(se) <- names(mlx.getEstimatedStandardErrors()$stochasticApproximation)
+    se <- mlx.getEstimatedStandardErrors()$stochasticApproximation$se
+    names(se) <- mlx.getEstimatedStandardErrors()$stochasticApproximation$parameter
   } else {
     if (!("linearization" %in% launched.tasks[["standardErrorEstimation"]])) {
-      cat("Estimation of the standard errors ... \n")
       mlx.runStandardErrorEstimation(linearization=TRUE)
     }
-    se <- mlx.getEstimatedStandardErrors()$linearization
+    se <- mlx.getEstimatedStandardErrors()$linearization$se
+    names(se) <- mlx.getEstimatedStandardErrors()$linearization$parameter
   }
+  
   
   param <- mlx.getEstimatedPopulationParameters()
   pname <- names(param)
-  
   io <- match(pname, names(se))
   se <- se[io]
   

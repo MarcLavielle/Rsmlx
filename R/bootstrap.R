@@ -21,7 +21,7 @@
 #' (default = FALSE)
 #' \item \code{level} level of the bootstrap confidence intervals of the population parameters
 #' (default = 0.90)
-#' #' \item \code{seed} seed for the generation of the data sets (default = NA)
+#' \item \code{seed} seed for the generation of the data sets (default = NA)
 #' }
 #' @return a data frame with the bootstrap estimates
 #' @examples
@@ -48,9 +48,12 @@
 #' @importFrom graphics boxplot lines par plot
 #' @importFrom stats quantile
 #' @export
-bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE, tasks=c(populationParameterEstimation=TRUE), 
+bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
+                    tasks=c(populationParameterEstimation=TRUE), 
                     settings = NULL){
 
+  params <- as.list(match.call(expand.dots=T))[-1]
+  
   monolixPath <- mlx.getLixoftConnectorsState()$path
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   
@@ -61,69 +64,58 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  projectName <- basename(tools::file_path_sans_ext(project))
   
-  # Check and initialize the settings
-  invalidParametricSettings <- intersect(c("N", "covStrat"), names(settings))
-  if (parametric == TRUE & length(invalidParametricSettings)) {
-    if (length(invalidParametricSettings) > 1) {
-      message <- paste0(paste(invalidParametricSettings, collapse = ", "), " arguments are ignored.")
-    } else {
-      message <- paste0(invalidParametricSettings, " argument is ignored.")
-    }
-    warning("In case of parametric boostrap, ", message, call. = FALSE)
-    settings <- settings[! names(settings) %in% c("N", "covStrat")]
-    if (!length(settings)) settings <- NULL
+  # Check and initialize inputs ------------------------------------------------
+  if (is.element("dataFolder", names(params)) & (is.element("nboot", names(params)))) {
+    stop("DataFolder and nBoot can not be used both at the same time.", call.=F)
   }
-  if(!is.null(settings)){
-    if(!.checkBootstrapInput(inputName = "settings", inputValue = settings)){return(invisible(FALSE))}
-  }
-  # Check and initialize the settings
-  if(!.checkBootstrapInput(inputName = "nboot", inputValue = nboot)){return(invisible(FALSE))}
-  if(!.checkBootstrapInput(inputName = "parametric", inputValue = parametric)){return(invisible(FALSE))}
-  if(!.checkBootstrapInput(inputName = "tasks", inputValue = tasks)){return(invisible(FALSE))}
+
+  .check_strict_pos_integer(nboot, "nboot")
+  if (is.null(nboot)) nboot <- 100
+  .check_bool(parametric, "parametric")
+  .check_in_vector(names(tasks), "tasks names", names(mlx.getScenario()$tasks))
+  .check_bool(tasks, "tasks")
   tasks['populationParameterEstimation'] <- TRUE
-  if(is.null(settings$plot)){ plot.res <- FALSE }else{ plot.res <- settings$plot; settings$plot<- NULL}
-  if(is.null(settings$level)){ level <- 0.90 }else{ level <- settings$level; settings$level<- NULL}
+
+  # check and initialize the settings
+  settings <- .initBootstrapSettings(settings, parametric)
   settings$nboot <- nboot
-  if(is.null(settings$nboot)){ settings$nboot <- 100 }
-  if(is.null(settings$N)){ settings$N <- NA}
-  if(is.null(settings$newResampling)){ settings$newResampling <- FALSE}
-  if(is.null(settings$covStrat)){settings$covStrat <- NA}
-  if(is.null(settings$seed)){settings$seed <- NA}
+  plot.res <- settings$plot
+  settings$plot<- NULL
+  level <- settings$level
   
-  if(!is.null(dataFolder)){
-    if(!(nboot==100)){
-      message("WARNING: Both dataFolder and nBoot can not be used both at the same time")
-      return(invisible(FALSE))
-    }
+  settings$level<- NULL
+  
+  if (!is.null(dataFolder)) {
     dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
-    if(length(dataFiles)>0){
+    if (length(dataFiles) > 0) {
       settings$nboot <- length(dataFiles)
       settings$newResampling <- FALSE
-    }else{
-      message("WARNING: Folder ",dataFolder,' does not exist or does not contain any data set')
-      return(invisible(FALSE))
+    } else {
+      stop("Folder ", dataFolder, " does not exist or does not contain any data set.", call.=F)
     }
-  }else{
-    #dataFolder <- paste0(exportDir,'/bootstrap/')
-  }
-  
-  # Prepare all the output folders
-  param <- mlx.getPopulationParameterInformation()$name[which(mlx.getPopulationParameterInformation()$method!="FIXED")]
-  
-  
-  if(is.null(dataFolder)){
+    
+    dataFolderToUse = dataFolder
+    boot.folder = '/bootstrap/'
+    if (!dir.exists(file.path(exportDir, boot.folder))) {
+      dir.create(file.path(exportDir, boot.folder))
+    }
+  } else {
+    # Prepare all the output folders
+
     # generate data sets from the initial data set
-    if(parametric)
+    if (parametric) {
       boot.folder = '/bootstrap/parametric/'
-    else
+    } else {
       boot.folder = '/bootstrap/nonParametric/'
-    if(settings$newResampling){
-      cleanbootstrap(project,boot.folder)
+    }
+    if (settings$newResampling) {
+      cleanbootstrap(project, boot.folder)
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
-    if(parametric) {
+
+    if (parametric) {
       version <- mlx.getLixoftConnectorsState()$version
       v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
       if (v >= 2020) {
@@ -135,86 +127,80 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       generateDataSetResample(project, settings, boot.folder)
     }
     useLL = F
-  } else {
-    dataFolderToUse = dataFolder
-    boot.folder = '/bootstrap/'
-    if (!dir.exists(file.path(exportDir, boot.folder)))
-      dir.create(file.path(exportDir, boot.folder))
   }
   generateBootstrapProject(project, dataFolder = dataFolderToUse, boot.folder=boot.folder)
   
-  #paramResults <- array(dim = c(settings$nboot, length(param))) 
   paramResults <- NULL 
-  for(indexSample in 1:settings$nboot){
-    projectBoot <-  paste0(exportDir,boot.folder,projectName,'_bootstrap_',toString(indexSample),'.mlxtran')
-    mlx.loadProject(projectBoot)
-    cat(paste0('Project ',toString(indexSample),'/',toString(settings$nboot)))
-    
-    # Check if the run was done
-    # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
-    launched.tasks <- mlx.getLaunchedTasks()
-    g <- mlx.getScenario()
-    g$tasks <- tasks
-    mlx.setScenario(g)
-    scenario.tasks <- mlx.getScenario()$tasks
-    mlx.saveProject(projectBoot)
-    if (!launched.tasks[["populationParameterEstimation"]]) {
-      if (sum(scenario.tasks)==1)
-        cat(' => Estimating the population parameters \n')
-      else
-        cat(' => Running the scenario \n')
-      mlx.runScenario()
-    } else {
-      missing.tasks <- 0
-      if (scenario.tasks[['conditionalDistributionSampling']] && !launched.tasks[['conditionalDistributionSampling']]) {
-        missing.tasks <- missing.tasks + 1 
-        if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        mlx.runConditionalDistributionSampling()
-      }
-      if (scenario.tasks[['conditionalModeEstimation']] && !launched.tasks[['conditionalModeEstimation']]) {
-        missing.tasks <- missing.tasks + 1 
-        if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        mlx.runConditionalModeEstimation()
-      }
-      if (scenario.tasks[['standardErrorEstimation']] && launched.tasks[['standardErrorEstimation']]==FALSE) {
-        missing.tasks <- missing.tasks + 1 
-        if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        mlx.runStandardErrorEstimation(linearization=g$linearization)
-      }
-      if (scenario.tasks[['logLikelihoodEstimation']] && !launched.tasks[['logLikelihoodEstimation']]) {
-        missing.tasks <- missing.tasks + 1 
-        if (missing.tasks==1) cat(' => Running the missing tasks \n')
-        mlx.runLogLikelihoodEstimation()
-      }
-      if (missing.tasks==0)  {
-        if (sum(scenario.tasks)==1)
-          cat(' => Population parameters already estimated \n')
-        else
-          cat(' => Tasks already performed \n')
-      }
-    }
-    
-    paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
-  }
-  colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
-  paramResults <- as.data.frame(paramResults)
-  
-  res.file <- file.path(exportDir,boot.folder,"populationParameters.txt")
-  write.table(x = paramResults, file = res.file,
-              eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
-  cat("Estimated population parameters have been saved: ", normalizePath(res.file), ".\n")
-  
-  # Plot the results
-  if (plot.res) {
-    nbFig <- ncol(paramResults)
-    x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
-    par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
-    for(indexFigure in 1:nbFig){
-      res <- paramResults[,indexFigure]
-      resQ <- quantile(res,c((1-level)/2,(1+level)/2))
-      bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
-    }
-  }
+  # for (indexSample in seq_len(settings$nboot)) {
+  #   projectBoot <-  paste0(exportDir, boot.folder, projectName, '_bootstrap_', toString(indexSample), '.mlxtran')
+  #   mlx.loadProject(projectBoot)
+  #   cat(paste0('Project ', toString(indexSample), '/', toString(settings$nboot)))
+  #   
+  #   # Check if the run was done
+  #   # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
+  #   launched.tasks <- mlx.getLaunchedTasks()
+  #   g <- mlx.getScenario()
+  #   g$tasks <- tasks
+  #   mlx.setScenario(g)
+  #   scenario.tasks <- mlx.getScenario()$tasks
+  #   mlx.saveProject(projectBoot)
+  #   if (!launched.tasks[["populationParameterEstimation"]]) {
+  #     if (sum(scenario.tasks)==1)
+  #       cat(' => Estimating the population parameters \n')
+  #     else
+  #       cat(' => Running the scenario \n')
+  #     mlx.runScenario()
+  #   } else {
+  #     missing.tasks <- 0
+  #     if (scenario.tasks[['conditionalDistributionSampling']] && !launched.tasks[['conditionalDistributionSampling']]) {
+  #       missing.tasks <- missing.tasks + 1 
+  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
+  #       mlx.runConditionalDistributionSampling()
+  #     }
+  #     if (scenario.tasks[['conditionalModeEstimation']] && !launched.tasks[['conditionalModeEstimation']]) {
+  #       missing.tasks <- missing.tasks + 1 
+  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
+  #       mlx.runConditionalModeEstimation()
+  #     }
+  #     if (scenario.tasks[['standardErrorEstimation']] && launched.tasks[['standardErrorEstimation']]==FALSE) {
+  #       missing.tasks <- missing.tasks + 1 
+  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
+  #       mlx.runStandardErrorEstimation(linearization=g$linearization)
+  #     }
+  #     if (scenario.tasks[['logLikelihoodEstimation']] && !launched.tasks[['logLikelihoodEstimation']]) {
+  #       missing.tasks <- missing.tasks + 1 
+  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
+  #       mlx.runLogLikelihoodEstimation()
+  #     }
+  #     if (missing.tasks==0)  {
+  #       if (sum(scenario.tasks)==1)
+  #         cat(' => Population parameters already estimated \n')
+  #       else
+  #         cat(' => Tasks already performed \n')
+  #     }
+  #   }
+  #   
+  #   paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
+  # }
+  # colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
+  # paramResults <- as.data.frame(paramResults)
+  # 
+  # res.file <- file.path(exportDir,boot.folder,"populationParameters.txt")
+  # write.table(x = paramResults, file = res.file,
+  #             eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
+  # cat("Estimated population parameters have been saved: ", normalizePath(res.file), ".\n")
+  # 
+  # # Plot the results
+  # if (plot.res) {
+  #   nbFig <- ncol(paramResults)
+  #   x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
+  #   par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
+  #   for(indexFigure in 1:nbFig){
+  #     res <- paramResults[,indexFigure]
+  #     resQ <- quantile(res,c((1-level)/2,(1+level)/2))
+  #     bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
+  #   }
+  # }
   return(paramResults)
 }
 
@@ -223,9 +209,8 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
 ##############################################################################
 generateDataSetResample = function(project, settings, boot.folder){
   
-  if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exist"))
-    return(invisible(FALSE))
+  if (!file.exists(project)) {
+    stop("project '", project, "' does not exist", call.=F)
   }
   
   mlx.loadProject(project)   
@@ -240,7 +225,7 @@ generateDataSetResample = function(project, settings, boot.folder){
   
   # Prepare all the output folders
   exportDir <- mlx.getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  projectName <- basename(tools::file_path_sans_ext(project))
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   
   # Get the data set information
@@ -268,14 +253,9 @@ generateDataSetResample = function(project, settings, boot.folder){
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE)
   
   # Load the data set
-  dataset <- NULL
-  try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ";", dec = "."), silent = TRUE);sepBoot = ';';
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = ",", dec = "."), silent = TRUE);sepBoot = ',';}
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "\t", dec = "."), silent = TRUE);sepBoot = '\t';}
-  if(length(dataset[1,])<=1){try(dataset <- read.table(file=datasetFile, header = TRUE, sep = "", dec = "."), silent = TRUE);sepBoot = ' ';}
-  if(length(dataset[1,])<=1){      
-    message("WARNING: The data set can not be recognized")
-    return(invisible(FALSE))}
+  sepBoot <- .getDelimiter(datasetFile)
+  dataset <- read.table(file=datasetFile, sep=sepBoot, header=T, dec=".", check.names=FALSE)
+  names(dataset) <- gsub(" ", "_", names(dataset))
   
   indexID <- which(referenceDataset$headerTypes=="id")
   nameID <- unique(dataset[, indexID])
@@ -384,14 +364,13 @@ generateDataSetResample = function(project, settings, boot.folder){
 generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL){
   
   if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exist"))
-    return(invisible(FALSE))
+    stop("project '", project, "' does not exist.", call.=F)
   }
   suppressMessages(mlx.initializeLixoftConnectors())
   mlx.loadProject(project)   
   # Prepare all the output folders
   exportDir <- mlx.getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  projectName <- basename(tools::file_path_sans_ext(project))
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE, recursive = TRUE)
   if(is.null(settings)){
@@ -427,35 +406,31 @@ generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL
 }
 
 generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=NULL){
-  
+  version <- mlx.getLixoftConnectorsState()$version
+
   if(!file.exists(project)){
-    message(paste0("ERROR: project '", project, "' does not exist"))
-    return(invisible(FALSE))
+    stop("Project ", project, ", does not exist.", call.=F)
   }
   suppressMessages(mlx.initializeLixoftConnectors())
   mlx.loadProject(project)
   obsInfo <- mlx.getObservationInformation()
-  mapObservation <- NULL
-  if (length(obsInfo$type) == 1) mapObservation <- c(obsInfo$mapping)
+  mapObservation <- c(obsInfo$mapping)
   
-  # return a warning in case of censoring data
-  if (is.element("regressor", mlx.getData()$headerTypes)) {
-    stop("Projects with regressor are not supported for Boostrap in monolix suite 2020R1. ", call. = FALSE)
-  }
   # return an error in case of regressor
+  if (is.element("regressor", mlx.getData()$headerTypes) & version == "2020R1") {
+    stop("Projects with regressor are not supported for Boostrap in monolix suite 2020R1.", call. = FALSE)
+  }
+  # return a warning in case of censoring data
   if (is.element("cens", mlx.getData()$headerTypes)) {
-    warning("Note that censoring is not performed on boostrap simulations in monolix suite 2020R1. ", call. = FALSE)
+    warning("Note that censoring is not performed on boostrap simulations.", call. = FALSE)
   }
   # Prepare all the output folders
   exportDir <- mlx.getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
+  projectName <- basename(tools::file_path_sans_ext(project))
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE, recursive = TRUE)
-  if(is.null(settings)){
-    settings$nboot <- 100 
-    settings$seed <- NA
-  }
-  if(!is.na(settings$seed)) smlx.setProjectSettings(settings$seed)
+
+  if (!is.na(settings$seed)) smlx.setProjectSettings(settings$seed)
   
   monolixPath <- mlx.getLixoftConnectorsState()$path
   suppressMessages(mlx.initializeLixoftConnectors(software="simulx", path=monolixPath, force=TRUE))
@@ -475,6 +450,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
         smlx.importMonolixProject(project)
         smlx.setNbReplicates(settings$nboot)
         smlx.runSimulation()
+        
         writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
 
         set_options(errors = op$errors, warnings = op$warnings, info = op$info)
@@ -506,12 +482,10 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
   # Get the data set information
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
-  projectName <- substr(basename(project), 1, nchar(basename(project))-8)
-  #mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
+  projectName <- basename(tools::file_path_sans_ext(project))
   
   # 
   scenario = mlx.getScenario()
-  #new.tasks <- any(names(which(mlx.getScenario()$tasks)) != names(which(tasks)))
   scenario$tasks = c(populationParameterEstimation=TRUE)
   mlx.setScenario(scenario)
 
@@ -521,8 +495,8 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
   bootData <- .getBootData(referenceDataset, b1)
 
   cat("Generating projects with bootstrap data sets...\n")
-  for(indexSample in 1:length(dataFiles)){
-    projectBootFileName =  file.path(exportDir,boot.folder,paste0(projectName,'_bootstrap_',toString(indexSample),'.mlxtran'))
+  for(indexSample in seq_along(dataFiles)){
+    projectBootFileName =  file.path(exportDir, boot.folder, paste0(projectName, '_bootstrap_', toString(indexSample), '.mlxtran'))
     if(!file.exists(projectBootFileName)){
       # deactivate lixoft warnings
       op <- get_lixoft_options()
@@ -564,138 +538,47 @@ cleanbootstrap <- function(project,boot.folder){
 
 
 ###################################################################################
-.checkBootstrapInput = function(inputName, inputValue){
-  isValid = TRUE
-  inputName = tolower(inputName)
-  if(inputName == tolower("settings")){
-    if(is.list(inputValue) == FALSE){
-      message("ERROR: Unexpected type encountered. settings must be a list")
-      isValid = FALSE
-    }else {
-      for (i in 1:length(inputValue)){
-        if(!.checkBootstrapSettings(settingName = names(inputValue)[i], settingValue = inputValue[[i]])){
-          isValid = FALSE
-        }
-      }
-    }
-  }else if(inputName == tolower("nboot")){
-    if(!is.double(inputValue)){
-      message("ERROR: Unexpected type encountered. nboot must be an integer")
-      isValid = FALSE
-    }else if (!(floor(inputValue)==inputValue)){
-      message("ERROR: Unexpected type encountered. nboot must be an integer")
-      isValid = FALSE
-    }
-  }else if(inputName == tolower("parametric")){
-    if(!is.logical(inputValue)){
-      message("ERROR: Unexpected type encountered. parametric must be a boolean")
-      isValid = FALSE
-    }
-  }else if(inputName == tolower("tasks")){
-    if(!is.vector(inputValue) || !is.logical(inputValue)){
-      message("ERROR: Unexpected type encountered. 'tasks' must be a vector of booleans (see mlx.getScenario()$tasks)")
-      isValid = FALSE
-    }
-    if (!all(names(inputValue) %in% names(mlx.getScenario()$tasks))) {
-      message("ERROR: Unexpected list of task (see mlx.getScenario()$tasks)")
-      isValid = FALSE
-    }
-  }
-  return(invisible(isValid))
-}
+.initBootstrapSettings = function(settings, parametric){
+  if (is.null(settings)) settings <- list()
 
-.checkBootstrapSettings = function(settingName, settingValue){
-  isValid = TRUE
-  settingName = tolower(settingName)
-  if(settingName == tolower("N")){
-    if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. N must be an integer.")
-      isValid = FALSE
-    }else{
-      if(!(as.integer(settingValue) == settingValue)){
-        message("ERROR: Unexpected type encountered. N must be an integer.")
-        isValid = FALSE
-      }else if(settingValue<1){
-        message("ERROR: N must be a strictly positive integer.")
-        isValid = FALSE
-      }
+  invalidParametricSettings <- intersect(c("N", "covStrat"), names(settings))
+  if (parametric == T & length(invalidParametricSettings)) {
+    if (length(invalidParametricSettings) > 1) {
+      message <- paste0(paste(invalidParametricSettings, collapse = ", "), " arguments are ignored.")
+    } else {
+      message <- paste0(invalidParametricSettings, " argument is ignored.")
     }
-  }else if(settingName == tolower("nboot")){
-    if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. nboot must be an integer.")
-      isValid = FALSE
-    }else{
-      if(!(as.integer(settingValue) == settingValue)){
-        message("ERROR: Unexpected type encountered. nboot must be an integer.")
-        isValid = FALSE
-      }else if(settingValue<1){
-        message("ERROR: nboot must be a strictly positive integer.")
-        isValid = FALSE
-      }
-    }
-  }else if(settingName == tolower("level")){
-    if((is.double(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. level must be an double")
-      isValid = FALSE
-    }else{
-      if(settingValue <= 0){
-        message("ERROR: Unexpected type encountered. level must be strictly positive")
-        isValid = FALSE
-      }else if(settingValue>=1){
-        message("ERROR: level must be strictly lower than 1.")
-        isValid = FALSE
-      }
-    }
-  }else if(settingName == tolower("newResampling")){
-    if((is.logical(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. newResampling must be an boolean")
-      isValid = FALSE
-    }
-  }else if(settingName == tolower("plot")){
-    if((is.logical(settingValue) == FALSE)){
-      message("ERROR: Unexpected type encountered. plot must be an boolean")
-      isValid = FALSE
-    }
-  }else if(settingName == tolower("covStrat")){
-    if(is.character(settingValue) == FALSE){
-      message("ERROR: Unexpected type encountered. covStrat must be a string")
-      isValid = FALSE
-    }else if(length(settingValue) >1){
-      message("ERROR: Unexpected length. covStrat must be a single string (not a vector, nor a list)")
-      isValid = FALSE
-    }else{
-      if(length(intersect(mlx.getCovariateInformation()$name, settingValue))==0){
-        message(paste0("ERROR: ",settingValue," is not a valid covariate of the project."))
-        isValid = FALSE
-      }else{
-        indexCAT <- which(mlx.getCovariateInformation()$name==settingValue)
-        catType <- mlx.getCovariateInformation()$type[indexCAT[1]]
-        if(!((catType=="categorical")||(catType=="categoricaltransformed"))){
-          message(paste0("ERROR: ",settingValue," is not a categorical covariate."))
-          isValid = FALSE
-        }
-      }
-    }
-  }else if(settingName == tolower("seed")){
-    if(!is.na(settingValue)){
-      if((is.double(settingValue) == FALSE)&&(is.integer(settingValue) == FALSE)){
-        message("ERROR: Unexpected type encountered. seed must be an integer.")
-        isValid = FALSE
-      }else{
-        if(!(as.integer(settingValue) == settingValue)){
-          message("ERROR: Unexpected type encountered. seed must be an integer.")
-          isValid = FALSE
-        }else if(settingValue<1){
-          message("ERROR: seed must be a strictly positive integer.")
-          isValid = FALSE
-        }
-      }
-    }
-  }else{
-    message("ERROR: ",settingName,' is not a valid setting.')
-    isValid = FALSE
+    warning("In case of parametric boostrap, ", message, call. = FALSE)
+    settings <- settings[! names(settings) %in% c("N", "covStrat")]
   }
-  return(isValid)
+
+  .check_in_vector(
+    names(settings), "settings",
+    c("plot", "level", "N", "newResampling", "covStrat", "seed")
+  )
+  
+  if (!is.element("plot", names(settings))) settings$plot <- F
+  if (!is.element("level", names(settings))) settings$level <- 0.90
+  if (!is.element("N", names(settings))) settings$N <- NA
+  if (!is.element("newResampling", names(settings))) settings$newResampling <- F
+  if (!is.element("covStrat", names(settings))) settings$covStrat <- NA
+  if (!is.element("seed", names(settings))) settings$seed <- NA
+  
+  if (!is.na(settings$N)) .check_strict_pos_integer(settings$N, "settings N")
+  .check_double(settings$level, "settings level")
+  .check_in_range(settings$level, "settings level", 0, 1)
+  .check_bool(settings$newResampling, "settings newResampling")
+  .check_bool(settings$plot, "settings plot")
+  if (!is.na(settings$covStrat)) {
+    .check_string(settings$covStrat, "settings covStrat")
+    covariates <- mlx.getCovariateInformation()
+    catcovariates <- names(covariates$type[covariates$type %in% c("categorical", "categoricaltransformed")])
+    .check_in_vector(settings$covStrat, "settings covStrat", catcovariates)
+  }
+  if (!is.na(settings$seed)) .check_strict_pos_integer(settings$seed, "settings seed")
+
+  if (parametric) settings <- settings[! names(settings) %in% c("N", "covStrat")]
+  return(settings)
 }
 
 .getBootData <- function(refData, bootFile, smlxHeaders = NULL) {
@@ -703,8 +586,10 @@ cleanbootstrap <- function(project,boot.folder){
   mlxHeaders <- refData$header
   mlxHeadersType <- refData$headerTypes
   
+  df <- utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), header = T)
+  
   if (is.null(smlxHeaders)) {
-    smlxHeaders <- names(utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), header = T))
+    smlxHeaders <- names(df)
   }
 
   intersectHeaders <- intersect(smlxHeaders, mlxHeaders)
@@ -721,15 +606,31 @@ cleanbootstrap <- function(project,boot.folder){
   if (any(is.na(smlxHeadersType))) {
     smlxHeadersType[is.na(smlxHeadersType) & smlxHeaders %in% obsInfo$name] <- "observation"
   }
-  bootData$observationNames <- smlxHeaders[smlxHeadersType == "observation"]
+  obsNames <- smlxHeaders[smlxHeadersType == "observation"]
   bootData$dataFile <- bootFile
-  bootData$header <- smlxHeaders
   bootData$headerTypes <- smlxHeadersType
+  
+  if ("obsid" %in% mlxHeadersType) {
+    if (! "obsid" %in% smlxHeadersType) {
+      obsmapping <- obsInfo$mapping[obsNames]
+      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping] <- obsNames
+      bootData$observationTypes <- bootData$observationTypes[names(bootData$observationTypes) %in% obsNames]
+      bootData$observationTypes <- unname(bootData$observationTypes)
+    } else {
+      obsids <- sort(unique(df[[smlxHeaders[smlxHeadersType == "obsid"]]]))
+      bootData$observationTypes <- refData$observationTypes[intersect(sort(obsids), names(refData$observationTypes))]
+    }
+  } else {
+    bootData$observationTypes <- unname(refData$observationTypes)
+  }
 
   # warning for simulx bug
-  if (length(obsInfo$name) > 1 & ! is.element("obsid", smlxHeadersType)) {
+  version <- mlx.getLixoftConnectorsState()$version
+  if (length(obsInfo$name) > 1 & ! is.element("obsid", smlxHeadersType) & version == "2020R1") {
     warning("Due to a bug in Simulx 2020R1, non-continuous outputs will be excluded from the simulation.", call. = FALSE)
   }
+  bootData <- bootData[c("dataFile", "headerTypes", "observationTypes")]
+
   return(bootData)
 }
 
@@ -760,8 +661,69 @@ cleanbootstrap <- function(project,boot.folder){
     missingIds <- setdiff(Reduce(union, unname(ids)), Reduce(intersect, unname(ids)))
   }
   if (length(missingIds) > 0) {
-    warning("Due to a bug in Simulx 2020R1, the ids ", paste(missingIds, collapse = ", "),
+    # BUG in Simulx 2020R1 & 2021R1
+    warning("Due to a bug in Simulx, the ids ", paste(missingIds, collapse = ", "),
             " will be excluded from the simulation because they do not appear in some of the treatment and output tables.",
             call. = FALSE)
   }
+}
+
+# CHeck functions --------------------------------------------------------------
+.check_bool <- function(bool, argname) {
+  if (!is.logical(bool))
+    stop("Invalid ", argname, ". It must be logical.", call. = F)
+  return(bool)
+}
+
+.check_string <- function(str, argname) {
+  if (!is.string(str))
+    stop("Invalid ", argname, ". It must be a string.", call. = F)
+  return(str)
+}
+
+.check_strict_pos_integer <- function(int, argname) {
+  if(!(is.double(int)||is.integer(int)))
+    stop("Invalid ", argname, ". It must be a strictly positive integer.", call. = F)
+  if ((int <= 0) || (!as.integer(int) == int))
+    stop("Invalid ", argname, ". It must be a strictly positive integer.", call. = F)
+  return(int)
+}
+
+.check_in_range <- function(arg, argname, lowerbound = -Inf, upperbound = Inf, includeBound = TRUE) {
+  if (includeBound) {
+    if (! all(arg >= lowerbound) | ! all(arg <= upperbound)) {
+      stop(argname, " must be in [", lowerbound, ", ", upperbound, "].", call. = F)
+    }
+  } else {
+    if (! all(arg > lowerbound) | ! all(arg < upperbound)) {
+      stop(argname, " must be in ]", lowerbound, ", ", upperbound, "[.", call. = F)
+    }
+  }
+  return(invisible(TRUE))
+}
+
+is.string <- function(str) {
+  isStr <- TRUE
+  if (!is.null(names(str))) {
+    isStr <- FALSE
+  } else if (length(str) > 1) {
+    isStr <- FALSE
+  } else if (! is.character(str)) {
+    isStr <- FALSE
+  }
+  return(isStr)
+}
+
+.check_in_vector <- function(arg, argname, vector) {
+  if (is.null(arg)) return(invisible(TRUE))
+  if (! all(is.element(arg, vector))) {
+    stop(argname, " must be in {'", paste(vector, collapse="', '"), "'}.", call. = F)
+  }
+  return(invisible(TRUE))
+}
+
+.check_double <- function(d, argname) {
+  if(!(is.double(d)||is.integer(d)))
+    stop("Invalid ", argname, ". It must be a double.", call. = F)
+  return(d)
 }
