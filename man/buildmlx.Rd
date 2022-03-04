@@ -5,7 +5,7 @@
 \title{Automatic statistical model building}
 \usage{
 buildmlx(
-  project,
+  project = NULL,
   final.project = NULL,
   model = "all",
   paramToUse = "all",
@@ -46,7 +46,7 @@ buildmlx(
 
 \item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
 
-\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
+\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
 \item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
 
@@ -68,7 +68,7 @@ buildmlx(
 
 \item{p.max}{maximum p-value used for removing non significant relationships between covariates and individual parameters (default=0.1)}
 
-\item{p.min}{minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))}
+\item{p.min}{vector of 3 minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))}
 
 \item{print}{{TRUE}/FALSE display the results (default=TRUE)}
 

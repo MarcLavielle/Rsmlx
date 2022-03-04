@@ -176,7 +176,7 @@ getEstimatedResiduals <- function() {
       dfj <- (yoj - ypj)/sqrt(pei[1]^2 + (pei[2]*ypj^pei[3])^2)
     else
       dfj <- (yoj - ypj)/(pei[1] + pei[2]*ypj^pei[3])
-    df[[j]] <- dfj
+    df[[j]][names(dfj)] <- dfj
   }
   names(df) <- obsNames
   return(df)

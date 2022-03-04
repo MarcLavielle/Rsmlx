@@ -48,16 +48,20 @@
 #' @importFrom utils ls.str read.csv read.table write.table
 #' @export
 
-testmlx <- function(project, 
+testmlx <- function(project=NULL, 
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE, adjust="edf", n.sample=NULL) 
 {
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   
+  if (!is.null(project)) {
   r <- prcheck(project, f="test", tests=tests)
   if (r$demo)
     return(r$res)
   project <- r$project
+  } else {
+    project <- mlx.getProjectSettings()$project
+  }
   
   launched.tasks <- mlx.getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -371,7 +375,7 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
 
 #----------------------------------------------------------
 covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
-  
+  id <- NULL
   if (!is.null(project)) 
     mlx.loadProject(project)
   
@@ -388,6 +392,9 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   #covariates["id"] <- NULL
   covariates <- covariates[order(covariates$id),]
   
+  g=mlx.getIndividualParameterModel()$covariateModel
+  cov.names <- names(g[[1]])
+  covariates <- covariates %>% select(id,cov.names)
   # sim.randeff <- mlx.getSimulatedRandomEffects()
   # if (is.null(sim.randeff$rep)) 
   #   sim.randeff$rep <- 1
@@ -430,7 +437,6 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   m.indparam <- subset(m.indparam, rep<=n.sample)[c("id",var.param)]
   m.randeff <- subset(m.randeff, rep<=n.sample)[c("id",var.randeff)]
   
-  g=mlx.getIndividualParameterModel()$covariateModel
   lnj <- NULL
   for (nj in var.param) {
     dj <- tolower(ind.dist[nj])

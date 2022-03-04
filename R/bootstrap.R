@@ -131,76 +131,76 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   generateBootstrapProject(project, dataFolder = dataFolderToUse, boot.folder=boot.folder)
   
   paramResults <- NULL 
-  # for (indexSample in seq_len(settings$nboot)) {
-  #   projectBoot <-  paste0(exportDir, boot.folder, projectName, '_bootstrap_', toString(indexSample), '.mlxtran')
-  #   mlx.loadProject(projectBoot)
-  #   cat(paste0('Project ', toString(indexSample), '/', toString(settings$nboot)))
-  #   
-  #   # Check if the run was done
-  #   # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
-  #   launched.tasks <- mlx.getLaunchedTasks()
-  #   g <- mlx.getScenario()
-  #   g$tasks <- tasks
-  #   mlx.setScenario(g)
-  #   scenario.tasks <- mlx.getScenario()$tasks
-  #   mlx.saveProject(projectBoot)
-  #   if (!launched.tasks[["populationParameterEstimation"]]) {
-  #     if (sum(scenario.tasks)==1)
-  #       cat(' => Estimating the population parameters \n')
-  #     else
-  #       cat(' => Running the scenario \n')
-  #     mlx.runScenario()
-  #   } else {
-  #     missing.tasks <- 0
-  #     if (scenario.tasks[['conditionalDistributionSampling']] && !launched.tasks[['conditionalDistributionSampling']]) {
-  #       missing.tasks <- missing.tasks + 1 
-  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
-  #       mlx.runConditionalDistributionSampling()
-  #     }
-  #     if (scenario.tasks[['conditionalModeEstimation']] && !launched.tasks[['conditionalModeEstimation']]) {
-  #       missing.tasks <- missing.tasks + 1 
-  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
-  #       mlx.runConditionalModeEstimation()
-  #     }
-  #     if (scenario.tasks[['standardErrorEstimation']] && launched.tasks[['standardErrorEstimation']]==FALSE) {
-  #       missing.tasks <- missing.tasks + 1 
-  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
-  #       mlx.runStandardErrorEstimation(linearization=g$linearization)
-  #     }
-  #     if (scenario.tasks[['logLikelihoodEstimation']] && !launched.tasks[['logLikelihoodEstimation']]) {
-  #       missing.tasks <- missing.tasks + 1 
-  #       if (missing.tasks==1) cat(' => Running the missing tasks \n')
-  #       mlx.runLogLikelihoodEstimation()
-  #     }
-  #     if (missing.tasks==0)  {
-  #       if (sum(scenario.tasks)==1)
-  #         cat(' => Population parameters already estimated \n')
-  #       else
-  #         cat(' => Tasks already performed \n')
-  #     }
-  #   }
-  #   
-  #   paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
-  # }
-  # colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
-  # paramResults <- as.data.frame(paramResults)
-  # 
-  # res.file <- file.path(exportDir,boot.folder,"populationParameters.txt")
-  # write.table(x = paramResults, file = res.file,
-  #             eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
-  # cat("Estimated population parameters have been saved: ", normalizePath(res.file), ".\n")
-  # 
-  # # Plot the results
-  # if (plot.res) {
-  #   nbFig <- ncol(paramResults)
-  #   x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
-  #   par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
-  #   for(indexFigure in 1:nbFig){
-  #     res <- paramResults[,indexFigure]
-  #     resQ <- quantile(res,c((1-level)/2,(1+level)/2))
-  #     bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
-  #   }
-  # }
+  for (indexSample in seq_len(settings$nboot)) {
+    projectBoot <-  paste0(exportDir, boot.folder, projectName, '_bootstrap_', toString(indexSample), '.mlxtran')
+    mlx.loadProject(projectBoot)
+    cat(paste0('Project ', toString(indexSample), '/', toString(settings$nboot)))
+
+    # Check if the run was done
+    # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
+    launched.tasks <- mlx.getLaunchedTasks()
+    g <- mlx.getScenario()
+    g$tasks <- tasks
+    mlx.setScenario(g)
+    scenario.tasks <- mlx.getScenario()$tasks
+    mlx.saveProject(projectBoot)
+    if (!launched.tasks[["populationParameterEstimation"]]) {
+      if (sum(scenario.tasks)==1)
+        cat(' => Estimating the population parameters \n')
+      else
+        cat(' => Running the scenario \n')
+      mlx.runScenario()
+    } else {
+      missing.tasks <- 0
+      if (scenario.tasks[['conditionalDistributionSampling']] && !launched.tasks[['conditionalDistributionSampling']]) {
+        missing.tasks <- missing.tasks + 1
+        if (missing.tasks==1) cat(' => Running the missing tasks \n')
+        mlx.runConditionalDistributionSampling()
+      }
+      if (scenario.tasks[['conditionalModeEstimation']] && !launched.tasks[['conditionalModeEstimation']]) {
+        missing.tasks <- missing.tasks + 1
+        if (missing.tasks==1) cat(' => Running the missing tasks \n')
+        mlx.runConditionalModeEstimation()
+      }
+      if (scenario.tasks[['standardErrorEstimation']] && launched.tasks[['standardErrorEstimation']]==FALSE) {
+        missing.tasks <- missing.tasks + 1
+        if (missing.tasks==1) cat(' => Running the missing tasks \n')
+        mlx.runStandardErrorEstimation(linearization=g$linearization)
+      }
+      if (scenario.tasks[['logLikelihoodEstimation']] && !launched.tasks[['logLikelihoodEstimation']]) {
+        missing.tasks <- missing.tasks + 1
+        if (missing.tasks==1) cat(' => Running the missing tasks \n')
+        mlx.runLogLikelihoodEstimation()
+      }
+      if (missing.tasks==0)  {
+        if (sum(scenario.tasks)==1)
+          cat(' => Population parameters already estimated \n')
+        else
+          cat(' => Tasks already performed \n')
+      }
+    }
+
+    paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
+  }
+  colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
+  paramResults <- as.data.frame(paramResults)
+
+  res.file <- file.path(exportDir,boot.folder,"populationParameters.txt")
+  write.table(x = paramResults, file = res.file,
+              eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
+  cat("Estimated population parameters have been saved: ", normalizePath(res.file), ".\n")
+
+  # Plot the results
+  if (plot.res) {
+    nbFig <- ncol(paramResults)
+    x_NbFig <- ceiling(max(sqrt(nbFig),1)); y_NbFig <- ceiling(nbFig/x_NbFig)
+    par(mfrow = c(x_NbFig, y_NbFig), oma = c(0, 3, 1, 1), mar = c(3, 1, 0, 3), mgp = c(1, 1, 0), xpd = NA)
+    for(indexFigure in 1:nbFig){
+      res <- paramResults[,indexFigure]
+      resQ <- quantile(res,c((1-level)/2,(1+level)/2))
+      bxp <- boxplot(res, xlab = paste0(colnames(paramResults)[indexFigure],'\n',level*100,'% CI: [',toString(round(resQ[1],3)),', ',toString(round(resQ[2],3)),']'))
+    }
+  }
   return(paramResults)
 }
 

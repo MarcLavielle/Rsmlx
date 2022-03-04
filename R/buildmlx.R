@@ -22,13 +22,13 @@
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
 #' @param center.covariate TRUE/{FALSE} center the covariates of the final model (default=FALSE) 
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
-#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)
 #' @param ll  {TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
+#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
 #' @param seq.cov TRUE/{FALSE} whether the covariate model is built before the correlation model  
 #' @param seq.cov.iter number of iterations before building the correlation model (only when seq.cov=F, default=0) 
 #' @param seq.corr {TRUE}/FALSE whether the correlation model is built iteratively (default=TRUE) 
 #' @param p.max  maximum p-value used for removing non significant relationships between covariates and individual parameters (default=0.1)
-#' @param p.min minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))
+#' @param p.min vector of 3 minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))
 #' @param pen.cov multiplicative penalty term for the covariate model (default=1)
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
 #' @param steps maximum number of iteration for stepAIC (default=1000)
@@ -65,7 +65,7 @@
 #' @importFrom dplyr filter select rename arrange bind_rows rename mutate
 #' @importFrom dplyr %>%
 #' @export
-buildmlx <- function(project, final.project=NULL, model="all", 
+buildmlx <- function(project=NULL, final.project=NULL, model="all", 
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, 
                      pen.cov=1, direction=NULL, steps=1000,
@@ -86,10 +86,14 @@ buildmlx <- function(project, final.project=NULL, model="all",
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   pi <- 4*atan(1)
   
-  r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
-  if (r$demo)
-    return(r$res)
-  project <- r$project
+  if (!is.null(project)) {
+    r <- prcheck(project, f="build", paramToUse=paramToUse, model=model)
+    if (r$demo)
+      return(r$res)
+    project <- r$project
+  } else {
+    project <- mlx.getProjectSettings()$project
+  }
   
   launched.tasks <- mlx.getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
@@ -102,10 +106,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
   r <- buildmlx.check(project, final.project, model, paramToUse, covToTest, covToTransform, center.covariate, 
                       criterion, linearization, ll, pen.cov, direction, steps, max.iter, explor.iter, 
                       seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model)
-  
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
-  
   
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) 
@@ -200,6 +202,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
     mlx.runConditionalDistributionSampling()
   }
+  
   gi <- mlx.getSimulatedIndividualParameters()
   gi <- gi %>% filter(rep==gi$rep[nrow(gi)]) %>% select(-rep)
   lin.ll <- method.ll=="linearization"
@@ -227,19 +230,39 @@ buildmlx <- function(project, final.project=NULL, model="all",
     
   }
   
-  #-----------------------------------------
-  
-  # res.dir <- mlx.getProjectSettings()$directory
-  # if (dir.exists(res.dir)) 
-  #   list_of_files <- c(list.files(res.dir) , ".Internals")
-  # foo <- file.copy(file.path(res.dir,list_of_files), final.dir, recursive=FALSE)
-  # foo <- file.rename(file.path(final.dir,".Internals",basename(project)),
-  #                    file.path(final.dir,".Internals",basename(final.project)))
-  # 
-  # mlx.setProjectSettings(directory=final.dir)
   mlx.saveProject(final.project)
-  if (is.null(mlx.getEstimatedPopulationParameters()))
-    mlx.runScenario()
+  
+  #-----------------------------------------
+  if (!is.null(covToTransform)) {
+    covariate <- mlx.getCovariateInformation()$covariate
+    for (cov.name in covToTransform) {
+      covkj <- covariate[[cov.name]]
+      lckj <- paste0("logt",toupper(substr(cov.name, 1, 1)), substr(cov.name, 2, nchar(cov.name)))
+      if (!(lckj %in% mlx.getCovariateInformation()$name)) {
+        tr.str <- paste0(lckj,' = "log(',cov.name,"/",signif(mean(covkj),digits=2),')"')
+        trs <- paste0("lixoftConnectors::addContinuousTransformedCovariate(",tr.str,")")
+        eval(parse(text=trs))
+      }
+      covToTest <- c(covToTest, lckj)
+      
+    }
+    covToTest <- unique(setdiff(covToTest, covToTransform))
+    covToTransform <- NULL
+    mlx.saveProject(final.project)
+    
+    if (!mlx.getLaunchedTasks()[["populationParameterEstimation"]]) {
+      to.cat <- "\nEstimation of the population parameters using the transformed covariates ... \n"
+      print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+      mlx.runPopulationParameterEstimation()
+    }
+    if (!mlx.getLaunchedTasks()[["conditionalDistributionSampling"]]) {
+      to.cat <- "Sampling of the conditional distribution using the the transformed covariates ... \n"
+      print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+      mlx.runConditionalDistributionSampling()
+    }
+    
+  }
+  
   
   #--------------
   
@@ -308,6 +331,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     if (iop.covariate) {
       #      pmax.cov <- ifelse(iter <= 1, 1, p.max) 
       pcov <- ifelse(iter <= 1, pen.coef[1], pen.coef[1]*pen.cov) 
+      #     browser()
       res.covariate <- covariateModelSelection(pen.coef=pcov, nb.model=nb.model,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
                                                steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter,
@@ -326,13 +350,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
       cov.names <- lapply(covariate.model[cov.select], function(x) {sort(names(which(x)))})
       cov.names0 <- lapply(covariate.model0[cov.select], function(x) {sort(names(which(x)))})
       
-      r.test <- covariateTest()$p.value.randomEffects %>% 
-        filter(covariate %in% covToTest) %>% mutate(p.value=p.ttest)
-      #      r.test <- getTests()$randomEffectsVsCovariatesCorrelation %>% filter(covariate %in% covToTest)
-      if (!is.null(cov.test))
-        cov.test$p.value <- pmin(cov.test$p.value, r.test$p.ttest)
-      else
-        cov.test <- r.test
+      cov.test <- covariate.test(cov.test, covToTest, covToTransform, paramToUse)
       
     } else {
       e <- mlx.getSimulatedRandomEffects()
@@ -530,6 +548,7 @@ buildmlx <- function(project, final.project=NULL, model="all",
     mlx.saveProject(final.project)
   }
   
+  change.error.model <- NULL
   if (iop.ll) {
     ll.min <- min(list.criterion)
     iter.opt <- which.min(list.criterion)
@@ -544,21 +563,26 @@ buildmlx <- function(project, final.project=NULL, model="all",
     if (iop.covariate) {
       g0 <- mlx.getIndividualParameterModel()
       covariate <- random.effect <- p.ttest <- p.lrt <- in.model <- NULL
-      r.test <- covariateTest()$p.value.randomEffects %>% 
-        filter(covariate %in% covToTest) %>% mutate(p.value=p.ttest)
-      r.test$p.value <- pmin(cov.test$p.value, r.test$p.value)
+      r.test <- covariate.test(cov.test, covToTest, covToTransform, paramToUse)
       r.test <- r.test %>% filter(!in.model) %>% select(-c(p.ttest, p.lrt, in.model))
+      r.cov0 <- res.covariate$r.cov0
+      for (j in 1:nrow(r.test)) {
+        pj <- r.test$parameter[j]
+        if (!is.null(r.cov0[[pj]])) {
+          if (r.test$covariate[j] %in% r.cov0[[pj]])
+            r.test$p.value[j] <- 1
+        }
+      }
       i.min <- which(as.numeric(r.test$p.value) < p.min[1])
       if (length(i.min)>0) {
         
         to.cat <- paste0(cat.line,"\n\nAdd parameters/covariates relationships:\n")
         to.print <- r.test[i.min,]
         print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
-        
         g <- mlx.getIndividualParameterModel()
         stop.test <- F
         for (i in i.min) {
-          param.i <- gsub("eta_","",r.test$random.effect[i])
+          param.i <- r.test$parameter[i]
           cov.i <- r.test$covariate[i]
           g$covariateModel[[param.i]][cov.i] <- T
         }
@@ -601,12 +625,14 @@ buildmlx <- function(project, final.project=NULL, model="all",
           }
         }
       }
+      
       if (identical(g$covariateModel, g0$covariateModel)) {
         stop.test <- T
       } else {
         to.cat <- paste0(cat.line,"\n\nRemove parameters/covariates relationships:\n")
-        method <- statistics <- NULL
-        to.print <- (r.test %>% select(-c(method, statistics)))[list.ipc,]
+        method <- statistics <- parameter <- NULL
+        to.print <- (r.test %>% select(-c(method, statistics)) %>%
+                       rename(coefficient=parameter))[list.ipc,]
         print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
         
         mlx.setIndividualParameterModel(g)
@@ -735,8 +761,8 @@ buildmlx <- function(project, final.project=NULL, model="all",
       p <- mlx.getEstimatedPopulationParameters()
       if (any(mlx.getObservationInformation()$type != "continuous")) {
         mlx.runStandardErrorEstimation(linearization=F)
-      se <- mlx.getEstimatedStandardErrors()$stochasticApproximation$se
-      names(se) <- mlx.getEstimatedStandardErrors()$stochasticApproximation$parameter
+        se <- mlx.getEstimatedStandardErrors()$stochasticApproximation$se
+        names(se) <- mlx.getEstimatedStandardErrors()$stochasticApproximation$parameter
       } else {
         mlx.runStandardErrorEstimation(linearization=T)
         se <- mlx.getEstimatedStandardErrors()$linearization$se
@@ -796,7 +822,6 @@ buildmlx <- function(project, final.project=NULL, model="all",
       }
     }
     
-    change.error.model <- NULL
     if (iop.error & 1>2){ 
       mlx.loadProject(final.project)
       ll.min <- computecriterion(criterion, method.ll)
@@ -1017,6 +1042,8 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
   j.trans <- grep("transformed",cov.types)
   j.cont <- grep("continuous",cov.types)
   cont.cov <- cov.names[j.cont]
+  # j.strat <- grep("stratification",cov.types)
+  # strat.cov <- cov.names[j.strat]
   if (identical(covToTransform,"all"))
     covToTransform = cov.names[j.cont]
   else if (identical(covToTransform,"none"))
@@ -1041,6 +1068,12 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
     ncov0 <- covToTest[(!(covToTest %in% cov.names))]
     if (length(ncov0)>0)  stop(paste0(ncov0, " is not a valid covariate"), call.=FALSE)
   }
+  
+  #covToTest <- setdiff(covToTest, strat.cov)
+  
+  covToTransform <- intersect(covToTest, covToTransform)
+  if (length(covToTransform)==0) 
+    covToTransform <- NULL
   
   ind.dist <- mlx.getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
@@ -1197,5 +1230,19 @@ print.result <- function(print, summary.file, to.cat=NULL,to.print=NULL) {
     if (!is.null(to.print))
       print(to.print)
   }
-  
 }
+
+covariate.test <- function(cov.test, covToTest, covToTransform, paramToUse) {
+  p.ttest <- random.effect <- covariate <- parameter <- id <- NULL
+  r.test <- covariateTest()$p.value.randomEffects  %>% 
+    rename(p.value=p.ttest) %>%
+    mutate(parameter=gsub("eta_","", random.effect)) %>%
+    select(-random.effect)
+  r.test <- r.test %>% 
+    filter(covariate %in% covToTest & parameter %in% paramToUse) 
+  if (!is.null(cov.test))
+    r.test$p.value <- pmin(cov.test$p.value, r.test$p.value)
+  r.test <- r.test[,c("parameter", "covariate", "p.value", "in.model")]
+  return(r.test)
+}
+

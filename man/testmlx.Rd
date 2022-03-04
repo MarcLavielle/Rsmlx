@@ -5,7 +5,7 @@
 \title{Statistical tests for model assessment}
 \usage{
 testmlx(
-  project,
+  project = NULL,
   tests = c("covariate", "randomEffect", "correlation", "residual"),
   plot = FALSE,
   adjust = "edf",

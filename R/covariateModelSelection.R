@@ -3,12 +3,15 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
                                     sp0=NULL, iter=1, correlation.model=NULL) {
   
   # correlation.model=NULL
-  project.folder <- mlx.getProjectSettings()$directory
-  sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
+  #  project.folder <- mlx.getProjectSettings()$directory
+  #  sp.file <- file.path(project.folder,"IndividualParameters","simulatedIndividualParameters.txt")
+  #  sp.df <- read.res(sp.file)
   
-  sp.df <- read.res(sp.file)
+  sp.df <- mlx.getSimulatedIndividualParameters()
   if (is.null(sp.df$rep))
     sp.df$rep <- 1
+  
+  #  sp.df <- sp.df %>% arrange(rep)
   
   if (!is.null(sp0)) {
     nrep0 <- max(sp0$rep) 
@@ -21,37 +24,42 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
   
   ind.dist <- mlx.getIndividualParameterModel()$distribution
   param.names <- names(ind.dist)
-  if (identical(paramToUse,"all"))
-    paramToUse <- param.names
+  # if (identical(paramToUse,"all"))
+  #   paramToUse <- param.names
   n.param <- length(param.names)
   #sim.parameters <- sp.df[c("rep","id",param.names)]
-  sim.parameters <- mlx.getSimulatedIndividualParameters()
+  # sim.parameters <- mlx.getSimulatedIndividualParameters()
   
   cov.info <- mlx.getCovariateInformation()
   cov.names <- cov.info$name
   cov.types <- cov.info$type
-  j.strat <- grep("stratification",cov.types)
-  if (length(j.strat)>0) {
-    cov.names <- cov.names[-j.strat]
-    cov.types <- cov.types[-j.strat]
-  }
-  j.trans <- grep("transformed",cov.types)
-  #j.trans <- NULL
-  j.cont <- grep("continuous",cov.types)
-  cont.cov <- cov.names[j.cont]
-  if (identical(covToTransform,"all"))
-    covToTransform = cov.names[j.cont]
-  tcov.names <- unique(c(cov.names[j.trans], setdiff(cont.cov,covToTransform)))
-  cov.types <- gsub("transformed","",cov.types)
-  covariates <- sp.df[c("rep","id",cov.names)]
+  # j.strat <- grep("stratification",cov.types)
+  # if (length(j.strat)>0) {
+  #   cov.names <- cov.names[-j.strat]
+  #   cov.types <- cov.types[-j.strat]
+  # }
+  # j.trans <- grep("transformed",cov.types)
+  # #j.trans <- NULL
+  # j.cont <- grep("continuous",cov.types)
+  # cont.cov <- cov.names[j.cont]
+  # if (identical(covToTransform,"all"))
+  #   covToTransform = cov.names[j.cont]
+  # tcov.names <- unique(c(cov.names[j.trans], setdiff(cont.cov,covToTransform)))
+  # cov.types <- gsub("transformed","",cov.types)
+  tcov.names <- NULL
+  covariates <- cov.info$covariate
   cov.cat <- cov.names[cov.types == "categorical"]
   covariates[cov.cat] <-  lapply(covariates[cov.cat],as.factor)
+  # j.strat <- grep("stratification",cov.types)
+  # if (length(j.strat)>0) 
+  #   covariates <- covariates %>% select(-cov.names[j.strat])
+  #cov0 <- NULL
   
   indvar <- mlx.getIndividualParameterModel()$variability$id
   indvar[setdiff(param.names, paramToUse)] <- FALSE
   
   cov.model <- mlx.getIndividualParameterModel()$covariateModel
-  r <- res <- list()
+  r <- res <- r.cov0 <- list()
   eps <- 1e-15
   for (j in (1:n.param)) {
     dj <- ind.dist[j]
@@ -65,7 +73,7 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
         yj <- log((yj+eps)/(1-yj+eps))
         names(yj) <- paste0("logit.",nj)
       } else if (tolower(dj) == "probitnormal") {
-        yj[[1]] <- qnorm(yj[[1]])
+        yj <- qnorm(yj)
         names(yj) <- paste0("probit.",nj)
       } 
       
@@ -76,10 +84,13 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
       } else {
         cov0 <- cov1 <- NULL
       }
+      #      cov0 <- cov1 <- NULL
+      #     browser()
       
       r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
                        direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
+      r.cov0[[j]] <- r[[j]]$cov0
       #   res[[j]][,c("ll","df","criterion")] <- NULL
       
       names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
@@ -90,9 +101,11 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
     r[[j]]$p.name <- nj
   }
   
-  names(res) <- param.names
+  names(res) <-  param.names
+  names(r.cov0) <- names(indvar)[which(indvar)]
   e <- as.data.frame(lapply(r[indvar], function(x) {x$model$residuals}))
-  names(e) <- paste0("eta_",lapply(r[indvar], function(x) {x$p.name}))
+  e.names <- unlist(lapply(r[indvar], function(x) {x$p.name}))
+  names(e) <- paste0("eta_",e.names)
   if (!is.null(sp.df["id"]))
     e <- cbind(sp.df["id"], e)
   if (!is.null(sp.df["rep"]))
@@ -100,51 +113,53 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
   
   if (length(correlation.model) >0 ) {
     #    en <- as.data.frame(scale(e))
+
     for (ic in (1:length(correlation.model))) {
       pic <- correlation.model[[ic]]
-      ipic <- match(pic, gsub("eta_","", names(e)))
-      epic <- e[,ipic]
-      gic <- solve(cov(epic))
-      jic <- match(pic, names(ind.dist))
-      #   print(head(epic))
-      for (itk in 1:2) {
-        jk <- 0
-        for (j in jic) {
-          jk <- jk+1
-          dj <- ind.dist[j]
-          nj <- names(dj)
-          yj <- sp.df[nj]
-          if (tolower(dj) == "lognormal") {
-            yj <- log(yj)
-            names(yj) <- paste0("log.",nj)
-          } else if (tolower(dj) == "logitnormal") {
-            yj <- log(yj/(1-yj))
-            names(yj) <- paste0("logit.",nj)
-          } else if (tolower(dj) == "probitnormal") {
-            yj[[1]] <- qnorm(yj[[1]])
-            names(yj) <- paste0("probit.",nj)
-          } 
-          
-          if (length(covFix)>0) {
-            cmj <- cov.model[[nj]][covFix]
-            cov0 <- names(which(!cmj))
-            cov1 <- names(which(cmj))
-          } else {
-            cov0 <- cov1 <- NULL
+      if (all(pic %in% e.names)) {
+        ipic <- match(pic, gsub("eta_","", names(e)))
+        epic <- e[,ipic]
+        gic <- solve(cov(epic))
+        jic <- match(pic, names(ind.dist))
+        #   print(head(epic))
+        for (itk in 1:2) {
+          jk <- 0
+          for (j in jic) {
+            jk <- jk+1
+            dj <- ind.dist[j]
+            nj <- names(dj)
+            yj <- sp.df[nj]
+            if (tolower(dj) == "lognormal") {
+              yj <- log(yj)
+              names(yj) <- paste0("log.",nj)
+            } else if (tolower(dj) == "logitnormal") {
+              yj <- log(yj/(1-yj))
+              names(yj) <- paste0("logit.",nj)
+            } else if (tolower(dj) == "probitnormal") {
+              yj[[1]] <- qnorm(yj[[1]])
+              names(yj) <- paste0("probit.",nj)
+            } 
+            if (length(covFix)>0) {
+              cmj <- cov.model[[nj]][covFix]
+              cov0 <- names(which(!cmj))
+              cov1 <- names(which(cmj))
+            } else {
+              cov0 <- cov1 <- NULL
+            }
+            ejc <- as.matrix(epic[,-jk])%*%matrix(gic[jk, -jk], ncol=1)/gic[jk, jk]
+            yjc <- yj + ejc
+            
+            r[[j]] <- lm.all(yjc, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
+                             direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
+            res[[j]] <- r[[j]]$res
+            r.cov0[[j]] <- r[[j]]$cov0
+            #   res[[j]][,c("ll","df","criterion")] <- NULL
+            #names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
+            r[[j]]$p.name <- nj
+            e[paste0("eta_",nj)] <- epic[,jk] <- r[[j]]$model$residuals - ejc
           }
-          ejc <- as.matrix(epic[,-jk])%*%matrix(gic[jk, -jk], ncol=1)/gic[jk, jk]
-          yjc <- yj + ejc
-          
-          r[[j]] <- lm.all(yjc, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
-                           direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
-          res[[j]] <- r[[j]]$res
-          #   res[[j]][,c("ll","df","criterion")] <- NULL
-          
-          names(res[[j]]) <- gsub("log[.]","l",names(res[[j]]))
-          r[[j]]$p.name <- nj
-          e[paste0("eta_",nj)] <- epic[,jk] <- r[[j]]$model$residuals - ejc
+          # print(head(epic))
         }
-        # print(head(epic))
       }
     }
   }
@@ -183,29 +198,23 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
   }
   #res <- formatCovariateModel(getIndividualParameterModel()$covariateModel)
   res <- formatCovariateModel(res)
-  return(list(model=covariate.model, residuals=e, res=res, add.covariate=trs, sp=sp.df, tr0=tr0))
+  return(list(model=covariate.model, residuals=e, res=res, add.covariate=trs, 
+              sp=sp.df, tr0=tr0, r.cov0=r.cov0))
 }
 
 #-----------------------------------
 
 lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
                    direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL, iter=1) {
-  if (!is.null(x$id)) {
-    N <- length(unique(x$id))
-    nrep <- nrow(x)/N
-  } else {
-    x$id <- 1
-    N <-  nrow(x)
-    nrep <- 1
-  }
-  if (is.null(x$rep)) x$rep <- 1
   
+  N <- length(unique(x$id))
+  nrep <- nrow(y)/N
   if (p.max<=1) {
     nx <- setdiff(names(x), c("id","rep"))
-    yc <- y[[1]][order(x$rep, x$id)]
-    yc <- rowMeans(matrix(yc, ncol=nrep))
-    xc <- subset(x,rep==1)
-    xc <- xc[order(xc$id),,drop=FALSE]
+    yc <- rowMeans(matrix(y[[1]], ncol=nrep))
+    #    yc=colMeans(matrix(y[[1]], ncol=N))
+    xc <- x
+    # xc <- x[order(x$id),,drop=FALSE]
     #  xc <- x[seq(1,nrow(x),by=nrep),,drop=FALSE]
     lm0 <- lm(yc ~1)
     nxc <- setdiff(nx, cov0)
@@ -233,6 +242,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   s <- rep("0:1", nx)
   names(s) <- names(x)
   j.num <- which(!sapply(x, is.factor))
+  j.num <- NULL
   if (length(j.num)>0) {
     if (length(j.num)==1)
       j0 <- which(min(x[,j.num])>0)
@@ -318,9 +328,11 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     }
     res <- cbind(G==1, res)
     #  res <- cbind(G, res)
+    res[,c("ll","df","criterion")] <- NULL
+    row.names(res) <- 1:nrow(res)
     
     #  browser()
-    return(list(model=llk, res=res))
+    return(list(model=llk, res=res, cov0=cov0))
   } 
   
   if (length(tr.names)>0){
@@ -365,19 +377,18 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   
   ll <- df <- bic <- bic.cor <- NULL
   corb <- log(iter^2/(iter^2+3))
-  
   #iop.mean <- ((iter ==2))
-    iop.mean <- F
+  iop.mean <- F
   if (iop.mean) {
     yg <- colMeans(matrix(y[[1]], nrow=nrep))
-    xg <- x[seq(1,nrow(x),by=nrep),]
+    xg <- x
     if (nrow(l)>0)
       lg <- l[seq(1,nrow(l),by=nrep),]
     nrepg <- 1
     #  pen.coef <- pen.coef + log(nrep)
   } else {
     yg <- y[[1]]
-    xg <- x
+    xg <- x[rep(1:N,nrep),]
     lg <- l
     nrepg <- nrep
   }
@@ -391,6 +402,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     j2 <- which(Gk==2)
     if (length(j2)>0)
       xk[names(l)[j2]] <- lg[j2]
+    
     llk= tryCatch( {
       lmk <- lm(y ~ ., data=xk)
       logLik(lmk)[1]/nrepg }
@@ -443,7 +455,7 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   j2 <- which(Gkmin==2)
   if (length(j1)>0) {
     for (k in (1:length(j1)))
-      eval(parse(text=paste0(names(x)[j1[k]]," <- x[[j1[k]]]")))
+      eval(parse(text=paste0(names(x)[j1[k]]," <- rep(x[[j1[k]]], nrep)")))
   }
   if (length(j2)>0) {
     for (k in (1:length(j2)))
@@ -451,9 +463,9 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
   }
   list.x <- c("1",names(x)[j1],names(l)[j2])
   form1 <- paste0(names(y), "~",  paste(list.x, collapse = "+")) 
+  
   eval(parse(text=paste0("lm.min <- lm(",form1,")")))
   lm.min$covsel=Gkmin
-  #  if (names(y)=="log.Cl") {print(cbind(G,res)); browser()}
   nb.model0 <- min(nb.model, length(bic))
   res <- res[obic[1:nb.model0],]
   G <- G[obic[1:nb.model],,drop=FALSE]
@@ -471,5 +483,5 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     res[,c("ll","df","criterion")] <- NULL
   row.names(res) <- 1:nrow(res)
   
-  return(list(model=lm.min, res=res))
+  return(list(model=lm.min, res=res, cov0=cov0))
 }

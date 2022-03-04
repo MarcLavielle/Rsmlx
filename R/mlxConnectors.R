@@ -111,6 +111,14 @@ mlx.getCovariateInformation <- function() {
     if (all(sn %in% names(pind)))
       r$covariate <- merge(r$covariate,pind[,c("id",sn)],by="id")
   }
+  j.strat <- grep("stratification",r$type)
+  if (length(j.strat) > 0) {
+    strat.cov <- r$name[j.strat]
+    r$covariate <- r$covariate %>% select(-strat.cov)
+    r$type <- r$type[-j.strat] 
+    r$name <- r$name[-j.strat] 
+  }
+  
   return(r)
 }
 
@@ -264,7 +272,7 @@ mlx.saveProject <- function(projectFile=NULL) {
 mlx.runPopulationParameterEstimation <- function(parameters=NULL) {
   r <- NULL
   if (as.numeric(substr(packageVersion("lixoftConnectors"),1,4))>=2021 & !is.null(parameters))
-  .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation(parameters=parameters)'))
+    .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation(parameters=parameters)'))
   else
     .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation()'))
   .hiddenCall(paste0('r0 <- lixoftConnectors::runConditionalModeEstimation()'))
