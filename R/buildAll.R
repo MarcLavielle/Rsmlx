@@ -68,7 +68,6 @@ buildAll <- function(project, final.project=NULL, model="all",
                      fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,5), 
                      omega.set=NULL, pop.set1=NULL, pop.set2=NULL) {
   
-  print("it works")
   in.model <- p.ttest <- random.effect <- covariate <- param <- NULL
   
   if (is.null(final.project))
