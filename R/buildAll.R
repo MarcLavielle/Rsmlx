@@ -8,7 +8,7 @@
 #' 
 #' See http://rsmlx.webpopix.org for more details.
 #' @param project a string: the initial Monolix project
-#' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
+#' @param final.project  a string: the final Monolix project (default adds "_buildAll" to the original project)
 #' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param fix.param1  parameters with variability that cannot be removed (default=NULL)
@@ -78,6 +78,8 @@ buildAll <- function(project, final.project=NULL, model="all",
   if (dir.exists(dir.built))
     unlink(dir.built, recursive=TRUE)
   dir.create(dir.built)
+  
+  r <- prcheck(project)
   
   #  start with "full variance" model
   mlx.loadProject(project)
