@@ -33,9 +33,9 @@ buildVar(
 
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
-\item{remove}{try to remove random effects (default=T)}
+\item{remove}{{TRUE}/FALSE try to remove random effects (default=TRUE)}
 
-\item{add}{try to add random effects (default=T)}
+\item{add}{{TRUE}/FALSE try to add random effects (default=TRUE)}
 
 \item{delta}{maximum difference in criteria for testing a new model (default=c(30,5))}
 

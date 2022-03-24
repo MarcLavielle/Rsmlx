@@ -8,6 +8,7 @@ buildmlx(
   project = NULL,
   final.project = NULL,
   model = "all",
+  prior = NULL,
   paramToUse = "all",
   covToTest = "all",
   covToTransform = "none",

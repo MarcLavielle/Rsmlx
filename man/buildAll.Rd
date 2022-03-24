@@ -40,7 +40,7 @@ buildAll(
 \arguments{
 \item{project}{a string: the initial Monolix project}
 
-\item{final.project}{a string: the final Monolix project (default adds "_built" to the original project)}
+\item{final.project}{a string: the final Monolix project (default adds "_buildAll" to the original project)}
 
 \item{model}{components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")}
 

@@ -15,7 +15,7 @@ Get estimated covariance and correlation matrices
 \examples{
 \dontrun{
 # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
-r = GetEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
+r = getEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
 
 # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
 # Download the demo examples here: http://rsmlx.webpopix.org/installation
