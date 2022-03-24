@@ -1,6 +1,6 @@
 covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NULL, covFix=NULL, 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, 
-                                    sp0=NULL, iter=1, correlation.model=NULL) {
+                                    sp0=NULL, iter=1, correlation.model=NULL, prior=0.5) {
   
   # correlation.model=NULL
   #  project.folder <- mlx.getProjectSettings()$directory
@@ -85,9 +85,10 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
         cov0 <- cov1 <- NULL
       }
       #      cov0 <- cov1 <- NULL
-      #     browser()
+     #      browser()
+      priorj <- prior[nj,]
       
-      r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
+      r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, prior=priorj,
                        direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
       r.cov0[[j]] <- r[[j]]$cov0
@@ -149,7 +150,7 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
             ejc <- as.matrix(epic[,-jk])%*%matrix(gic[jk, -jk], ncol=1)/gic[jk, jk]
             yjc <- yj + ejc
             
-            r[[j]] <- lm.all(yjc, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, 
+            r[[j]] <- lm.all(yjc, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, prior=priorj,
                              direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
             res[[j]] <- r[[j]]$res
             r.cov0[[j]] <- r[[j]]$cov0
@@ -204,7 +205,7 @@ covariateModelSelection <- function(pen.coef=NULL, nb.model=1, covToTransform=NU
 
 #-----------------------------------
 
-lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
+lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, prior=0.5,
                    direction='both',steps = 1000, p.max=1, cov0=NULL, cov1=NULL, iter=1) {
   
   N <- length(unique(x$id))
@@ -289,11 +290,11 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
       
       if(direction=='backward'){
         lm.sat=stepAIC(model.sature, direction='backward', trace = FALSE, k=nrep*pen.coef,
-                       scope=list(upper=model.sature, lower=model.cst), steps=steps)
+                       scope=list(upper=model.sature, lower=model.cst), steps=steps, prior=prior)
       }
       else {
         lm.cst=stepAIC(model.cst, direction=direction, trace = FALSE, k=nrep*pen.coef,
-                       scope=list(upper=model.sature, lower=model.cst), steps=steps)
+                       scope=list(upper=model.sature, lower=model.cst), steps=steps, prior=prior)
       }
     }
     , error=function(e) {
@@ -310,13 +311,14 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     usedcovariates = names(llk$model)[-1] #names(coef(llk)) 
     for (i in names(G)){
       if (i %in% usedcovariates ) G[1,i]=1 else G[1,i]=0
-      if (paste0('log.',i) %in% usedcovariates ) G[1,i]=G[1,i]+2  
+    #  if (paste0('log.',i) %in% usedcovariates ) G[1,i]=G[1,i]+2  
       # = 3 if both log and non-log are used
     }
     
     ll = logLik(llk)/nrep
     df = length(coef(llk))-1 # except Intercept
-    criterion = -2*ll + df*pen.coef
+    pen.cov <- 2*(sum(G*log((1-prior)/0.5)) + sum((1-G)*log(prior/0.5)))
+    criterion = -2*ll + df*pen.coef + pen.cov
     
     res <- data.frame(ll=round(ll,digits=3), df=df,  criterion=round(criterion,digits=3))
     j0.num <- j0.num[!(names(j0.num) %in% tr.names)]
@@ -411,7 +413,9 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL,
     )    
     #dfk <- sum(Gk>0)
     dfk <- lmk$rank
-    bick <- -2*llk + pen.coef*dfk + any(Gk==2)*0.001
+    pen.covk <- 2*(sum(Gk*log((1-prior)/0.5)) + sum((1-Gk)*log(prior/0.5)))
+
+    bick <- -2*llk + pen.coef*dfk + pen.covk
     ll <- c(ll , llk)
     df <- c(df, dfk)
     bic <- c(bic , bick)

@@ -478,7 +478,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
 ##############################################################################
 generateBootstrapProject = function(project, dataFolder, boot.folder){
   
-  dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
+  dataFiles <- list.files(path = dataFolder, pattern = '.txt|.csv')
   # Get the data set information
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
@@ -585,7 +585,6 @@ cleanbootstrap <- function(project,boot.folder){
   bootData <- refData
   mlxHeaders <- refData$header
   mlxHeadersType <- refData$headerTypes
-  
   df <- utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), header = T)
   
   if (is.null(smlxHeaders)) {

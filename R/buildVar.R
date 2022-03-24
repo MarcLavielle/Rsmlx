@@ -13,8 +13,8 @@
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
-#' @param remove  try to remove random effects (default=T)
-#' @param add  try to add random effects (default=T)
+#' @param remove  {TRUE}/FALSE try to remove random effects (default=TRUE)
+#' @param add  {TRUE}/FALSE try to add random effects (default=TRUE)
 #' @param delta  maximum difference in criteria for testing a new model (default=c(30,5))
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1

@@ -65,7 +65,7 @@
 #' @importFrom dplyr filter select rename arrange bind_rows rename mutate
 #' @importFrom dplyr %>%
 #' @export
-buildmlx <- function(project=NULL, final.project=NULL, model="all", 
+buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, 
                      pen.cov=1, direction=NULL, steps=1000,
@@ -129,10 +129,11 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
   if (!dir.exists(final.dir))
     dir.create(final.dir, recursive=T)
   
-  # if (!is.null(r$idir)) {
-  #   to.cat <- paste0('\n\ndirection = "',direction, '" will be used for the covariate search\n\n')
-  #   print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
-  # }
+  prior.cov <- prior$covariate
+  if (is.null(prior.cov)) {
+    prior.cov <- do.call(rbind, mlx.getIndividualParameterModel()$covariateModel)
+    prior.cov[is.logical(prior.cov)] <- 0.5
+  } 
   
   launched.tasks <- mlx.getLaunchedTasks()
   
@@ -217,9 +218,12 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
       
       mlx.runLogLikelihoodEstimation(linearization = lin.ll)
     }
-    ll.ini <- computecriterion(criterion, method.ll)
+    
+   
+    pen <- compute.pen(prior)
+    ll.ini <- compute.criterion(criterion, method.ll, pen)
     list.criterion <- ll.ini
-    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], pen)
     if (is.numeric(criterion))
       ll['criterion'] <- ll.ini
     
@@ -317,7 +321,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
       ll0 <- ll
     
     if (iop.error) {
-      res.error <- errorModelSelection(pen.coef=pen.coef[-1], nb.model=nb.model)
+      res.error <- errorModelSelection(pen.coef=pen.coef[-1], nb.model=nb.model, prior=prior$err)
       if (nb.model==1)
         error.model <- res.error
       else {
@@ -332,7 +336,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
       #      pmax.cov <- ifelse(iter <= 1, 1, p.max) 
       pcov <- ifelse(iter <= 1, pen.coef[1], pen.coef[1]*pen.cov) 
       #     browser()
-      res.covariate <- covariateModelSelection(pen.coef=pcov, nb.model=nb.model,
+      res.covariate <- covariateModelSelection(pen.coef=pcov, nb.model=nb.model, prior=prior.cov,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
                                                steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter,
                                                correlation.model = correlation.model)
@@ -515,7 +519,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
           if (lin.ll & !launched.tasks[["conditionalModeEstimation"]])
             mlx.runConditionalModeEstimation()
           mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-          ll.new <- computecriterion(criterion, method.ll)
+          pen <- compute.pen(prior)
+          ll.new <- compute.criterion(criterion, method.ll, pen)
           list.criterion <- c(list.criterion, ll.new)
         }
         
@@ -656,8 +661,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
         to.cat <- "Estimation of the log-likelihood... \n"
         print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
         mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-        ll.new <- computecriterion(criterion, method.ll)
-        ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+        pen <- compute.pen(prior)
+        ll.new <- compute.criterion(criterion, method.ll, pen)
+        ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], pen)
         if (is.numeric(criterion))
           ll['criterion'] <- ll.new
         to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
@@ -733,8 +739,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
             to.cat <- "Estimation of the log-likelihood... \n"
             print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
             mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-            ll.new <- computecriterion(criterion, method.ll)
-            ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+            pen <- compute.pen(prior)
+            ll.new <- compute.criterion(criterion, method.ll, pen)
+            ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], pen)
             if (is.numeric(criterion))
               ll.disp['criterion'] <- ll.new
             
@@ -808,8 +815,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
         to.cat <- "Estimation of the log-likelihood... \n"
         print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
         mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-        ll.new <- computecriterion(criterion, method.ll)
-        ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+        pen <- compute.pen(prior)
+        ll.new <- compute.criterion(criterion, method.ll, pen)
+        ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], pen)
         if (is.numeric(criterion))
           ll['criterion'] <- ll.new
         to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
@@ -824,7 +832,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
     
     if (iop.error & 1>2){ 
       mlx.loadProject(final.project)
-      ll.min <- computecriterion(criterion, method.ll)
+      pen <- compute.pen(prior)
+      ll.min <- compute.criterion(criterion, method.ll, pen)
       g <- mlx.getContinuousObservationModel()
       gc <- which(g$errorModel=="combined1" | g$errorModel=="combined2")
       if (length(gc) >0) {
@@ -865,8 +874,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all",
           to.cat <- "Estimation of the log-likelihood... \n"
           print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
           mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-          ll.new <- computecriterion(criterion, method.ll)
-          ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+          pen <- compute.pen(prior)
+          ll.new <- compute.criterion(criterion, method.ll, pen)
+          ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], pen)
           if (is.numeric(criterion))
             ll['criterion'] <- ll.new
           to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
@@ -1195,12 +1205,13 @@ formatErrorModel <- function(m) {
   return(m)
 }
 
-formatLL <- function(ll) {
+formatLL <- function(ll, pen=0) {
   names(ll)[which(names(ll)=="standardError")] <- "s.e."
+  ll[c('AIC', 'BIC', 'BICc')] <- ll[c('AIC', 'BIC', 'BICc')] + pen
   return(ll)
 }
 
-computecriterion <- function(criterion, method.ll) {
+compute.criterion <- function(criterion, method.ll, pen=0) {
   ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
   if (identical(criterion,"AIC")) cr <- ll[["AIC"]]
   else if (identical(criterion,"BIC")) cr <- ll[["BIC"]]
@@ -1209,7 +1220,7 @@ computecriterion <- function(criterion, method.ll) {
     d <- (ll[["AIC"]] - ll[["OFV"]])/2
     cr <- ll[["OFV"]]+d*criterion
   }
-  return(cr)
+  return(cr + pen)
 }
 
 print.result <- function(print, summary.file, to.cat=NULL,to.print=NULL) {
@@ -1244,5 +1255,24 @@ covariate.test <- function(cov.test, covToTest, covToTransform, paramToUse) {
     r.test$p.value <- pmin(cov.test$p.value, r.test$p.value)
   r.test <- r.test[,c("parameter", "covariate", "p.value", "in.model")]
   return(r.test)
+}
+
+
+compute.pen <- function(prior) {
+  pen <- 0
+  if (!is.null(prior$covariate)) {
+    g <- do.call(rbind, getIndividualParameterModel()$covariateModel)
+    pen.cov <- 2*(log(prior$covariate/0.5)*(1-g) + log((1-prior$covariate)/0.5)*g)
+    pen <- pen + sum(pen.cov)
+  }
+  if (!is.null(prior$correlation)) {
+    pen.cor <- 0
+    pen <- pen + pen.cor
+  }
+  if (!is.null(prior$error)) {
+    pen.err <- 0
+    pen <- pen + pen.err
+  }
+  return(pen)
 }
 

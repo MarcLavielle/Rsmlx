@@ -1,4 +1,4 @@
-errorModelSelection <- function(project=NULL, pen.coef=NULL, nb.model=1) {
+errorModelSelection <- function(project=NULL, pen.coef=NULL, nb.model=1, prior=NULL) {
   
   if (!is.null(project))
     mlx.loadProject(project)

@@ -1,4 +1,5 @@
-correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, seqmod=TRUE) {
+correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, 
+                                      seqmod=TRUE, prior=NULL) {
   
   # if (criterion=="BICc")  criterion="BIC"
   
@@ -26,7 +27,8 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
   e.var <- paste0("eta_",e.name)
   e.var <- e.var[e.var %in% names(e)]
   e <- e[e.var]
-  e <- as.data.frame(scale(e))
+#  e <- scale(e)
+  e <- as.data.frame(e)
   n.param <- ncol(e)
   alpha.cor <- 0.01
   if (n.param>1) {
@@ -42,7 +44,7 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
       }   
     }
     C <- (C + alpha.cor*diag(diag(C)))/(1+alpha.cor)
-    ll <- sum(my.dmvnorm(e, sigma=diag(rep(1,n.param)), log=T))/nrep
+    ll <- sum(my.dmvnorm(e, sigma=diag(diag(C)), log=T))/nrep
     # ll <- -0.5*(sum(e^2)/nrep + N*n.param*log(2*pi))
     df <- 0
     Ck <- Pk <- diag(rep(1,n.param))
@@ -50,6 +52,7 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
     colnames(Ck) <- names(e)
     
     Cp <- 1-pv
+    #Cp <- C
     Cp <- Cp - diag(diag(Cp)) + diag(rep(1, nrow(Cp)))
     
     A <- abs(Cp)
@@ -75,12 +78,15 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
         Pk[ij,ij] <- pv[ij,ij]
       }
       llk <- sum(my.dmvnorm(e, sigma=Ck, log=T))/nrep
+      # ll <- -0.5*(sum((as.matrix(e)%*%solve(Ck))*e)/nrep + N*n.param*log(2*pi) + N*log(det(Ck)))
       dfk <- (length(which(Ck !=0))-n.param)/2
       df <- c(df, dfk)
       ll <- c(ll , llk)
       CC[[k]] <- Ck
       PP[[k]] <- Pk
     }
+    browser()
+    
     bic <- -2*ll + pen.coef*df
     pvl <- 1
     for (k in (2:length(PP))) 
