@@ -85,7 +85,7 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
       CC[[k]] <- Ck
       PP[[k]] <- Pk
     }
-    browser()
+ #   browser()
     
     bic <- -2*ll + pen.coef*df
     pvl <- 1
