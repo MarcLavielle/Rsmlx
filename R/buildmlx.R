@@ -392,7 +392,10 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         }
         if (model$correlation) {
           to.cat <- "\nCorrelation model:\n"
-          to.print <- ifelse(!is.null(res.correlation), res.correlation, "NULL")
+          if (!is.null(res.correlation)) 
+            to.print <- res.correlation
+          else
+            to.print <- "NULL"
           print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
         }
         if (model$residualError) {
@@ -1238,7 +1241,7 @@ formatLL <- function(ll, criterion, cr, is.weight, is.prior) {
   return(llr)
 }
 
-compute.criterion <- function(criterion, method.ll, weight, pen.coef) {
+compute.criterion <- function(criterion, method.ll, weight=NULL, pen.coef=NULL) {
   ll <- mlx.getEstimatedLogLikelihood()[[method.ll]]
   cov.model <- do.call(rbind, mlx.getIndividualParameterModel()$covariateModel)
   if (!is.null(weight$covariate)) 

@@ -183,8 +183,8 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
       mlx.runLogLikelihoodEstimation(linearization=FALSE)
     }
   }
-  BICc.built <- computecriterion(criterion, method.ll)
-  BICc.built.iter <- computecriterion(criterion, method.ll.iter)
+  BICc.built <- compute.criterion(criterion, method.ll)
+  BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
   
   mlx.setInitialEstimatesToLastEstimates(fixedEffectsOnly = FALSE)
   mlx.saveProject(project.built)
@@ -286,7 +286,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runConditionalDistributionSampling()
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
-              BICc1.iter <- computecriterion(criterion, method.ll.iter) - log(N)
+              BICc1.iter <- compute.criterion(criterion, method.ll.iter) - log(N)
               
               #  browser()
               if (print)
@@ -336,7 +336,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
                 #        print(mlx.getEstimatedPopulationParameters())
-                BICc0 <- computecriterion(criterion, method.ll)
+                BICc0 <- compute.criterion(criterion, method.ll)
               } else {
                 BICc0 <- -Inf
               }
@@ -361,7 +361,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runConditionalDistributionSampling()
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
-                BICc.built.iter <- computecriterion(criterion, method.ll.iter)
+                BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
                 
                 pop.built <- mlx.getEstimatedPopulationParameters()
                 ind.built <- mlx.getEstimatedIndividualParameters()$saem
@@ -469,7 +469,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runConditionalDistributionSampling()
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
-              BICc1.iter <- computecriterion(criterion, method.ll.iter) 
+              BICc1.iter <- compute.criterion(criterion, method.ll.iter) 
               if (print)
                 cat(sprintf("%.1f", BICc1.iter), "\n")
               if (BICc1.iter - BICc.built.iter < delta[2]) {
@@ -516,7 +516,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
               
-              BICc0 <- computecriterion(criterion, method.ll)
+              BICc0 <- compute.criterion(criterion, method.ll)
               if (print)
                 cat(round(BICc0,1))
               # r <- round(c(r, BICc0), 1)
@@ -538,7 +538,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runConditionalDistributionSampling()
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
-                BICc.built.iter <- computecriterion(criterion, method.ll.iter)
+                BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
                 
                 pop.built <- mlx.getEstimatedPopulationParameters()
                 ind.built <- mlx.getEstimatedIndividualParameters()$saem

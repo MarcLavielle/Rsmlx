@@ -30,7 +30,6 @@
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
-#' @param pen.cov multiplicative penalty term for the covariate model (default=1)
 #' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
 #' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @param max.iter maximum number of iterations (default=20)
@@ -62,7 +61,7 @@
 #' @export
 buildAll <- function(project, final.project=NULL, model="all", 
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
-                     criterion="BICc", linearization=FALSE, ll=T, pen.cov=1, direction=NULL, steps=1000,
+                     criterion="BICc", linearization=FALSE, ll=T, direction=NULL, steps=1000,
                      max.iter=20, explor.iter=2, seq.cov=FALSE, seq.corr=TRUE, seq.cov.iter=0, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1), print=TRUE, nb.model=1,
                      fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,5), 
@@ -133,7 +132,7 @@ buildAll <- function(project, final.project=NULL, model="all",
       r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                          linearization=linearization, ll=ll, pen.cov=pen.cov, direction=direction, steps=steps,
+                          linearization=linearization, ll=ll, direction=direction, steps=steps,
                           max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
       relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate, p.ttest)))
       cov2 <- mlx.getIndividualParameterModel()$covariateModel
@@ -261,7 +260,7 @@ buildAll <- function(project, final.project=NULL, model="all",
           r.build <- buildmlx(project=final.project, covToTest=covToTest,
                               covToTransform=covToTransform, seq.corr=F, seq.cov=F, seq.cov.iter=0, p.max=p.max, p.min=p.min,
                               model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                              linearization=linearization, ll=ll, pen.cov=pen.cov, direction=direction, steps=steps,
+                              linearization=linearization, ll=ll, direction=direction, steps=steps,
                               max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
           mlx.saveProject(final.project)
         }
