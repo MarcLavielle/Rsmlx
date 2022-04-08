@@ -58,7 +58,7 @@
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
 #' 
 #' 
-#' @importFrom MASS stepAIC 
+#' @importFrom MASS addterm dropterm 
 #' @importFrom stats coef as.formula model.matrix
 #' @importFrom utils data write.csv packageVersion
 #' @importFrom dplyr filter select rename arrange bind_rows rename mutate
@@ -67,7 +67,7 @@
 buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, 
-                     direction=NULL, steps=1000,
+                     direction=NULL, steps=1000, n.full=10,
                      max.iter=20, explor.iter=2, 
                      seq.cov=FALSE, seq.cov.iter=0, seq.corr=TRUE, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1),
@@ -106,7 +106,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   method.ll <- iop.ll <- NULL
   r <- buildmlx.check(project, final.project, model, paramToUse, covToTest, covToTransform, center.covariate, 
                       criterion, linearization, ll, direction, steps, max.iter, explor.iter, 
-                      seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight)
+                      seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight, n.full)
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
   
@@ -316,7 +316,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       res.covariate <- covariateModelSelection(pen.coef=pen.coef[1], nb.model=nb.model, weight=weight$covariate,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
                                                steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter,
-                                               correlation.model = correlation.model)
+                                               correlation.model = correlation.model, n.full=n.full)
       res.covariate$res <- sortCov(res.covariate$res, cov.ini)
       if (iter>explor.iter) sp0 <- res.covariate$sp
       covToTransform <- setdiff(covToTransform, res.covariate$tr0)
@@ -966,7 +966,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
 
 buildmlx.check <- function(project, final.project, model, paramToUse, covToTest, covToTransform, center.covariate, 
                            criterion, linearization, ll, direction, steps, max.iter, explor.iter, 
-                           seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight) {
+                           seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight, n.full) {
   
   if (length(mlx.getIndividualParameterModel()$variability)>1)
     stop("Multiple levels of variability are not supported in this version of buildmlx", call.=FALSE)
@@ -996,6 +996,8 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
     stop(" 'max.iter' should be an integer > 0", call.=FALSE)
   if ((round(explor.iter)!=explor.iter) | explor.iter<=0)
     stop(" 'explor.iter' should be an integer > 0", call.=FALSE)
+  if ((round(n.full)!=n.full) | n.full<=0)
+    stop(" 'n.full' should be an integer > 0", call.=FALSE)
   if (!is.logical(seq.cov))
     stop(" 'seq.cov' should be boolean", call.=FALSE)
   if ((round(seq.cov.iter)!=seq.cov.iter) | seq.cov.iter<0)
@@ -1088,7 +1090,7 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
     dir.names <- c("full", "both", "backward", "forward")
     if (is.null(direction)) {
       nbcov <- length(mlx.getCovariateInformation()$name)
-      direction <- ifelse(nbcov<=10,"full","both")
+      direction <- ifelse(nbcov<=n.full,"full","both")
       idir <- direction
     }
     dir0 <- direction[(!(direction %in% dir.names))]
