@@ -5,9 +5,12 @@
 \title{Automatic complete statistical model building}
 \usage{
 buildAll(
-  project,
+  project = NULL,
   final.project = NULL,
   model = "all",
+  prior = NULL,
+  weight = NULL,
+  cv.min = 0.001,
   paramToUse = "all",
   covToTest = "all",
   covToTransform = "none",
@@ -15,7 +18,6 @@ buildAll(
   criterion = "BICc",
   linearization = FALSE,
   ll = T,
-  pen.cov = 1,
   direction = NULL,
   steps = 1000,
   max.iter = 20,
@@ -40,9 +42,15 @@ buildAll(
 \arguments{
 \item{project}{a string: the initial Monolix project}
 
-\item{final.project}{a string: the final Monolix project (default adds "_built" to the original project)}
+\item{final.project}{a string: the final Monolix project (default adds "_buildAll" to the original project)}
 
 \item{model}{components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")}
+
+\item{prior}{list of prior probabilities for each component of the model (default=NULL)}
+
+\item{weight}{list of penalty weights for each component of the model (default=NULL)}
+
+\item{cv.min}{value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)}
 
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
@@ -57,8 +65,6 @@ buildAll(
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
 
 \item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
-
-\item{pen.cov}{multiplicative penalty term for the covariate model (default=1)}
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 

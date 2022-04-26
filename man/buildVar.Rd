@@ -5,7 +5,10 @@
 \title{Automatic model variance building}
 \usage{
 buildVar(
-  project,
+  project = NULL,
+  weight = NULL,
+  prior = NULL,
+  cv.min = 0.001,
   final.project = NULL,
   fix.param1 = NULL,
   fix.param0 = NULL,
@@ -23,6 +26,12 @@ buildVar(
 \arguments{
 \item{project}{a string: the initial Monolix project}
 
+\item{weight}{named vector of weights (default=NULL)}
+
+\item{prior}{named vector of prior probabilities (default=NULL)}
+
+\item{cv.min}{value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)}
+
 \item{final.project}{a string: the final Monolix project (default adds "_var" to the original project)}
 
 \item{fix.param1}{parameters with variability that cannot be removed (default=NULL)}
@@ -33,9 +42,9 @@ buildVar(
 
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
-\item{remove}{try to remove random effects (default=T)}
+\item{remove}{{TRUE}/FALSE try to remove random effects (default=TRUE)}
 
-\item{add}{try to add random effects (default=T)}
+\item{add}{{TRUE}/FALSE try to add random effects (default=TRUE)}
 
 \item{delta}{maximum difference in criteria for testing a new model (default=c(30,5))}
 

@@ -8,6 +8,8 @@ buildmlx(
   project = NULL,
   final.project = NULL,
   model = "all",
+  prior = NULL,
+  weight = NULL,
   paramToUse = "all",
   covToTest = "all",
   covToTransform = "none",
@@ -15,9 +17,9 @@ buildmlx(
   criterion = "BICc",
   linearization = FALSE,
   ll = T,
-  pen.cov = 1,
   direction = NULL,
   steps = 1000,
+  n.full = 10,
   max.iter = 20,
   explor.iter = 2,
   seq.cov = FALSE,
@@ -36,6 +38,10 @@ buildmlx(
 
 \item{model}{components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")}
 
+\item{prior}{list of prior probabilities for each component of the model (default=NULL)}
+
+\item{weight}{list of penalty weights for each component of the model (default=NULL)}
+
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
 \item{covToTest}{components of the covariate model that can be modified   (default="all")}
@@ -50,11 +56,11 @@ buildmlx(
 
 \item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
 
-\item{pen.cov}{multiplicative penalty term for the covariate model (default=1)}
-
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
 \item{steps}{maximum number of iteration for stepAIC (default=1000)}
+
+\item{n.full}{maximum number of covariates for an exhaustive comparison of all possible covariate models (default=10)}
 
 \item{max.iter}{maximum number of iterations (default=20)}
 

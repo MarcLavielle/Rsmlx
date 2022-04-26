@@ -1,4 +1,5 @@
-correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, seqmod=TRUE) {
+correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=NULL, 
+                                      seqmod=TRUE, prior=NULL, cor.list=NULL, weight=NULL) {
   
   # if (criterion=="BICc")  criterion="BIC"
   
@@ -26,65 +27,34 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
   e.var <- paste0("eta_",e.name)
   e.var <- e.var[e.var %in% names(e)]
   e <- e[e.var]
-  e <- as.data.frame(scale(e))
+  e <- scale(e)
+  e <- as.data.frame(e)
   n.param <- ncol(e)
   alpha.cor <- 0.01
   if (n.param>1) {
-    C <- cov(e) 
-    Ci <- pv <- C
-    for (i1 in (1:(n.param-1))) {
-      for (i2 in ((i1+1):n.param)) {
-        refi1 <- matrix(e[,i1],ncol=nrep)
-        refi2 <- matrix(e[,i2],ncol=nrep)
-        ri <- rowSums(refi1*refi2)
-        Ci[i1, i2] <- Ci[i2, i1] <- cor(rowMeans(refi1),rowMeans(refi2))
-        pv[i1, i2] <- pv[i2, i1] <- signif(t.test(ri)$p.value)
-      }   
-    }
+    weight <- weight[e.name, e.name]
+    C <- cov(e)
     C <- (C + alpha.cor*diag(diag(C)))/(1+alpha.cor)
-    ll <- sum(my.dmvnorm(e, sigma=diag(rep(1,n.param)), log=T))/nrep
-    # ll <- -0.5*(sum(e^2)/nrep + N*n.param*log(2*pi))
+    C0 <- diag(diag(C))
+    ll <- -log(det(C0))*N/2
     df <- 0
-    Ck <- Pk <- diag(rep(1,n.param))
-    row.names(Ck) <- names(e)
-    colnames(Ck) <- names(e)
-    
-    Cp <- 1-pv
-    Cp <- Cp - diag(diag(Cp)) + diag(rep(1, nrow(Cp)))
-    
-    A <- abs(Cp)
-    A[lower.tri(A, diag=T)] <- 0
-    b <- 1:n.param
-    test <- FALSE
-    CC <- PP <- list(Ck)
-    k <- 1
-
-    while (test==F){
-      k <- k+1
-      m <- which(A == max(A), arr.ind = TRUE)
-      i1 <- which(b==b[m[1]])
-      b[i1] <- b[m[2]]
-      #print(b)
-      ib <- which(b==b[m[1]])
-      A[ib,ib] <- 0
-      if (length(unique(b))==1)
-        test <- TRUE
-      for (j in (1:n.param)) {
-        ij <- which(b==b[j])
-        Ck[ij,ij] <- C[ij,ij]
-        Pk[ij,ij] <- pv[ij,ij]
+    CC <- list(C0)
+    r <- cor.list(v=1:n.param)
+    for (rk in r) {
+      Ck <- C0
+      for (j in 1:length(rk)) {
+        rjk <- rk[[j]] 
+        Ck[rjk, rjk] <- C[rjk, rjk]
       }
-      llk <- sum(my.dmvnorm(e, sigma=Ck, log=T))/nrep
-      dfk <- (length(which(Ck !=0))-n.param)/2
-      df <- c(df, dfk)
-      ll <- c(ll , llk)
-      CC[[k]] <- Ck
-      PP[[k]] <- Pk
+      df <- c(df, sum(weight*(Ck !=0)))
+      ll <- c(ll, -log(det(Ck))*N/2)
+      CC <- c(CC, list(Ck))
     }
+    
     bic <- -2*ll + pen.coef*df
-    pvl <- 1
-    for (k in (2:length(PP))) 
-      pvl <- c(pvl, min(PP[[k]][which(PP[[k-1]]==0 & PP[[k]]>0)]))
+    # pvl <- 1
+    # for (k in (2:length(PP))) 
+    #   pvl <- c(pvl, min(PP[[k]][which(PP[[k-1]]==0 & PP[[k]]>0)]))
     
     if (seqmod) {
       if (length(corr0)==0)
@@ -95,7 +65,7 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
       bl <- bl-1
       bm <- sum(bl*(bl+1)/2)
       bic[df>bm] <- Inf
-      pvl[df>bm] <- 1
+      #     pvl[df>bm] <- 1
     }
     
     obic <- order(bic)
@@ -107,7 +77,8 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
     # }
     
     nb.model <- min(nb.model, length(bic))
-    E <- data.frame(ll=ll, df=df, criterion=bic, pv=pvl)
+    #   E <- data.frame(ll=ll, df=df, criterion=bic, pv=pvl)
+    E <- data.frame(ll=ll, df=df, criterion=bic)
     # print(E)
     E <- E[obic[1:nb.model],]
     row.names(E) <- 1:nrow(E)
@@ -183,4 +154,27 @@ my.dmvnorm <- function(x, mean = rep(0, p), sigma = diag(p), log = FALSE)
   if (log) 
     logretval
   else exp(logretval)
+}
+
+
+#-------------------------------------------
+
+cor.list <- function(l=NULL, v=NULL, l0=list(), r=list()){
+  if (length(l)>1)  
+    r[[length(r)+1]] <- c(l0,list(l))
+  nv <- length(v)
+  lk <- l
+  if (nv>0) {
+    for (k in 1:(nv)) {
+      lk <- c(l, v[k])
+      if (k<nv)
+        vk <- v[(k+1):nv]
+      else
+        vk <- NULL
+      r <- cor.list(l=lk, v=vk, l0=l0, r=r)
+      if (length(lk)>1)
+        r <- cor.list(l=NULL, v=vk, l0=c(l0, list(lk)), r=r)
+    }
+  }  
+  return(r)
 }

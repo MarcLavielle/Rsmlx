@@ -89,24 +89,25 @@ getEstimatedPredictions <- function() {
   
   df <- list()
   obsNames <- names(obs.info$mapping)
-  for (j in seq_along(obsNames)) {
-    name <- obsNames[j]
+  contNames <- obsNames[obs.info$type[obsNames]=="continuous"]
+  for (j in seq_along(contNames)) {
+    name <- contNames[j]
     df[j] <- obs.info[name]
     df[[j]][name] <- NULL
   }
   
   f.pop1 <- mlx.computePredictions(ip$popPopCov)
-  for (j in seq_along(obsNames)) {df[[j]]$popPopCov <- f.pop1[[j]]}
+  for (j in seq_along(contNames)) {df[[j]]$popPopCov <- f.pop1[[j]]}
   f.pop2 <- mlx.computePredictions(ip$popIndCov)
-  for (j in seq_along(obsNames)) {df[[j]]$popIndCov <- f.pop2[[j]]}
+  for (j in seq_along(contNames)) {df[[j]]$popIndCov <- f.pop2[[j]]}
   
   if (!is.null(ip$conditionalMean)) {
     f.mean <- mlx.computePredictions(ip$conditionalMean)
-    for (j in seq_along(obsNames)) {df[[j]]$conditionalMean <- f.mean[[j]]}
+    for (j in seq_along(contNames)) {df[[j]]$conditionalMean <- f.mean[[j]]}
   }
   if (!is.null(ip$conditionalMode)) {
     f.mode <- mlx.computePredictions(ip$conditionalMode)
-    for (j in seq_along(obsNames)) {df[[j]]$conditionalMode <- f.mode[[j]]}
+    for (j in seq_along(contNames)) {df[[j]]$conditionalMode <- f.mode[[j]]}
   }
   names(df) <- names(f.pop1)
   return(df)
@@ -139,14 +140,15 @@ getEstimatedResiduals <- function() {
   nip <- c("popPopCov", "popIndCov", "conditionalMean", "conditionalMode")
   
   obsNames <- names(obs.info$mapping)
-  nobs <- length(obsNames)
+  contNames <- obsNames[obs.info$type[obsNames]=="continuous"]
+  nobs <- length(contNames)
   error.model <- mlx.getContinuousObservationModel()$errorModel
   error.dist <- mlx.getContinuousObservationModel()$distribution
   ep <- error.parameter()
   pop.param <- mlx.getEstimatedPopulationParameters()
   param.error <- list()
-  for (j in seq_along(obsNames)) {
-    name <- obsNames[j]
+  for (j in seq_along(contNames)) {
+    name <- contNames[j]
     dfj <- df[[j]]
     ij <- which(names(dfj) %in% nip)
     yoj <- replicate(length(ij), obs.info[[name]][[name]])
@@ -178,7 +180,7 @@ getEstimatedResiduals <- function() {
       dfj <- (yoj - ypj)/(pei[1] + pei[2]*ypj^pei[3])
     df[[j]][names(dfj)] <- dfj
   }
-  names(df) <- obsNames
+  names(df) <- contNames
   return(df)
 }
 
@@ -210,9 +212,10 @@ getSimulatedPredictions <- function() {
   obs.info <- mlx.getObservationInformation()
   df <- list()
   obsNames <- names(obs.info$mapping)
+  contNames <- obsNames[obs.info$type[obsNames]=="continuous"]
   pred <- mlx.getContinuousObservationModel()$prediction
-  for (j in seq_along(obsNames)) {
-    name <- obsNames[j]
+  for (j in seq_along(contNames)) {
+    name <- contNames[j]
     df[j] <- obs.info[name]
     df[[j]][name] <- NULL
     df[[j]][pred[name]] <- 0
@@ -224,8 +227,8 @@ getSimulatedPredictions <- function() {
   for (irep in seq_len(nrep)) {
     parami <- subset(sip, rep==irep)[,col.el]
     fi <- mlx.computePredictions(parami)
-    for (j in seq_along(obsNames)) {
-      name <- obsNames[j]
+    for (j in seq_along(contNames)) {
+      name <- contNames[j]
       df[[j]][pred[name]] <- fi[[pred[name]]]
       df[[j]]["rep"] <- irep
       if (irep==1)
@@ -235,7 +238,7 @@ getSimulatedPredictions <- function() {
     }
     
   }
-  names(res) <- pred[obsNames]
+  names(res) <- pred[contNames]
   return(res)
 }
 
@@ -263,15 +266,16 @@ getSimulatedResiduals <- function() {
   df <- getSimulatedPredictions()
   obs.info <- mlx.getObservationInformation()
   obsNames <- names(obs.info$mapping)
-
+  contNames <- obsNames[obs.info$type[obsNames]=="continuous"]
+  
   error.model <- mlx.getContinuousObservationModel()$errorModel
   error.dist <- mlx.getContinuousObservationModel()$distribution
   ep <- error.parameter()
   pop.param <- mlx.getEstimatedPopulationParameters()
   param.error <- list()
   nrep <- max(df[[1]]["rep"])
-  for (j in seq_along(obsNames)) {
-    name <- obsNames[j]
+  for (j in seq_along(contNames)) {
+    name <- contNames[j]
     dfj <- df[[j]]
     ij <- which(names(dfj) == names(df)[j])
     yoj <- rep(obs.info[[name]][[name]],nrep)
@@ -304,7 +308,7 @@ getSimulatedResiduals <- function() {
     df[[j]][,ij] <- dfj
     names(df[[j]])[ij] <- "residual"
   }
-  names(df) <- obsNames
+  names(df) <- contNames
   return(df)
 }
 
@@ -315,7 +319,7 @@ getSimulatedResiduals <- function() {
 #' @examples
 #' \dontrun{
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
-#' r = GetEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
+#' r = getEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
 #' 
 #' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
