@@ -87,8 +87,8 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   
   if (!is.null(project)) {
     project <- prcheck(project)$project
-  mlx.loadProject(project)
-}  else 
+    mlx.loadProject(project)
+  }  else 
     project <- mlx.getProjectSettings()$project
   
   in.model <- p.ttest <- random.effect <- covariate <- param <- pen.coef <- NULL
@@ -158,8 +158,6 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       cor1 <- rep(F, length(cov1))
       names(cor1) <- names(cov1)
       cor1[unlist(mlx.getIndividualParameterModel()$correlationBlocks$id)] <- T
-      #      if (print)
-      #        cat(paste0("\n",dashed.line))
       r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
@@ -177,7 +175,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     } else {
       r.build$change <- F
     }
-    if (iter==1 || r.build$change) {
+    if ((iter==1 || r.build$change) & "variance" %in% model) {
       fix0 <- fix.param0
       fix1 <- fix.param1
       if (iter >= 2) {
@@ -194,8 +192,6 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       if (length(setdiff(names(cov1), c(fix0, fix1)))>0){
         project.ini.buildvar <- project.final.built
         project.final.builtvar <- file.path(dir.built, paste0("project_builtvar",iter,".mlxtran"))
-        #        if (print)
-        #          cat(paste0("\n",dashed.line))
         r.buildvar <- buildVar(project.ini.buildvar, final.project=project.final.builtvar, linearization=linearization, cv.min=cv.min,
                                fix.param1=fix1, fix.param0=fix0, criterion=criterion, print=print, prior=NULL, weight=weight,
                                remove=remove, add=add, delta=delta, omega.set=omega.set, pop.set1=pop.set1, pop.set2=pop.set2)
@@ -203,7 +199,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         r.buildvar <- list(change = F)
       }
     } else {
-      r.buildvar$change <- F
+      r.buildvar <- list(change=F)
     }
     change <- r.build$change | r.buildvar$change 
   }
@@ -212,7 +208,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   # relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate)))
   # mlx.loadProject(final.project)
   
-
+  
   if (!identical(model, "all") & !("covariate" %in% model))
     relToTest <- NULL
   
@@ -323,8 +319,6 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     covariate.model.print <- formatCovariateModel(mlx.getIndividualParameterModel()$covariateModel)
     correlation.model.print <- lapply(mlx.getIndividualParameterModel()$correlationBlocks$id, sort)
     error.model.print <- formatErrorModel(mlx.getContinuousObservationModel()$errorModel)
-    ll.final <- compute.criterion(criterion, method.ll, r.build$weight, pen.coef)
-    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, weight$is.weight)
     
     cat(paste0("\n",dashed.line,"\nFinal complete model:\n"))
     cat("\nVariance model: \n")
@@ -341,8 +335,12 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       cat("\nResidual error model:\n")
       print(error.model.print)
     }
-    cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
-    print(round(ll,2)) 
+    if (ll) {
+      ll.final <- compute.criterion(criterion, method.ll, r.build$weight, pen.coef)
+      ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, weight$is.weight)
+      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+      print(round(ll,2)) 
+    }
     dt <- proc.time() - ptm
     cat(paste0("\ntotal time: ", round(dt["elapsed"], digits=1),"s\n", dashed.line, "\n"))
     
