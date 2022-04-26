@@ -515,7 +515,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
           if (stop.test)
             ll <- ll0
           else {
-            ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
+            ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight)
           }
           
           to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
@@ -1157,31 +1157,34 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
       warning("Covariate model: only 'weight' or 'prior' can be defined, not both. 'weight' will be used and prior will be ignored", call.=FALSE)
       p.cov <- NULL
     }
-    if (!is.null(p.cov) & is.null(w.cov)) { 
-      if (length(p.cov)==1) {
-        foo <- p.cov
-        p.cov <- cov.model
-        p.cov[is.logical(cov.model)] <- foo
-      } else if (!identical(colnames(cov.model), colnames(p.cov)) | !identical(rownames(cov.model), rownames(p.cov)))
+    #if (!is.null(p.cov) & is.null(w.cov)) { 
+    # if (length(p.cov)==1) {
+    #   foo <- p.cov
+    #   p.cov <- cov.model
+    #   p.cov[is.logical(cov.model)] <- foo
+    if (length(p.cov) > 1) {
+      if (!identical(sort(colnames(cov.model)), sort(colnames(p.cov))) | !identical(sort(rownames(cov.model)), sort(rownames(p.cov))))
         stop("prior$covariate should be a matrix whose column names are the names of the covariates and whose row names are the names of the parameters", call.=FALSE)
+      else
+        prior$covariate <- p.cov[,colnames(cov.model)]
     }
-    if (is.null(p.cov) & is.null(w.cov)) 
-      w.cov <- 1
-    if (!is.null(w.cov)) {
-      if (length(w.cov)==1) {
-        foo <- w.cov
-        w.cov <- cov.model
-        w.cov[is.logical(cov.model)] <- foo
-      } else {
-        if (!identical(colnames(cov.model), colnames(w.cov)) | !identical(rownames(cov.model), rownames(w.cov)))
-          stop("weight$covariate should be a matrix whose column names are the names of the covariates and whose row names are the names of the parameters", call.=FALSE)
-      }
-    } else {
-      seq.cov <- F
+    # if (is.null(p.cov) & is.null(w.cov)) 
+    #   w.cov <- 1
+    # if (!is.null(w.cov)) {
+    #   if (length(w.cov)==1) {
+    #     foo <- w.cov
+    #     w.cov <- cov.model
+    #     w.cov[is.logical(cov.model)] <- foo
+    #   } else {
+    if (length(w.cov) > 1) {
+      if (!identical(sort(colnames(cov.model)), sort(colnames(w.cov))) | !identical(sort(rownames(cov.model)), sort(rownames(w.cov))))
+        stop("weight$covariate should be a matrix whose column names are the names of the covariates and whose row names are the names of the parameters", call.=FALSE)
+      else 
+        weight$covariate <- w.cov[,colnames(cov.model)]
     }
     
-    weight$covariate <- w.cov
-    prior$covariate <- p.cov
+  } else {
+    seq.cov <- F
   }
   
   if (model$correlation) {
@@ -1194,25 +1197,23 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
     var.model <- mlx.getIndividualParameterModel()$variability$id
     n.param <- names(which(var.model))
     d.param <- length(n.param)
-    if (!is.null(p.cor) & is.null(w.cor)) { 
-      if (length(p.cor)==1) 
-        p.cor <- matrix(p.cor, nrow=d.param, ncol=d.param, dimnames=list(n.param, n.param))
-      else if (!all(n.param %in% colnames(p.cor)) | !all(n.param %in% rownames(p.cor)) |
-               (!identical(p.cor, t(p.cor)) & !identical(p.cor, lower.tri(p.cor)*p.cor))) {
-        print(p.cor)
-        stop("prior$correlation should be a symetrical or triangular inferior square matrix whose column names and row names are the names of the parameters with variability", call.=FALSE)
-      }
+    if (!is.null(p.cor)) { 
+      if (length(p.cor) > 1) 
+        if (!all(n.param %in% colnames(p.cor)) | !all(n.param %in% rownames(p.cor)) |
+            (!identical(p.cor, t(p.cor)) & !identical(p.cor, lower.tri(p.cor)*p.cor))) {
+          print(p.cor)
+          stop("prior$correlation should be a symetrical or triangular inferior square matrix whose column names and row names are the names of the parameters with variability", call.=FALSE)
+        } 
     }
-    if (is.null(p.cor) & is.null(w.cor)) 
-      w.cor <- 1
+    
     if (!is.null(w.cor)) {
       if (length(w.cor)==1) 
-        w.cor <- matrix(w.cor, nrow=d.param, ncol=d.param, dimnames=list(n.param, n.param))
-      else if (!all(n.param %in% colnames(w.cor)) | !all(n.param %in% rownames(w.cor)) |
-               (!identical(w.cor, t(w.cor)) & !identical(w.cor, lower.tri(w.cor)*w.cor))) {
-        print(w.cor)
-        stop("weight$correlation should be a symetrical or triangular inferior square matrix whose column names and row names are the names of the parameters with variability", call.=FALSE)
-      }
+        if (length(p.cor) > 1) 
+          if (!all(n.param %in% colnames(w.cor)) | !all(n.param %in% rownames(w.cor)) |
+              (!identical(w.cor, t(w.cor)) & !identical(w.cor, lower.tri(w.cor)*w.cor))) {
+            print(w.cor)
+            stop("weight$correlation should be a symetrical or triangular inferior square matrix whose column names and row names are the names of the parameters with variability", call.=FALSE)
+          }
     }
     
     weight$correlation <- w.cor

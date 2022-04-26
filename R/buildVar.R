@@ -62,8 +62,8 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
   op.new$lixoft_notificationOptions$warnings <- 1   #hide the warning messages
   options(op.new)
   
-  is.weight <- !is.null(weight)
-  is.prior <- !is.null(prior)
+  # is.weight <- !is.null(weight)
+  # is.prior <- !is.null(prior)
   
   if (!is.null(project)) 
     project <- prcheck(project)$project

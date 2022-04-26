@@ -133,7 +133,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
   weight0 <- weight
-  weight0$variance <- 1
+  #weight0$variance <- 1
   
   method.ll <- ifelse(linearization,"linearization","importanceSampling")
   
@@ -160,7 +160,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       cor1[unlist(mlx.getIndividualParameterModel()$correlationBlocks$id)] <- T
       #      if (print)
       #        cat(paste0("\n",dashed.line))
-      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight0,
+      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
                           linearization=linearization, ll=ll, direction=direction, steps=steps,
@@ -173,6 +173,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       names(cor2) <- names(cov2)
       cor2[unlist(mlx.getIndividualParameterModel()$correlationBlocks$id)] <- T
       var2 <- unlist(mlx.getIndividualParameterModel()$variability$id)
+      weight <- r.build$weight
     } else {
       r.build$change <- F
     }
@@ -323,7 +324,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     correlation.model.print <- lapply(mlx.getIndividualParameterModel()$correlationBlocks$id, sort)
     error.model.print <- formatErrorModel(mlx.getContinuousObservationModel()$errorModel)
     ll.final <- compute.criterion(criterion, method.ll, r.build$weight, pen.coef)
-    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, is.weight, is.prior)
+    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, weight$is.weight)
     
     cat(paste0("\n",dashed.line,"\nFinal complete model:\n"))
     cat("\nVariance model: \n")
