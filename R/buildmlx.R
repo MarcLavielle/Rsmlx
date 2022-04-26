@@ -89,8 +89,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   op.new$lixoft_notificationOptions$warnings <- 1   #hide the warning messages
   options(op.new)
   
-  is.weight <- weight$is.weight
-  is.prior <- NULL
   
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   pi <- 4*atan(1)
@@ -115,6 +113,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   r <- def.variable(weight=weight, prior=prior, criterion=criterion)
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
+  
+  is.weight <- weight$is.weight
+  is.prior <- NULL
   
   final.dir <- sub(pattern = "(.*)\\..*$", replacement = "\\1", final.project)
   if (dir.exists(final.dir)) 

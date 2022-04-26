@@ -82,8 +82,8 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   op.new$lixoft_notificationOptions$warnings <- 1   #hide the warning messages
   options(op.new)
   
-  is.weight <- !is.null(weight)
-  is.prior <- !is.null(prior)
+  # is.weight <- !is.null(weight)
+  # is.prior <- !is.null(prior)
   
   if (!is.null(project)) 
     project <- prcheck(project)$project
@@ -294,7 +294,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
           eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
         
         ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
-        ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
+        ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, weight$is.weight)
         if (is.numeric(criterion))
           ll.disp['criterion'] <- ll.new
         if (print) {
