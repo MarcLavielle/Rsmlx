@@ -10,6 +10,9 @@
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_buildAll" to the original project)
 #' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
+#' @param prior  list of prior probabilities for each component of the model (default=NULL)
+#' @param weight list of penalty weights for each component of the model (default=NULL)
+#' @param cv.min  value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param fix.param1  parameters with variability that cannot be removed (default=NULL)
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
@@ -59,7 +62,7 @@
 #' @importFrom dplyr filter select rename arrange bind_rows rename
 #' @importFrom dplyr %>%
 #' @export
-buildAll <- function(project, final.project=NULL, model="all", 
+buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, cv.min=0.001,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, direction=NULL, steps=1000,
                      max.iter=20, explor.iter=2, seq.cov=FALSE, seq.corr=TRUE, seq.cov.iter=0, 
@@ -67,7 +70,27 @@ buildAll <- function(project, final.project=NULL, model="all",
                      fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,5), 
                      omega.set=NULL, pop.set1=NULL, pop.set2=NULL) {
   
-  in.model <- p.ttest <- random.effect <- covariate <- param <- NULL
+  ptm <- proc.time()
+  
+  dashed.line <- "--------------------------------------------------\n"
+  plain.line <-  "__________________________________________________\n"
+  dashed.short <- "-----------------------\n"
+  plain.short  <- "_______________________\n"
+  
+  op.original <- options()
+  op.new <- options()
+  op.new$lixoft_notificationOptions$warnings <- 1   #hide the warning messages
+  options(op.new)
+  
+  is.weight <- !is.null(weight)
+  is.prior <- !is.null(prior)
+  
+  if (!is.null(project)) 
+    project <- prcheck(project)$project
+  else 
+    project <- mlx.getProjectSettings()$project
+  
+  in.model <- p.ttest <- random.effect <- covariate <- param <- pen.coef <- NULL
   
   if (is.null(final.project))
     final.project <- gsub(".mlxtran", "_buildAll.mlxtran", project)
@@ -77,8 +100,6 @@ buildAll <- function(project, final.project=NULL, model="all",
   if (dir.exists(dir.built))
     unlink(dir.built, recursive=TRUE)
   dir.create(dir.built)
-  
-  r <- prcheck(project)
   
   #  start with "full variance" model
   mlx.loadProject(project)
@@ -108,6 +129,14 @@ buildAll <- function(project, final.project=NULL, model="all",
   pop.set2 <- modifyList(pop.set1, pset2[intersect(names(pset2), names(pop.set1))])
   # ---------------------
   
+  r <- def.variable(weight=weight, prior=prior, criterion=criterion, fix.param0=fix.param0, fix.param1=fix.param1)
+  for (j in 1:length(r))
+    eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
+  weight0 <- weight
+  weight0$variance <- 1
+  
+  method.ll <- ifelse(linearization,"linearization","importanceSampling")
+  
   #  iterate buildmlx (SAMBA) and buildvar until convergence
   change <- T
   iter <- 0
@@ -129,12 +158,16 @@ buildAll <- function(project, final.project=NULL, model="all",
       cor1 <- rep(F, length(cov1))
       names(cor1) <- names(cov1)
       cor1[unlist(mlx.getIndividualParameterModel()$correlationBlocks$id)] <- T
-      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest,
+      #      if (print)
+      #        cat(paste0("\n",dashed.line))
+      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight0,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
                           linearization=linearization, ll=ll, direction=direction, steps=steps,
                           max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
-      relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate, p.ttest)))
+      pv.re <- covariateTest()$p.value.randomEffects
+      if (!is.null(pv.re))
+        relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate, p.ttest)))
       cov2 <- mlx.getIndividualParameterModel()$covariateModel
       cor2 <- rep(F, length(cov2))
       names(cor2) <- names(cov2)
@@ -147,7 +180,7 @@ buildAll <- function(project, final.project=NULL, model="all",
       fix0 <- fix.param0
       fix1 <- fix.param1
       if (iter >= 2) {
-         list.n <- setdiff(names(cov1), c(fix.param0, fix.param1))
+        list.n <- setdiff(names(cov1), c(fix.param0, fix.param1))
         for (nc in list.n) {
           if (!var2[nc] & identical(cov1[nc], cov2[nc]))
             fix0 <- c(fix0, nc)
@@ -160,11 +193,13 @@ buildAll <- function(project, final.project=NULL, model="all",
       if (length(setdiff(names(cov1), c(fix0, fix1)))>0){
         project.ini.buildvar <- project.final.built
         project.final.builtvar <- file.path(dir.built, paste0("project_builtvar",iter,".mlxtran"))
-        r.buildvar <- buildVar(project.ini.buildvar, final.project=project.final.builtvar, linearization=linearization,
-                               fix.param1=fix1, fix.param0=fix0, criterion=criterion, print=print,
+        #        if (print)
+        #          cat(paste0("\n",dashed.line))
+        r.buildvar <- buildVar(project.ini.buildvar, final.project=project.final.builtvar, linearization=linearization, cv.min=cv.min,
+                               fix.param1=fix1, fix.param0=fix0, criterion=criterion, print=print, prior=NULL, weight=weight,
                                remove=remove, add=add, delta=delta, omega.set=omega.set, pop.set1=pop.set1, pop.set2=pop.set2)
       } else {
-        r.buildvar$change <- F
+        r.buildvar <- list(change = F)
       }
     } else {
       r.buildvar$change <- F
@@ -176,12 +211,18 @@ buildAll <- function(project, final.project=NULL, model="all",
   # relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate)))
   # mlx.loadProject(final.project)
   
+
+  if (model != "all" & !("covariate" %in% model))
+    relToTest <- NULL
   
   if (!is.null(relToTest)) {
     param0 <- names(which(!mlx.getIndividualParameterModel()$variability$id))
     relToTest <- unique(relToTest) %>% mutate(param=gsub("eta_","", random.effect)) %>% filter(param %in% param0) %>% select(-random.effect)
     if (nrow(relToTest)>0) {
-      
+      if (print) {
+        cat(paste0("\n",dashed.line))
+        cat("\nTesting additional relationships between covariates and parameters\n")
+      }
       linearization.iter <- T
       if (any(mlx.getObservationInformation()$type != "continuous")) 
         linearization <- linearization.iter <-  F
@@ -201,8 +242,8 @@ buildAll <- function(project, final.project=NULL, model="all",
       project.relToTest <- file.path(dir.built, paste0("project_relToTest.mlxtran"))
       mlx.saveProject(project.relToTest)
       
-      ll.ini <- computecriterion(criterion, method.ll)
-      ll.min <- computecriterion(criterion, method.ll.iter)
+      ll.ini <- compute.criterion(criterion, method.ll, weight, pen.coef)
+      ll.min <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
       
       ind.param <- mlx.getEstimatedIndividualParameters()$saem
       mlx.setInitialEstimatesToLastEstimates()
@@ -211,7 +252,7 @@ buildAll <- function(project, final.project=NULL, model="all",
       mlx.setPopulationParameterEstimationSettings(pop.set1)
       g.min <- g.ini <- mlx.getIndividualParameterModel()
       for (k in 1:nrow(relToTest)) {
-        print(relToTest[k,])
+        if (print)  print(relToTest[k,])
         g <- g.min
         g$covariateModel[[relToTest$param[k]]][[relToTest$covariate[k]]] <- T
         mlx.setIndividualParameterModel(g)
@@ -223,7 +264,8 @@ buildAll <- function(project, final.project=NULL, model="all",
           mlx.runConditionalDistributionSampling()
           mlx.runLogLikelihoodEstimation(linearization=FALSE)
         }
-        ll.iter <- computecriterion(criterion, method.ll.iter)
+        
+        ll.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
         print(c(ll.min, ll.iter))
         if (ll.iter < ll.min) {
           ll.min <- ll.iter
@@ -247,8 +289,12 @@ buildAll <- function(project, final.project=NULL, model="all",
           mlx.runConditionalDistributionSampling()
           mlx.runLogLikelihoodEstimation(linearization=FALSE)
         }
-        ll.new <- computecriterion(criterion, method.ll)
-        ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]])
+        r <- def.variable(weight=weight, prior=prior, criterion=criterion)
+        for (j in 1:length(r))
+          eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
+        
+        ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
+        ll.disp <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
         if (is.numeric(criterion))
           ll.disp['criterion'] <- ll.new
         if (print) {
@@ -257,7 +303,8 @@ buildAll <- function(project, final.project=NULL, model="all",
         }
         if (ll.new < ll.ini) {
           mlx.saveProject(final.project)
-          r.build <- buildmlx(project=final.project, covToTest=covToTest,
+          # if (print)
+          r.build <- buildmlx(project=final.project, covToTest=covToTest, prior=NULL, weight=weight,
                               covToTransform=covToTransform, seq.corr=F, seq.cov=F, seq.cov.iter=0, p.max=p.max, p.min=p.min,
                               model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
                               linearization=linearization, ll=ll, direction=direction, steps=steps,
@@ -267,6 +314,37 @@ buildAll <- function(project, final.project=NULL, model="all",
       }
     }
     mlx.loadProject(final.project)
+  }
+  
+  if (print) {
+    param0 <- names(which(!mlx.getIndividualParameterModel()$variability$id))
+    param1 <- names(which(mlx.getIndividualParameterModel()$variability$id))
+    covariate.model.print <- formatCovariateModel(mlx.getIndividualParameterModel()$covariateModel)
+    correlation.model.print <- lapply(mlx.getIndividualParameterModel()$correlationBlocks$id, sort)
+    error.model.print <- formatErrorModel(mlx.getContinuousObservationModel()$errorModel)
+    ll.final <- compute.criterion(criterion, method.ll, r.build$weight, pen.coef)
+    ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, is.weight, is.prior)
+    
+    cat(paste0("\n",dashed.line,"\nFinal complete model:\n"))
+    cat("\nVariance model: \n")
+    cat("Parameters without variability:", param0, "\n")
+    cat("Parameters with variability   :", param1, "\n")
+    cat("\nCovariate model:\n")
+    print(covariate.model.print)
+    cat("\nCorrelation model:\n")
+    if (length(correlation.model.print)>0)
+      print(correlation.model.print)
+    else
+      print("NULL")
+    if (length(error.model.print)>0) {
+      cat("\nResidual error model:\n")
+      print(error.model.print)
+    }
+    cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+    print(round(ll,2)) 
+    dt <- proc.time() - ptm
+    cat(paste0("\ntotal time: ", round(dt["elapsed"], digits=1),"s\n", dashed.line, "\n"))
+    
   }
   
   return(list(project=final.project))

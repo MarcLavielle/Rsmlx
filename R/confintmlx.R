@@ -91,8 +91,8 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   
   if (method=="bootstrap") {
     r.boot <- bootmlx(project, nboot=nboot, settings=list(plot=FALSE, level=level), parametric=parametric)
-    c.inf <- apply(r.boot,MARGIN=2, quantile,(1-level)/2)
-    c.sup <- apply(r.boot,MARGIN=2, quantile,(1+level)/2)
+    c.inf <- apply(r.boot,MARGIN=2, quantile,(1-level)/2, na.rm=TRUE)
+    c.sup <- apply(r.boot,MARGIN=2, quantile,(1+level)/2, na.rm=TRUE)
     lp <- mlx.loadProject(project) 
     if (!lp) return()
     c.est <- mlx.getEstimatedPopulationParameters()

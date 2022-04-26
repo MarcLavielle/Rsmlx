@@ -9,6 +9,9 @@
 #' See http://rsmlx.webpopix.org for more details.
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_var" to the original project)
+#' @param prior  named vector of prior probabilities (default=NULL)
+#' @param weight  named vector of weights (default=NULL)
+#' @param cv.min  value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)
 #' @param fix.param1  parameters with variability that cannot be removed (default=NULL)
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
@@ -38,36 +41,49 @@
 #' # Download the demo examples here: http://rsmlx.webpopix.org/installation
 #' 
 #' 
-#' @importFrom stats coef as.formula model.matrix
+#' @importFrom stats coef as.formula model.matrix integrate
 #' @importFrom utils modifyList 
 #' @export
 
-buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NULL, 
-                     criterion="BICc", linearization=F, remove=T, add=T, delta=c(30,5), 
-                     omega.set=NULL, pop.set1=NULL, pop.set2=NULL, print=TRUE) {
+buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.project=NULL, 
+                     fix.param1=NULL, fix.param0=NULL, criterion="BICc", linearization=F, remove=T, add=T,
+                     delta=c(30,5), omega.set=NULL, pop.set1=NULL, pop.set2=NULL, print=TRUE) {
   
-  
-  oset <- project.built <- project.temp <- NULL
   
   ptm <- proc.time()
-  Sys.sleep(0.1)
   
-  r.min <- 0.001
+  dashed.line <- "--------------------------------------------------\n"
+  plain.line <-  "__________________________________________________\n"
+  dashed.short <- "-----------------------\n"
+  plain.short  <- "_______________________\n"
   
-  swap <- F
   op.original <- options()
   op.new <- options()
   op.new$lixoft_notificationOptions$warnings <- 1   #hide the warning messages
   options(op.new)
   
-  r <- prcheck(project)
+  is.weight <- !is.null(weight)
+  is.prior <- !is.null(prior)
   
+  if (!is.null(project)) 
+    project <- prcheck(project)$project
+  else 
+    project <- mlx.getProjectSettings()$project
+  
+  oset <- project.built <- project.temp <- pen.coef <- NULL
   r <- buildVar.check(project=project, final.project=final.project, fix.param1=fix.param1, fix.param0=fix.param0, 
                       criterion=criterion, linearization=linearization, remove=remove, add=add, delta=delta, 
-                      omega.set=omega.set, pop.set1=pop.set1, pop.set2=pop.set2, print=print) 
+                      omega.set=omega.set, pop.set1=pop.set1, pop.set2=pop.set2, print=print, prior=prior, weight=weight) 
   
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
+  
+  r <- def.variable(weight, prior, criterion)
+  for (j in 1:length(r))
+    eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
+  w.var <- weight$variance
+  
+  if (print) cat(paste0("\n",dashed.line,"\nBuilding the variance model\n"))
   
   mlx.saveProject(project.built)
   
@@ -102,6 +118,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   
   g <- mlx.getIndividualParameterModel()
   gv <- gv0 <- g$variability$id
+  change.ini <- F
   if (!is.null(fix.param1))
     gv[fix.param1] <- T
   if (!is.null(fix.param0))
@@ -109,21 +126,27 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   if (!identical(gv,gv0)) {
     g$variability$id <- gv
     mlx.setIndividualParameterModel(g)
+    change.ini <- T
   }
   
   p.param1 <- sapply(mlx.getIndividualParameterModel()$name,function(x) NULL)
   lpar <- max(nchar(mlx.getIndividualParameterModel()$name))
   
   #---------------------------------------------
+  print.line <- F
   if (remove) {
     g <- mlx.getIndividualParameterModel()$variability$id
     param0 <- names(which(!g))
     param1 <- names(which(g))
     
     g <- as.list(mlx.getLaunchedTasks())
+    if (print) {
+      cat(paste0("\n", plain.line))
+      print.line <- T
+    }
     if (!g[['populationParameterEstimation']]) {
-      if (print)
-        cat("Estimating the population parameters\n\n")
+      if (print)  cat("\nEstimating the population parameters\n\n")
+      print.line <- F
       mlx.runPopulationParameterEstimation()
     }
     pop.built <- mlx.getEstimatedPopulationParameters()
@@ -131,25 +154,25 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
     list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
     list.param1 <- setdiff(list.param1, fix.param1)
     if (length(list.param1)>0) {
-      list.omega1 <- paste0("omega_", list.param1)
-      r.param1 <- pop.built[list.omega1]
-      d.param1 <- mlx.getIndividualParameterModel()$distribution[list.param1]
-      j.normal <- which(d.param1=="normal")
-      if (length(j.normal) > 0)
-        r.param1[j.normal] <- r.param1[j.normal]/pop.built[paste0(list.param1[j.normal],"_pop")]
-      j0 <- which(r.param1 < r.min)
+      r.param1 <- compute.cv(pop.built, list.param1)
+      j0 <- which(r.param1$cv < cv.min)
       if (length(j0) > 0) {
         if (print) {
-          cat("Parameters without variability:", param0, "\n")
-          cat("Parameters with variability   :", param1, "\n")
-          print(pop.built[list.omega1])
-          cat("remove variability on ",list.param1[j0], "\n\n")
+          if (!print.line) cat(paste0("\n", plain.line))
+          cat("\nParameters without variability:", param0, "\n")
+          cat("Parameters with variability   :", param1, "\n\n")
+          print(r.param1$o)
+          print(r.param1$cv)
+          cat(paste0("\nRemove variability on ",list.param1[j0], "\n"))
+          print.line <- F
         }
-        
         param0 <- c(param0, list.param1[j0])
         param1 <- setdiff(param1, list.param1[j0])
         update.project(project, project.built, param0, param1, NULL, pop.set1)
+        list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
+        list.param1 <- setdiff(list.param1, fix.param1)
       }
+      list.omega1 <- paste0("omega_", list.param1)
       list.omega1 <- list.omega1[order(pop.built[list.omega1])]
     }
   }
@@ -157,8 +180,11 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   
   g <- as.list(mlx.getLaunchedTasks())
   if (!g[['populationParameterEstimation']]) {
-    if (print)
-      cat("Fitting the initial model\n\n")
+    if (print) {
+      if (!print.line) cat(plain.line)
+      cat("\nFitting the initial model\n")
+      print.line <- F
+    }
     mlx.runPopulationParameterEstimation()
   }
   
@@ -183,8 +209,8 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
       mlx.runLogLikelihoodEstimation(linearization=FALSE)
     }
   }
-  BICc.built <- compute.criterion(criterion, method.ll)
-  BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
+  BICc.built <- compute.criterion(criterion, method.ll, weight, pen.coef)
+  BICc.built.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
   
   mlx.setInitialEstimatesToLastEstimates(fixedEffectsOnly = FALSE)
   mlx.saveProject(project.built)
@@ -216,7 +242,8 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   pop.set3 <- pop.set2
   pop.set3$nbburningiterations <- pop.set3$nbexploratoryiterations <- pop.set3$nbsmoothingiterations <- 0
   
-  stop <- change.any <- F
+  stop <- F 
+  change.any <- change.ini
   change.remove <- change.add <- F
   p.last.remove <- p.last.add <- NULL
   k <- 0
@@ -225,13 +252,16 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   while (!stop) {
     k <- k+1
     if (print) {
-      cat("\n___________________________\n")
-      cat("\nIteration ", k, "\n\n")
+      if (!print.line)  cat(plain.line)
+      print.line <- F
+      cat("Iteration ", k, "\n\n")
     }
     mlx.loadProject(project.built)
     if (remove) {
-      if (print)
+      if (print) {
+        #       cat(plain.short)
         cat("removing variability...\n")
+      }
       g <- mlx.getIndividualParameterModel()$variability$id
       param0 <- names(which(!g))
       param1 <- names(which(g))
@@ -241,13 +271,13 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
       stop.remove <- F
       m <- 0
       while (!stop.remove) {
-        
         list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
         if (length(setdiff(list.param1, fix.param1))>0) {
           list.param1 <- setdiff(list.param1, fix.param1)
           m <- m+1
           if (print) {
-            cat("\n---------\n")
+            cat("\n")
+            cat(dashed.short)
             cat("Step ", m, "\n")
             cat("Parameters without variability:", param0, "\n")
             cat("Parameters with variability   :", param1, "\n\n")
@@ -286,7 +316,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runConditionalDistributionSampling()
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
-              BICc1.iter <- compute.criterion(criterion, method.ll.iter) - log(N)
+              BICc1.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef) - w.var[pj]*pen.coef[1]
               
               #  browser()
               if (print)
@@ -336,7 +366,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
                 #        print(mlx.getEstimatedPopulationParameters())
-                BICc0 <- compute.criterion(criterion, method.ll)
+                BICc0 <- compute.criterion(criterion, method.ll, weight, pen.coef)
               } else {
                 BICc0 <- -Inf
               }
@@ -345,7 +375,6 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
               # r <- round(c(r, BICc0), 1)
               # names(r)[length(r)] <- paste0(param0, collapse='_')
               #     print(r)
-              
               if (BICc0 < BICc.built) {
                 if (print)
                   cat("\nvariability on", p.min, "removed\n")
@@ -361,7 +390,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runConditionalDistributionSampling()
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
-                BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
+                BICc.built.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
                 
                 pop.built <- mlx.getEstimatedPopulationParameters()
                 ind.built <- mlx.getEstimatedIndividualParameters()$saem
@@ -406,7 +435,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
     
     if (add & (change.remove | k==1)) {
       if (print) {
-        cat("\n___________________________\n")
+        cat(plain.short)
         cat("\nadding variability...\n")
       }
       
@@ -422,7 +451,8 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
         if (length(setdiff(param0, fix.param0))>0) {
           m <- m+1
           if (print) {
-            cat("\n---------\n")
+            cat("\n")
+            cat(dashed.short)
             cat("Step ", m, "\n")
             cat("Parameters without variability:", param0, "\n")
             cat("Parameters with variability   :", param1, "\n\n")
@@ -469,16 +499,22 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runConditionalDistributionSampling()
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
-              BICc1.iter <- compute.criterion(criterion, method.ll.iter) 
-              if (print)
-                cat(sprintf("%.1f", BICc1.iter), "\n")
-              if (BICc1.iter - BICc.built.iter < delta[2]) {
-                n.add <- n.add+1
-                BICc.min[n.add] <- BICc1.iter
-                op.min[[n.add]] <- op
-                pmin <- mlx.getEstimatedPopulationParameters()
-                pop.min[[n.add]] <- pmin
-                ind.min[[n.add]] <- mlx.getEstimatedIndividualParameters()$saem
+              BICc1.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef) 
+              cvj <- compute.cv(popj, pj)$cv
+              if (cvj < cv.min) {
+                if (print)
+                  cat(sprintf("%.1f", BICc1.iter), " ; cv = ", cvj, "\n")
+              } else {
+                if (print)
+                  cat(sprintf("%.1f", BICc1.iter), "\n")
+                if (BICc1.iter - BICc.built.iter < delta[2]) {
+                  n.add <- n.add+1
+                  BICc.min[n.add] <- BICc1.iter
+                  op.min[[n.add]] <- op
+                  pmin <- mlx.getEstimatedPopulationParameters()
+                  pop.min[[n.add]] <- pmin
+                  ind.min[[n.add]] <- mlx.getEstimatedIndividualParameters()$saem
+                }
               }
             }
           }
@@ -516,7 +552,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                 mlx.runLogLikelihoodEstimation(linearization=FALSE)
               }
               
-              BICc0 <- compute.criterion(criterion, method.ll)
+              BICc0 <- compute.criterion(criterion, method.ll, weight, pen.coef)
               if (print)
                 cat(round(BICc0,1))
               # r <- round(c(r, BICc0), 1)
@@ -538,7 +574,7 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
                   mlx.runConditionalDistributionSampling()
                   mlx.runLogLikelihoodEstimation(linearization=FALSE)
                 }
-                BICc.built.iter <- compute.criterion(criterion, method.ll.iter)
+                BICc.built.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
                 
                 pop.built <- mlx.getEstimatedPopulationParameters()
                 ind.built <- mlx.getEstimatedIndividualParameters()$saem
@@ -586,52 +622,52 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   g <- mlx.getIndividualParameterModel()$variability$id
   param0 <- names(which(!g))
   param1 <- names(which(g))
-  if (print) {
-    cat("\n___________________________\n")
-    cat("Final model: \n")
-    cat("Parameters without variability:", param0, "\n")
-    cat("Parameters with variability   :", param1, "\n")
-    cat("Criterion: ",round(BICc.built,1), "\n\n")
-  }
   
   if (change.any) {
     mlx.setPopulationParameterEstimationSettings(pop.set0)
     mlx.setScenario(scenario0)
-    if (print)
-      cat("Fitting the final model using the original settings... \n")
-    mlx.saveProject(project.built)
-    mlx.runPopulationParameterEstimation(parameters=ind.built)
-    
     if (remove) {
-      pop.built <- mlx.getEstimatedPopulationParameters()
       p.param1 <- sapply(mlx.getIndividualParameterModel()$name,function(x) NULL)
       
       list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
       list.param1 <- setdiff(list.param1, fix.param1)
       if (length(list.param1)>0) {
-        list.omega1 <- paste0("omega_", list.param1)
-        r.param1 <- pop.built[list.omega1]
-        d.param1 <- mlx.getIndividualParameterModel()$distribution[list.param1]
-        j.normal <- which(d.param1=="normal")
-        if (length(j.normal) > 0)
-          r.param1[j.normal] <- r.param1[j.normal]/pop.built[paste0(list.param1[j.normal],"_pop")]
-        j0 <- which(r.param1 < r.min)
+        #        list.omega1 <- paste0("omega_", list.param1)
+        # p.param1 <- pop.built[paste0(list.param1,"_pop")]
+        # o.param1 <- pop.built[paste0("omega_", list.param1)]
+        # d.param1 <- mlx.getIndividualParameterModel()$distribution[list.param1]
+        r.param1 <- compute.cv(pop.built, list.param1)
+        j0 <- which(r.param1$cv < cv.min)
         if (length(j0) > 0) {
           if (print) {
-            cat("Parameters without variability:", param0, "\n")
-            cat("Parameters with variability   :", param1, "\n")
-            print(pop.built[list.omega1])
+            # cat("Parameters without variability:", param0, "\n")
+            # cat("Parameters with variability   :", param1, "\n")
+            cat(paste0("\n",plain.line,"\n"))
+            print(r.param1$o)
+            print(r.param1$cv)
             cat("remove variability on ",list.param1[j0], "\n\n")
           }
           
           param0 <- c(param0, list.param1[j0])
           param1 <- setdiff(param1, list.param1[j0])
           update.project(project.built, project.built, param0, param1, NULL, pop.set0)
-          mlx.saveProject(project.built)
-          mlx.runPopulationParameterEstimation(parameters=ind.built)
+          # mlx.saveProject(project.built)
+          # mlx.runPopulationParameterEstimation(parameters=ind.built)
         }
       }
     }
+    
+    if (print) {
+      cat(paste0("\n",plain.line))
+      cat("\nFinal variance model: \n")
+      cat("\nParameters without variability:", param0, "\n")
+      cat("Parameters with variability   :", param1, "\n")
+      cat("\nFitting the final model using the original settings... \n")
+    }
+    
+    mlx.saveProject(project.built)
+    mlx.runPopulationParameterEstimation(parameters=ind.built)
+    
     
     if (linearization) {
       mlx.runConditionalModeEstimation()
@@ -641,7 +677,25 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
       mlx.runLogLikelihoodEstimation(linearization=FALSE)
     }
     
+    if (print) {
+      ll.final <- compute.criterion(criterion, method.ll, weight, pen.coef)
+      ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, weight$is.weight)
+      cat(paste0("\nEstimated criteria (",method.ll,"):\n"))
+      print(round(ll,2))
+    }
+    
+    # ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, is.weight, is.prior)
+    # to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
+    # to.print <- round(ll,2)
+    # print.result(print, NULL, to.cat=to.cat, to.print=to.print) 
+    
   } else {
+    if (print) {
+      cat(paste0("\n",plain.line))
+      cat("\nFinal variance model: \n")
+      cat("\nParameters without variability:", param0, "\n")
+      cat("Parameters with variability   :", param1, "\n")
+    }
     mlx.loadProject(project)
     mlx.saveProject(project.built)
   }
@@ -654,9 +708,10 @@ buildVar <- function(project, final.project=NULL, fix.param1=NULL, fix.param0=NU
   if (file.exists(prop.temp))
     foo <- file.remove(prop.temp)
   
+  
   dt <- proc.time() - ptm
   if (print)
-    cat(paste0("total time: ", round(dt["elapsed"], digits=1),"s\n"))
+    cat(paste0("\ntotal time: ", round(dt["elapsed"], digits=1),"s\n\n"))
   
   options(op.original)
   return(list(project=project.built, niter=k, change=change.any, 
@@ -772,7 +827,7 @@ update.project <- function(project, project.temp, param0, param1, pop=NULL, pop.
 
 buildVar.check <- function(project, final.project, fix.param1, fix.param0, 
                            criterion, linearization, remove, add, delta, 
-                           omega.set, pop.set1, pop.set2, print) {
+                           omega.set, pop.set1, pop.set2, print, weight, prior) {
   
   if (length(mlx.getIndividualParameterModel()$variability)>1)
     stop("Multiple levels of variability are not supported in this version of buildVar", call.=FALSE)
@@ -817,9 +872,86 @@ buildVar.check <- function(project, final.project, fix.param1, fix.param0,
   if (min(delta)< 0 )
     stop(" 'delta' should be a 2-vector of thresholds >= 0", call.=FALSE)
   
-  return(list(final.project=final.project, oset=oset, project.temp=project.temp, project.built=project.built))
+  
+  if (!is.null(prior) & !is.list(prior))
+    prior <- list(variance=prior)
+  if (!is.null(weight) & !is.list(weight))
+    weight <- list(variance=weight)
+  
+  if (!is.null(prior$variance) & !is.null( weight$variance)) {
+    warning("Variance model: only 'weight' or 'prior' can be defined, not both. 'weight' will be used and prior will be ignored", call.=FALSE)
+    prior$variance <- NULL
+  }
+  p.var <- prior$variance
+  w.var <- weight$variance
+  if (!is.null(p.var) & !is.null(w.var)) {
+    warning("Variance model: only 'weight' or 'prior' can be defined, not both. 'weight' will be used and prior will be ignored", call.=FALSE)
+    prior$variance <- NULL
+  }
+  var.model <- mlx.getIndividualParameterModel()$variability$id
+  if (!is.null(p.var) & !identical(names(var.model), names(p.var))) 
+    stop("prior$variance should be a named vector whose names are the names of the parameters", call.=FALSE)
+  if (length(w.var)>1 & is.null(names(w.var)))
+    stop("weight$variance should be a scalar or a named vector whose names are parameter names", call.=FALSE)
+  if (!all(names(w.var) %in% names(var.model)))
+    stop("weight$variance should be a scalar or a named vector whose names are parameter names", call.=FALSE)
+  
+  # if (!is.null(p.var) & is.null(w.var)) { 
+  #   if (length(p.var)==1) {
+  #     foo <- p.var
+  #     p.var <- var.model
+  #     p.var[] <- foo
+  #   } else if (!identical(names(var.model), names(p.var)))
+  #     stop("prior$variance should be a named vector whose names are the names of the parameters", call.=FALSE)
+  # }
+  # prior$variance <- p.var
+  # 
+  # if (is.null(p.var)) {
+  #   foo <- var.model
+  #   foo[] <- 1
+  #   if (length(w.var)==1 & is.null(names(w.var))) 
+  #     foo[] <- w.var
+  #   if (length(w.var)>1 & is.null(names(w.var))) 
+  #     stop("weight$variance should be a scalar or a named vector whose names are parameter names", call.=FALSE)
+  #   if (!all(names(w.var) %in% names(var.model)))
+  #     stop("weight$variance should be a scalar or a named vector whose names are parameter names", call.=FALSE)
+  #   foo[names(w.var)] <- w.var
+  #   weight$variance <- foo
+  # }
+  # 
+  return(list(final.project=final.project, oset=oset, project.temp=project.temp, 
+              project.built=project.built, weight=weight, prior=prior))
 }
 
+
+compute.cv <- function(vp, lp) {
+  f0 <- function(x, mu=0, sigma=1) {
+    f <- 1/sqrt(2*pi)/sigma*exp(-((log(x/(1-x)) - mu)^2)/(2*sigma^2))/(x*(1-x)) }
+  f1 <- function(x, mu=0, sigma=1) {
+    f <- x*f0(x, mu, sigma) }
+  f2 <- function(x, mu=0, sigma=1) {
+    f <- (x^2)*f0(x, mu, sigma) }
+  
+  p <- vp[paste0(lp,"_pop")]
+  o <- vp[paste0("omega_", lp)]
+  d <- mlx.getIndividualParameterModel()$distribution[lp]
+  
+  cv <- o/abs(p)
+  j1 <- which(d=="logNormal")
+  if (length(j1) > 0)
+    cv[j1] <- sqrt(exp(o[j1]^2) - 1)
+  j2 <- which(d=="logitNormal")
+  for (k in seq_along(j2)) {
+    lk <- mlx.getIndividualParameterModel()$limits[[lp[j2[k]]]]
+    ok <- o[j2[k]]
+    muk <- log((p[j2[k]] - lk[1])/(lk[2]-p[j2[k]]))
+    mk <- integrate(f1, lower = 0, upper = 1, mu=muk, sigma=ok)$value
+    vk <- integrate(f2, lower = 0, upper = 1, mu=muk, sigma=ok)$value - mk^2
+    cv[j2[k]] <- (lk[2]-lk[1])*sqrt(vk)/(mk*(lk[2]-lk[1])+lk[1])
+  }
+  names(cv) <- gsub("omega", "cv", names(o))
+  return(list(cv=cv, o=o, p=p))
+}
 
 
 # if (swap) {

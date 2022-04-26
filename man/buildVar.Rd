@@ -5,7 +5,10 @@
 \title{Automatic model variance building}
 \usage{
 buildVar(
-  project,
+  project = NULL,
+  weight = NULL,
+  prior = NULL,
+  cv.min = 0.001,
   final.project = NULL,
   fix.param1 = NULL,
   fix.param0 = NULL,
@@ -22,6 +25,12 @@ buildVar(
 }
 \arguments{
 \item{project}{a string: the initial Monolix project}
+
+\item{weight}{named vector of weights (default=NULL)}
+
+\item{prior}{named vector of prior probabilities (default=NULL)}
+
+\item{cv.min}{value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)}
 
 \item{final.project}{a string: the final Monolix project (default adds "_var" to the original project)}
 

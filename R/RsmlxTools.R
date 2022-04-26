@@ -292,7 +292,7 @@ compute.ini <- function(r, parameter) {
     ka_ini <- lm(log(y) ~  time, data=subset(abs, y>0))$coefficients[[2]]
     if (ka_ini < 0)
       ka_ini <- 1
-#    ka_ini <- lm(y ~ -1 + time, data=subset(abs, y>0))$coefficients[[1]]
+    #    ka_ini <- lm(y ~ -1 + time, data=subset(abs, y>0))$coefficients[[1]]
     Tk0_ini <- mean(tmax)
     if (ka_ini>0)
       V_ini <- 1/mean(ymax)*ka_ini/abs(ka_ini-k_ini)
@@ -494,3 +494,86 @@ get_lixoft_options <- function() {
   info <- ifelse(op$info == 1, FALSE, TRUE)
   return(list(errors = errors, warnings = warnings, info = info))
 }
+
+############################################################################
+
+def.variable <- function(weight=NULL, prior=NULL, criterion=NULL, fix.param0=NULL, fix.param1=NULL) {
+  go <- mlx.getObservationInformation()
+  y.name <- names(go$mapping)
+  y.type <- go$type[y.name]
+  id <- n <- NULL
+  for (yn in y.name) {
+    id <- unique(c(id, go[[yn]]$id))
+    n <- c(n, nrow(go[[yn]]))
+  }
+  N <- length(id)
+  nc <- n[which(y.type=="continuous")]
+  
+  if (identical(criterion,"AIC")) {
+    pen.coef <- rep(2, length(nc)+2)  
+  } else if (identical(criterion,"BIC")) {
+    pen.coef <- rep(log(N), length(nc)+2)
+  } else if (identical(criterion,"BICc")) {
+    pen.coef <- c(log(N), rep(log(sum(n)), length(nc)+1))
+    #  pen.coef <- c(log(N), log(sum(n)), rep(log(sum(nc)), length(nc)))
+    #    pen.coef <- c(log(N), log(sum(nc)), log(nc))
+  } else {
+    pen.coef <- rep(criterion, length(nc)+2)
+  }
+  
+  if (is.null(weight$is.weight)) { 
+    if (is.null(weight) & is.null(prior))
+      is.weight <- F
+    else
+      is.weight <- T
+  } else {
+    is.weight <- weight$is.weight
+  }
+  
+  w.cov <- weight$covariate
+  if (!is.null(prior$covariate)) 
+    w.cov <- -2*log(prior$covariate/(1-prior$covariate))/pen.coef[1]
+  if (is.null(w.cov))
+    w.cov <- 1
+  if (length(w.cov)==1) {
+    cov.model <- do.call(rbind, mlx.getIndividualParameterModel()$covariateModel)
+    foo <- w.cov
+    w.cov <- cov.model
+    w.cov[] <- foo
+  }
+  
+  w.cor <- weight$correlation
+  if (!is.null(prior$correlation)) 
+    w.cor <- -2*log(prior$correlation/(1-prior$correlation))/pen.coef[2]
+  if (is.null(w.cor))
+    w.cor <- 1
+  if (length(w.cor)==1) {
+    var.model <- mlx.getIndividualParameterModel()$variability$id
+    n.param <- names(which(var.model))
+    d.param <- length(n.param)
+    w.cor <- matrix(w.cor, nrow=d.param, ncol=d.param, dimnames=list(n.param, n.param))
+  }
+  if (!is.null(w.cor))
+    w.cor[fix.param0, ] <- w.cor[, fix.param0] <- 1e10
+  w.cor <- w.cor*lower.tri(w.cor)
+  w.cor[which(is.nan(w.cor))] <- 0
+  
+  if (!is.null(prior$variance)) 
+    w.var <- -2*log(prior$variance/(1-prior$variance))/pen.coef[2]
+  else
+    w.var <- weight$variance 
+  foo <- mlx.getIndividualParameterModel()$variability$id
+  foo[] <- 1
+  if (length(w.var)==1 & is.null(names(w.var)))
+    foo[] <- w.var
+  foo[names(w.var)] <- w.var
+  w.var <- foo
+  w.var[fix.param0] <- 1e10
+  w.var[fix.param1] <- 0
+  
+  
+  weight <- list(covariate=w.cov, correlation=w.cor, variance=w.var, is.weight=is.weight)
+  
+  return(list(n=n, N=N, weight=weight, pen.coef=pen.coef))
+}
+
