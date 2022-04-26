@@ -568,8 +568,8 @@ def.variable <- function(weight=NULL, prior=NULL, criterion=NULL, fix.param0=NUL
     foo[] <- w.var
   foo[names(w.var)] <- w.var
   w.var <- foo
-  w.var[fix.param0] <- 1e10
-  w.var[fix.param1] <- 0
+  # w.var[fix.param0] <- 1e10
+  # w.var[fix.param1] <- 0
   
   
   weight <- list(covariate=w.cov, correlation=w.cor, variance=w.var, is.weight=is.weight)

@@ -1090,7 +1090,7 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
   if (identical(model,"all")) model <- model.names
   # if (is.null(cov.names))  model <- setdiff(model, "covariate")
   # if (sum(mlx.getIndividualParameterModel()$variability$id) < 2) model <- setdiff(model, "correlation")
-  mod0 <- model[(!(model %in% model.names))]
+  mod0 <- model[(!(model %in% c(model.names, "variance")))]
   if (length(mod0)>0) 
     stop(paste0(mod0, " is not a valid model component"), call.=FALSE)
   foo <- model

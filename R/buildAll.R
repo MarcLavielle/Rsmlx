@@ -85,9 +85,10 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   # is.weight <- !is.null(weight)
   # is.prior <- !is.null(prior)
   
-  if (!is.null(project)) 
+  if (!is.null(project)) {
     project <- prcheck(project)$project
-  else 
+  mlx.loadProject(project)
+}  else 
     project <- mlx.getProjectSettings()$project
   
   in.model <- p.ttest <- random.effect <- covariate <- param <- pen.coef <- NULL
@@ -102,7 +103,6 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   dir.create(dir.built)
   
   #  start with "full variance" model
-  mlx.loadProject(project)
   g <- mlx.getIndividualParameterModel()
   if (any(!g$variability$id[1:length(g$variability$id)])) {
     g$variability$id[1:length(g$variability$id)] <- T
@@ -213,7 +213,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   # mlx.loadProject(final.project)
   
 
-  if (model != "all" & !("covariate" %in% model))
+  if (!identical(model, "all") & !("covariate" %in% model))
     relToTest <- NULL
   
   if (!is.null(relToTest)) {
