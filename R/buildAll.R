@@ -175,7 +175,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     } else {
       r.build$change <- F
     }
-    if ((iter==1 || r.build$change) & "variance" %in% model) {
+    if ((iter==1 || r.build$change) & ("variance" %in% model | identical(model,"all"))) {
       fix0 <- fix.param0
       fix1 <- fix.param1
       if (iter >= 2) {
