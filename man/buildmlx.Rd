@@ -22,6 +22,7 @@ buildmlx(
   n.full = 10,
   max.iter = 20,
   explor.iter = 2,
+  fError.min = 0.001,
   seq.cov = FALSE,
   seq.cov.iter = 0,
   seq.corr = TRUE,
@@ -65,6 +66,8 @@ buildmlx(
 \item{max.iter}{maximum number of iterations (default=20)}
 
 \item{explor.iter}{number of iterations during the exploratory phase (default=2)}
+
+\item{fError.min}{minimum fraction of residual variance for combined error model (default = 1e-3)}
 
 \item{seq.cov}{TRUE/{FALSE} whether the covariate model is built before the correlation model}
 

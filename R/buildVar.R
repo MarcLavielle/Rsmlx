@@ -626,36 +626,6 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
   if (change.any) {
     mlx.setPopulationParameterEstimationSettings(pop.set0)
     mlx.setScenario(scenario0)
-    if (remove) {
-      p.param1 <- sapply(mlx.getIndividualParameterModel()$name,function(x) NULL)
-      
-      list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
-      list.param1 <- setdiff(list.param1, fix.param1)
-      if (length(list.param1)>0) {
-        #        list.omega1 <- paste0("omega_", list.param1)
-        # p.param1 <- pop.built[paste0(list.param1,"_pop")]
-        # o.param1 <- pop.built[paste0("omega_", list.param1)]
-        # d.param1 <- mlx.getIndividualParameterModel()$distribution[list.param1]
-        r.param1 <- compute.cv(pop.built, list.param1)
-        j0 <- which(r.param1$cv < cv.min)
-        if (length(j0) > 0) {
-          if (print) {
-            # cat("Parameters without variability:", param0, "\n")
-            # cat("Parameters with variability   :", param1, "\n")
-            cat(paste0("\n",plain.line,"\n"))
-            print(r.param1$o)
-            print(r.param1$cv)
-            cat("remove variability on ",list.param1[j0], "\n\n")
-          }
-          
-          param0 <- c(param0, list.param1[j0])
-          param1 <- setdiff(param1, list.param1[j0])
-          update.project(project.built, project.built, param0, param1, NULL, pop.set0)
-          # mlx.saveProject(project.built)
-          # mlx.runPopulationParameterEstimation(parameters=ind.built)
-        }
-      }
-    }
     
     if (print) {
       cat(paste0("\n",plain.line))
@@ -667,6 +637,44 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
     
     mlx.saveProject(project.built)
     mlx.runPopulationParameterEstimation(parameters=ind.built)
+    
+    change0 <- F
+    if (remove) {
+      test0 <- T
+      while (test0) {
+        p.param1 <- sapply(mlx.getIndividualParameterModel()$name,function(x) NULL)
+        list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
+        list.param1 <- setdiff(list.param1, fix.param1)
+        if (length(list.param1)>0) {
+          pop.built <- getEstimatedPopulationParameters()
+          r.param1 <- compute.cv(pop.built, list.param1)
+          j0 <- which(r.param1$cv < cv.min)
+          if (length(j0) > 0) {
+            if (print) {
+              cat(paste0("\n",plain.line,"\n"))
+              print(r.param1$o)
+              print(r.param1$cv)
+              cat("remove variability on ",list.param1[j0], "\n\n")
+            }
+            change0 <- T
+            param0 <- c(param0, list.param1[j0])
+            param1 <- setdiff(param1, list.param1[j0])
+            update.project(project.built, project.built, param0, param1, NULL, pop.set0)
+            mlx.saveProject(project.built)
+            mlx.runPopulationParameterEstimation(parameters=ind.built)
+          } else {
+            test0 <- F
+          }
+        }
+      }
+    }
+    
+    if (print & change0) {
+      cat(paste0("\n",plain.line))
+      cat("\nFinal variance model: \n")
+      cat("\nParameters without variability:", param0, "\n")
+      cat("Parameters with variability   :", param1, "\n")
+    }
     
     
     if (linearization) {

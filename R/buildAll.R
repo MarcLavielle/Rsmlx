@@ -13,6 +13,7 @@
 #' @param prior  list of prior probabilities for each component of the model (default=NULL)
 #' @param weight list of penalty weights for each component of the model (default=NULL)
 #' @param cv.min  value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)
+#' @param fError.min  minimum fraction of residual variance for combined error model (default = 1e-3)
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param fix.param1  parameters with variability that cannot be removed (default=NULL)
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
@@ -62,7 +63,7 @@
 #' @importFrom dplyr filter select rename arrange bind_rows rename
 #' @importFrom dplyr %>%
 #' @export
-buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, cv.min=0.001,
+buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, cv.min=0.001, fError.min=1e-3,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, direction=NULL, steps=1000,
                      max.iter=20, explor.iter=2, seq.cov=FALSE, seq.corr=TRUE, seq.cov.iter=0, 
@@ -161,7 +162,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                          linearization=linearization, ll=ll, direction=direction, steps=steps,
+                          linearization=linearization, ll=ll, direction=direction, steps=steps, fError.min=fError.min,
                           max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
       pv.re <- covariateTest()$p.value.randomEffects
       if (!is.null(pv.re))
@@ -208,11 +209,10 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   # relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate)))
   # mlx.loadProject(final.project)
   
-  
   if (!identical(model, "all") & !("covariate" %in% model))
     relToTest <- NULL
   
-  if (!is.null(relToTest)) {
+  if (!is.null(relToTest) & ll==T) {
     param0 <- names(which(!mlx.getIndividualParameterModel()$variability$id))
     relToTest <- unique(relToTest) %>% mutate(param=gsub("eta_","", random.effect)) %>% filter(param %in% param0) %>% select(-random.effect)
     if (nrow(relToTest)>0) {
@@ -304,9 +304,12 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
           r.build <- buildmlx(project=final.project, covToTest=covToTest, prior=NULL, weight=weight,
                               covToTransform=covToTransform, seq.corr=F, seq.cov=F, seq.cov.iter=0, p.max=p.max, p.min=p.min,
                               model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                              linearization=linearization, ll=ll, direction=direction, steps=steps,
+                              linearization=linearization, ll=ll, direction=direction, steps=steps, fError.min=fError.min,
                               max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
           mlx.saveProject(final.project)
+          unlink(r.build$project)
+          unlink(gsub("mlxtran", "mlxproperties", r.build$project))
+          unlink(gsub(".mlxtran", "", r.build$project), recursive=T)
         }
       }
     }

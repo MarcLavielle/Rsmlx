@@ -1,7 +1,7 @@
 covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
                                     nb.model=1, covToTransform=NULL, covFix=NULL, 
                                     direction="both", paramToUse="all", steps=1000, p.max=1, 
-                                    sp0=NULL, iter=1, correlation.model=NULL) {
+                                    sp0=NULL, iter=1, correlation.model=NULL, eta=NULL) {
   
   # correlation.model=NULL
   #  project.folder <- mlx.getProjectSettings()$directory
@@ -77,7 +77,10 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
         yj <- qnorm(yj)
         names(yj) <- paste0("probit.",nj)
       } 
-      
+      if (!is.null(eta))
+        etaj <- eta[paste0("eta_",nj)]
+      else
+        etaj <- NULL
       if (length(covFix)>0) {
         cmj <- cov.model[[nj]][covFix]
         cov0 <- names(which(!cmj))
@@ -93,7 +96,7 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
       # else
       pwj <- weight[nj,]
       
-      r[[j]] <- lm.all(yj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, pw=pwj, n.full=n.full,
+      r[[j]] <- lm.all(nj, yj, etaj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, pw=pwj, n.full=n.full,
                        direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
       res[[j]] <- r[[j]]$res
       r.cov0[[j]] <- r[[j]]$cov0
@@ -129,6 +132,7 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
         jic <- match(pic, names(ind.dist))
         
         #   print(head(epic))
+  #      if (1>2){
         for (itk in 1:2) {
           jk <- 0
           for (j in jic) {
@@ -147,6 +151,11 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
               yj[[1]] <- qnorm(yj[[1]])
               names(yj) <- paste0("probit.",nj)
             } 
+            if (!is.null(eta))
+              etaj <- eta[paste0("eta_",nj)]
+            else
+              etaj <- NULL
+            
             if (length(covFix)>0) {
               cmj <- cov.model[[nj]][covFix]
               cov0 <- names(which(!cmj))
@@ -157,7 +166,7 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
             ejc <- as.matrix(epic[,-jk])%*%matrix(gic[jk, -jk], ncol=1)/gic[jk, jk]
             yjc <- yj + ejc
             
-            r[[j]] <- lm.all(yjc, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, pw=pwj, n.full=n.full,
+            r[[j]] <- lm.all(nj, yjc, etaj, covariates, tcov.names, pen.coef=pen.coef, nb.model=nb.model, pw=pwj, n.full=n.full,
                              direction=direction, steps=steps, p.max=p.max, cov0=cov0, cov1=cov1, iter=iter)
             res[[j]] <- r[[j]]$res
             r.cov0[[j]] <- r[[j]]$cov0
@@ -212,14 +221,14 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
 
 #-----------------------------------
 
-lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, pw=NULL, n.full=10,
+lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, pw=NULL, n.full=10,
                    direction='both', steps = 1000, p.max=1, cov0=NULL, cov1=NULL, iter=1) {
   
   N <- length(unique(x$id))
   nrep <- nrow(y)/N
   if (p.max<=1) {
     nx <- setdiff(names(x), c("id","rep"))
-    yc <- rowMeans(matrix(y[[1]], ncol=nrep))
+    yc <- rowMeans(matrix(y[[1]], nrow=N))
     #    yc=colMeans(matrix(y[[1]], ncol=N))
     xc <- x
     # xc <- x[order(x$id),,drop=FALSE]
@@ -235,11 +244,29 @@ lm.all <- function(y, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, pw=NULL, n
       # pjc <- c(pjc, pc*rc/(1 - pc + pc*rc))
     }
     pjc <- p.weight(pjc, pw[nxc], pen.coef)
-    
+    if (!is.null(eta)) {
+      etac <- rowMeans(matrix(eta[[1]], nrow=N))
+      lm0 <- lm(etac ~1)
+      pjec <- NULL
+      for (nc in nxc) {
+#        if (length(etac) != length(xc[[nc]]))  browser()
+        lmc <- lm(etac ~ xc[[nc]])
+        pc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
+        pjec <- c(pjec, pc)
+        # rc <- exp(pen.coef*(pw[nc]-1)/2)
+        # pjc <- c(pjc, pc*rc/(1 - pc + pc*rc))
+      }
+      pjec <- p.weight(pjec, pw[nxc], pen.coef)
+      # print(names(y))
+      # print(rbind(pjc, pjec))
+      pjc <- pmin(pjc, pjec, na.rm=T)
+ #     if (names(y) %in% c("log.Cl", "log.V1")) pjc[1] <- 0
+    }
     # if (length(which(pjc<p.max)) == 0)
     #   list.c <- which(pjc<max(pjc))
     # else
     #   pjc <- p.adjust(pjc, method="BH")
+    pjc[mlx.getIndividualParameterModel()$covariateModel[[ny]]] <- 0
     list.c <- which(pjc>p.max)
     # browser()
     

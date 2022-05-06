@@ -11,6 +11,7 @@ buildAll(
   prior = NULL,
   weight = NULL,
   cv.min = 0.001,
+  fError.min = 0.001,
   paramToUse = "all",
   covToTest = "all",
   covToTransform = "none",
@@ -51,6 +52,8 @@ buildAll(
 \item{weight}{list of penalty weights for each component of the model (default=NULL)}
 
 \item{cv.min}{value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)}
+
+\item{fError.min}{minimum fraction of residual variance for combined error model (default = 1e-3)}
 
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 

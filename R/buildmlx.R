@@ -26,6 +26,7 @@
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
 #' @param ll  {TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
+#' @param fError.min  minimum fraction of residual variance for combined error model (default = 1e-3)
 #' @param seq.cov TRUE/{FALSE} whether the covariate model is built before the correlation model  
 #' @param seq.cov.iter number of iterations before building the correlation model (only when seq.cov=F, default=0) 
 #' @param seq.corr {TRUE}/FALSE whether the correlation model is built iteratively (default=TRUE) 
@@ -71,7 +72,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
                      criterion="BICc", linearization=FALSE, ll=T, 
                      direction=NULL, steps=1000, n.full=10,
-                     max.iter=20, explor.iter=2, 
+                     max.iter=20, explor.iter=2, fError.min=1e-3, 
                      seq.cov=FALSE, seq.cov.iter=0, seq.corr=TRUE, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1),
                      print=TRUE, nb.model=1)
@@ -291,6 +292,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   }
   sp0 <- NULL
   cov.test <- NULL
+  e <- NULL
   while (!stop.test) {
     iter <- iter + 1
     
@@ -305,7 +307,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       ll0 <- ll
     
     if (model$residualError) {
-      res.error <- errorModelSelection(pen.coef=pen.coef[-c(1, 2)], nb.model=nb.model)
+      res.error <- errorModelSelection(pen.coef=pen.coef[-c(1, 2)], nb.model=nb.model, f.min=fError.min)
       if (nb.model==1)
         error.model <- res.error
       else {
@@ -321,7 +323,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       res.covariate <- covariateModelSelection(pen.coef=pen.coef[1], nb.model=nb.model, weight=weight$covariate,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
                                                steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter,
-                                               correlation.model = correlation.model, n.full=n.full)
+                                               correlation.model = correlation.model, n.full=n.full, eta=e)
       res.covariate$res <- sortCov(res.covariate$res, cov.ini)
       if (iter>explor.iter) sp0 <- res.covariate$sp
       covToTransform <- setdiff(covToTransform, res.covariate$tr0)
@@ -548,7 +550,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     
     to.cat <- paste0(plain.line,"- - - Further tests - - -\n")
     print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
-    
     if (model$covariate) {
       g0 <- mlx.getIndividualParameterModel()
       covariate <- random.effect <- p.ttest <- p.lrt <- in.model <- p.value <- NULL
@@ -827,58 +828,55 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       mlx.loadProject(final.project)
       # pen <- compute.pen(prior)
       # ll.min <- compute.criterion(criterion, method.ll, weight, pen.coef)
-      # g <- mlx.getContinuousObservationModel()
-      # gc <- which(g$errorModel=="combined1" | g$errorModel=="combined2")
-      # if (length(gc) >0) {
-      #   pop.est <- mlx.getEstimatedPopulationParameters()
-      #   test.err <- F
-      #   for (ic in gc) {
-      #     nc <- g$parameters[[ic]][1:2]
-      #     pc <- pop.est[nc]
-      #     yc <- names(g$errorModel)[ic]
-      #     yb <- mean(abs(mlx.getObservationInformation()[[yc]][[yc]]))
-      #     if (pc[1]/yb < pc[2]*0.01) {
-      #       eval(parse(text=paste0("setErrorModel(",yc," = 'proportional')")))
-      #       test.err <- T
-      #     } else if (pc[2] < pc[1]/yb*0.01) {
-      #       eval(parse(text=paste0("setErrorModel(",yc," = 'constant')")))
-      #       test.err <- T
-      #     }
-      #   }
-      #   if (test.err) {
-      #     iter <- iter+1
-      #     buildmlx.project.iter <- file.path(buildmlx.dir,paste0("iteration",iter,".mlxtran"))
-      #     mlx.saveProject(buildmlx.project.iter)
-      #     to.cat <- "\nTest new error model:\n"
-      #     print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-      #     
-      #     iter <- iter+1
-      #     to.cat <- paste0("\nRun scenario for model ",iter,"  ... \nEstimation of the population parameters... \n")
-      #     print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-      #     mlx.runPopulationParameterEstimation()
-      #     if (lin.ll) {
-      #       if(!launched.tasks[["conditionalModeEstimation"]])
-      #         mlx.runConditionalModeEstimation()
-      #     } else {
-      #       to.cat <- "Sampling from the conditional distribution... \n"
-      #       print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-      #       mlx.runConditionalDistributionSampling()
-      #     }
-      #     to.cat <- "Estimation of the log-likelihood... \n"
-      #     print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-      #     mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-      #     ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
-      #     ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
-      #     to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
-      #     to.print <- round(ll,2)
-      #     print.result(print, summary.file, to.cat=to.cat, to.print=to.print)
-      #     if (ll.new < ll.min) {
-      #       ll.min <- ll.new
-      #       change.error.model <- list(g, mlx.getContinuousObservationModel())
-      #       mlx.saveProject(final.project)
-      #     }
-      #   }
-      # }
+      g <- mlx.getContinuousObservationModel()
+      gc <- which(g$errorModel=="combined1" | g$errorModel=="combined2")
+      if (length(gc) >0) {
+        pop.est <- mlx.getEstimatedPopulationParameters()
+        test.err <- F
+        for (ic in gc) {
+          nc <- g$parameters[[ic]][1:2]
+          pc <- pop.est[nc]
+          yc <- names(g$errorModel)[ic]
+          yb <- mean(abs(mlx.getObservationInformation()[[yc]][[yc]]))
+          if (pc[1]/yb < pc[2]*0.01) {
+            print(pc)
+            eval(parse(text=paste0("setErrorModel(",yc," = 'proportional')")))
+            test.err <- T
+          } else if (pc[2] < pc[1]/yb*0.01) {
+            print(pc)
+            eval(parse(text=paste0("setErrorModel(",yc," = 'constant')")))
+            test.err <- T
+          }
+        }
+        if (test.err) {
+          to.cat <- paste0(plain.line,"- - - Fit new error model - - -\n")
+          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
+          to.cat <- "\nEstimation of the population parameters... \n"
+          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
+          mlx.runPopulationParameterEstimation()
+          if (lin.ll) {
+            if(!launched.tasks[["conditionalModeEstimation"]])
+              mlx.runConditionalModeEstimation()
+          } else {
+            to.cat <- "Sampling from the conditional distribution... \n"
+            print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
+            mlx.runConditionalDistributionSampling()
+          }
+          to.cat <- "Estimation of the log-likelihood... \n"
+          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
+          mlx.runLogLikelihoodEstimation(linearization = lin.ll)
+          ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
+          ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
+          to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
+          to.print <- round(ll,2)
+          print.result(print, summary.file, to.cat=to.cat, to.print=to.print)
+          #     if (ll.new < ll.min) {
+          ll.min <- ll.new
+          change.error.model <- list(g, mlx.getContinuousObservationModel())
+          mlx.saveProject(final.project)
+          #     }
+        }
+      }
     }
   } else {
     iter.opt <- iter
