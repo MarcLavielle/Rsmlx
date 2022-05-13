@@ -43,6 +43,7 @@
 #'             geom_abline geom_boxplot geom_smooth
 #' @importFrom gridExtra grid.arrange
 #' @importFrom grDevices palette
+#' @importFrom tidyr spread
 #' @importFrom stats quantile anova binom.test cor cov dnorm lm logLik nlm p.adjust pchisq dchisq pnorm qnorm
 #'             quantile rnorm runif sd shapiro.test spline t.test optimize median
 #' @importFrom utils ls.str read.csv read.table write.table
@@ -55,10 +56,10 @@ testmlx <- function(project=NULL,
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   
   if (!is.null(project)) {
-  r <- prcheck(project, f="test", tests=tests)
-  if (r$demo)
-    return(r$res)
-  project <- r$project
+    r <- prcheck(project, f="test", tests=tests)
+    if (r$demo)
+      return(r$res)
+    project <- r$project
   } else {
     project <- mlx.getProjectSettings()$project
   }
@@ -288,8 +289,26 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   col.el <- which((names(sim.randeff) %in% var.randeff))
   nel <- length(col.el)
   list.cor <- mlx.getIndividualParameterModel()$correlationBlocks$id
+  se <- mlx.getEstimatedStandardErrors()
+  p <- mlx.getEstimatedPopulationParameters()
+  if (!is.null(se$linearization)) {
+    se.lin <- se$linearization$se
+    names(se.lin) <- se$linearization$parameter
+    z <- as.numeric(p)/as.numeric(se.lin[names(p)])
+    names(z) <- names(p)
+    pv <- pnorm(-abs(z))*2
+    pv.wald_lin <- pv[grep("corr_", names(pv))]
+  }
+  if (!is.null(se$stochasticApproximation)) {
+    se.SA <- se$stochasticApproximation$se
+    names(se.SA) <- se$stochasticApproximation$parameter
+    z <- as.numeric(p)/as.numeric(se.SA[names(p)])
+    names(z) <- names(p)
+    pv <- pnorm(-abs(z))*2
+    pv.wald_SA <- pv[grep("corr_", names(pv))]
+  }
   
-   if (nel>1) {
+  if (nel>1) {
     nref <- names(sim.randeff)
     res.cor <- NULL
     for (i1 in (1:(nel-1))) {
@@ -311,13 +330,32 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
         # pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
         # plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
         # dnc <- data.frame(random.effect=ne,covariate=nc,p.value=pjc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
-        if (is.null(res.cor))
-          res.cor <- data.frame(randomEffect.1=nref1, randomEffect.2=nref2, correlation=ci, p.value=pv, in.model=in.model)
-        else {
-          resi <- data.frame(randomEffect.1=nref1, randomEffect.2=nref2, correlation=ci, p.value=pv, in.model=in.model)
-          res.cor <- rbind(res.cor, resi)
+        resi <- data.frame(randomEffect.1=nref1, randomEffect.2=nref2, correlation=ci, p.cortest=pv)
+        if (!is.null(se$linearization)) {
+          if (in.model) {
+            ii <- which(sapply(names(pv.wald_lin), function(x) { grepl(gsub("eta_","",nref1),x) & grepl(gsub("eta_","",nref2),x)}))
+            resi$p.wald_lin <- pv.wald_lin[ii] 
+          } else {
+            resi$p.wald_lin <- NaN
+          }
         }
+        if (!is.null(se$stochasticApproximation)) {
+          if (in.model) {
+            ii <- which(sapply(names(pv.wald_SA), function(x) { grepl(gsub("eta_","",nref1),x) & grepl(gsub("eta_","",nref2),x)}))
+            resi$p.wald_SA <- pv.wald_SA[ii] 
+          } else {
+            resi$p.wald_SA <- NaN
+          }
+        }
+        resi$in.model <- in.model
+        if (is.null(res.cor))
+          res.cor <- resi
+        else 
+          res.cor <- rbind(res.cor, resi)
       }
+      foo <- res.cor[order(res.cor$p.cortest),]
+      res.cor <- foo[order(foo$in.model, decreasing=TRUE),]
+      
     }
     
     if (plot) {
@@ -375,7 +413,7 @@ correlationTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
 
 #----------------------------------------------------------
 covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
-  id <- NULL
+  id <- p.value <- statistics <- method <- in.model <- p.ori <- NULL
   if (!is.null(project)) 
     mlx.loadProject(project)
   
@@ -400,9 +438,12 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   #   sim.randeff$rep <- 1
   # nrep <- max(sim.randeff$rep)
   
-  var.param <- names(which(mlx.getIndividualParameterModel()$variability$id))
-  var.randeff <- paste0("eta_",var.param)
+  name.param <- names(mlx.getIndividualParameterModel()$variability$id)
+  var.param <- name.param
+  iiv <- mlx.getIndividualParameterModel()$variability$id
+  #var.param <- names(which(mlx.getIndividualParameterModel()$variability$id))
   ind.dist <- mlx.getIndividualParameterModel()$distribution[var.param]
+  var.randeff <- paste0("eta_",var.param)
   n.param <- length(var.param)
   # m.indparam <- mlx.getEstimatedIndividualParameters()$conditionalMean[var.param]
   # m.randeff <- mlx.getEstimatedRandomEffects()$conditionalMean[var.randeff]
@@ -465,15 +506,39 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     yj <- m.indparam[[nj]]
     lm0 <- lm(yj ~1)
     for (nc in cov.names) {
-      lmc <- lm(yj ~ covariates[[nc]])
-      pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
-      dnc <- data.frame(parameter=lnj[j],covariate=nc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
+      if (iiv[[nj]]) {
+        lmc <- lm(yj ~ covariates[[nc]])
+        pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
+        plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+      } else {
+        pjc <- plrt <- NA
+      }
+      dnc <- data.frame(p.ori=var.param[j],parameter=lnj[j],covariate=nc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d1 <- rbind(d1,dnc)
     }
   }
   foo <- d1[order(d1$parameter, d1$p.ttest),]
   d1 <- foo[order(foo$in.model, decreasing=TRUE),]
+  
+  i.in <- which(d1$in.model)
+  if (length(i.in)>0 & !is.null(mlx.getTests()$wald)) {
+    wald <- mlx.getTests()$wald %>% mutate(p.value=as.numeric(gsub("<", "", p.value)))
+    w1 <-wald %>% select(-statistics) %>% spread(key=method, value=p.value)
+    if (!is.null(w1$fisher_linearization))
+      d1$p.wald_lin <- NA
+    if (!is.null(w1$fisher_stochasticApproximation))
+      d1$p.wald_SA <- NA
+    for (i in i.in) {
+      di <- d1[i,]
+      ij <- which(w1$parameter==paste0("beta_",di$p.ori,"_",di$covariate))
+      if (!is.null(w1$fisher_linearization))
+        d1$p.wald_lin[i] <- w1$fisher_linearization[ij] 
+      if (!is.null(w1$fisher_stochasticApproximation))
+        d1$p.wald_SA[i] <- w1$fisher_stochasticApproximation[ij] 
+    }
+    d1 <- cbind(d1 %>% select(-in.model), in.model=d1$in.model)
+  }
+  d1 <- d1 %>% select(-p.ori)
   
   m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)
   m.randeff <- m.randeff[order(m.randeff[,1]),]
@@ -484,9 +549,13 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
     yj <- m.randeff[[ne]]
     lm0 <- lm(yj ~1)
     for (nc in cov.names) {
-      lmc <- lm(yj ~ covariates[[nc]])
-      pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
-      plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+      if (iiv[[nj]]) {
+        lmc <- lm(yj ~ covariates[[nc]])
+        pjc <- signif(anova(lm0, lmc)$`Pr(>F)`[2],4)
+        plrt <- signif(1-pchisq(2*c(logLik(lmc)-logLik(lm0)),1),4)
+      } else {
+        pjc <- plrt <- NA
+      }
       dnc <- data.frame(random.effect=ne,covariate=nc,p.ttest=pjc,p.lrt=plrt,in.model=g[[nj]][[nc]])
       d2 <- rbind(d2,dnc)
     }

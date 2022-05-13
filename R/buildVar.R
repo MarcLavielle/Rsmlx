@@ -646,7 +646,7 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
         list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
         list.param1 <- setdiff(list.param1, fix.param1)
         if (length(list.param1)>0) {
-          pop.built <- getEstimatedPopulationParameters()
+          pop.built <- mlx.getEstimatedPopulationParameters()
           r.param1 <- compute.cv(pop.built, list.param1)
           j0 <- which(r.param1$cv < cv.min)
           if (length(j0) > 0) {

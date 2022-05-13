@@ -65,7 +65,7 @@
 #' @importFrom MASS addterm dropterm 
 #' @importFrom stats coef as.formula model.matrix deviance formula extractAIC factor.scope nobs terms update update.formula
 #' @importFrom utils data write.csv packageVersion
-#' @importFrom dplyr filter select rename arrange bind_rows rename mutate
+#' @importFrom dplyr filter select rename arrange bind_rows mutate
 #' @importFrom dplyr %>%
 #' @export
 buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL,
@@ -675,7 +675,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       test.cor <- T
       while (test.cor) {
         mlx.loadProject(final.project)
-        r.test <- correlationTest()$p.value %>% filter(!in.model)
+        p.cortest <- NULL
+        r.test <- correlationTest()$p.value %>% filter(!in.model) %>% rename(p.value=p.cortest)
         param1 <- gsub("eta_","",r.test$randomEffect.1)
         param2 <- gsub("eta_","",r.test$randomEffect.2)
         w.cor <- weight$correlation[cbind(param1, param2)]+weight$correlation[cbind(param2, param1)]

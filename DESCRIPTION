@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 4.2.1
+Version: 4.2.2
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
@@ -16,7 +16,7 @@ Description: Provides methods for model building and model evaluation of mixed e
 URL: http://rsmlx.webpopix.org
 SystemRequirements: 'Monolix' (<https://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
-Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr
+Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr, tidyr
 Suggests: mlxR, 
 Collate: mlxConnectors.R
          bootstrap.R
