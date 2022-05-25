@@ -189,6 +189,8 @@ covariateModelSelection <- function(pen.coef=NULL, weight=1, n.full=10,
   tr0 <- NULL
   for (k in (1:n.param)) {
     if (!identical(res[[k]],"none")) {
+      # if (nrow(res[[k]]) < nb.model)
+      #   res[[k]][(nrow(res[[k]])+1):nb.model, ] <- res[[k]][nrow(res[[k]]), ] 
       covariate.model[[k]][1:length(covariate.model[[k]])] <- FALSE
       if (indvar[k]) {
         ck <- attr(r[[k]]$model$terms,"term.labels")
@@ -244,6 +246,7 @@ lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, p
       # pjc <- c(pjc, pc*rc/(1 - pc + pc*rc))
     }
     pjc <- p.weight(pjc, pw[nxc], pen.coef)
+    names(pjc) <- nxc
     if (!is.null(eta)) {
       etac <- rowMeans(matrix(eta[[1]], nrow=N))
       lm0 <- lm(etac ~1)
@@ -257,6 +260,7 @@ lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, p
         # pjc <- c(pjc, pc*rc/(1 - pc + pc*rc))
       }
       pjec <- p.weight(pjec, pw[nxc], pen.coef)
+      names(pjec) <- nxc
       # print(names(y))
       # print(rbind(pjc, pjec))
       pjc <- pmin(pjc, pjec, na.rm=T)
@@ -266,7 +270,7 @@ lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, p
     #   list.c <- which(pjc<max(pjc))
     # else
     #   pjc <- p.adjust(pjc, method="BH")
-    pjc[mlx.getIndividualParameterModel()$covariateModel[[ny]]] <- 0
+    pjc[names(which(mlx.getIndividualParameterModel()$covariateModel[[ny]]))] <- 0
     list.c <- which(pjc>p.max)
     # browser()
     
@@ -332,8 +336,16 @@ lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, p
                            scope=list(upper=model.sature, lower=model.cst), steps=steps, weight=pw)
       }
       else {
-        lm.cst=mlx.stepAIC(model.cst, direction=direction, trace = FALSE, k=nrep*pen.coef,
-                           scope=list(upper=model.sature, lower=model.cst), steps=steps, weight=pw)
+ #       lm.cst=mlx.stepAIC(model.cst, direction=direction, trace = FALSE, k=nrep*pen.coef,
+ #                          scope=list(upper=model.sature, lower=model.cst), steps=steps, weight=pw)
+        c.cur <- names(which(mlx.getIndividualParameterModel()$covariateModel[[ny]]))
+        f.cur <- "y ~ 1"
+        if (length(c.cur)>0)
+          f.cur <- paste0(f.cur, "+", paste(c.cur,collapse="+"))
+        f.cur <- as.formula(f.cur)
+        model.cur=lm(f.cur,l_data)
+        lm.cst=stepAIC(model.cur, direction=direction, trace=FALSE, k=nrep*pen.coef,
+                           scope=list(upper=model.sature, lower=model.cst), steps=steps)
       }
     }
     , error=function(e) {
@@ -369,7 +381,10 @@ lm.all <- function(ny, y, eta, x, tr.names=NULL, pen.coef=NULL, nb.model=NULL, p
     }
     res <- cbind(G==1, res)
     #  res <- cbind(G, res)
+    if (nb.model==1)
     res[,c("ll","df","criterion")] <- NULL
+    else
+      res[2:nb.model,] <- res[1,]
     row.names(res) <- 1:nrow(res)
     
     #  browser()

@@ -10,6 +10,7 @@ buildAll(
   model = "all",
   prior = NULL,
   weight = NULL,
+  coef.w1 = 0.5,
   cv.min = 0.001,
   fError.min = 0.001,
   paramToUse = "all",
@@ -19,6 +20,7 @@ buildAll(
   criterion = "BICc",
   linearization = FALSE,
   ll = T,
+  test = T,
   direction = NULL,
   steps = 1000,
   max.iter = 20,
@@ -34,7 +36,7 @@ buildAll(
   fix.param0 = NULL,
   remove = T,
   add = T,
-  delta = c(30, 5),
+  delta = c(30, 10, 5),
   omega.set = NULL,
   pop.set1 = NULL,
   pop.set2 = NULL
@@ -50,6 +52,8 @@ buildAll(
 \item{prior}{list of prior probabilities for each component of the model (default=NULL)}
 
 \item{weight}{list of penalty weights for each component of the model (default=NULL)}
+
+\item{coef.w1}{multiplicative weight coefficient used for the first iteration only (default=0.5)}
 
 \item{cv.min}{value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)}
 
@@ -68,6 +72,8 @@ buildAll(
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
 
 \item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
+
+\item{test}{{TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)}
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
@@ -99,7 +105,7 @@ buildAll(
 
 \item{add}{try to add random effects (default=T)}
 
-\item{delta}{maximum difference in criteria for testing a new model (default=c(30,5))}
+\item{delta}{maximum difference in criteria for testing a new model (default=c(30,10,5))}
 
 \item{omega.set}{settings to define how a variance varies during iterations of SAEM}
 

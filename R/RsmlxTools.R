@@ -544,7 +544,7 @@ def.variable <- function(weight=NULL, prior=NULL, criterion=NULL, fix.param0=NUL
   
   w.cor <- weight$correlation
   if (!is.null(prior$correlation)) 
-    w.cor <- -2*log(prior$correlation/(1-prior$correlation))/pen.coef[2]
+    w.cor <- -2*log(prior$correlation/(1-prior$correlation))/pen.coef[1]
   if (is.null(w.cor))
     w.cor <- 1
   if (length(w.cor)==1) {
@@ -559,7 +559,7 @@ def.variable <- function(weight=NULL, prior=NULL, criterion=NULL, fix.param0=NUL
   w.cor[which(is.nan(w.cor))] <- 0
   
   if (!is.null(prior$variance)) 
-    w.var <- -2*log(prior$variance/(1-prior$variance))/pen.coef[2]
+    w.var <- -2*log(prior$variance/(1-prior$variance))/pen.coef[1]
   else
     w.var <- weight$variance 
   foo <- mlx.getIndividualParameterModel()$variability$id

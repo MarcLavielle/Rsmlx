@@ -10,6 +10,7 @@ buildmlx(
   model = "all",
   prior = NULL,
   weight = NULL,
+  coef.w1 = 0.5,
   paramToUse = "all",
   covToTest = "all",
   covToTransform = "none",
@@ -17,6 +18,7 @@ buildmlx(
   criterion = "BICc",
   linearization = FALSE,
   ll = T,
+  test = T,
   direction = NULL,
   steps = 1000,
   n.full = 10,
@@ -43,6 +45,8 @@ buildmlx(
 
 \item{weight}{list of penalty weights for each component of the model (default=NULL)}
 
+\item{coef.w1}{multiplicative weight coefficient used for the first iteration only (default=0.5)}
+
 \item{paramToUse}{list of parameters possibly function of covariates (default="all")}
 
 \item{covToTest}{components of the covariate model that can be modified   (default="all")}
@@ -56,6 +60,8 @@ buildmlx(
 \item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
 \item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
+
+\item{test}{{TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)}
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 

@@ -19,11 +19,13 @@
 #' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
 #' @param prior  list of prior probabilities for each component of the model (default=NULL)
 #' @param weight list of penalty weights for each component of the model (default=NULL)
+#' @param coef.w1 multiplicative weight coefficient used for the first iteration only (default=0.5)
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
 #' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
 #' @param center.covariate TRUE/{FALSE} center the covariates of the final model (default=FALSE) 
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
+#' @param test  {TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)
 #' @param ll  {TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
 #' @param fError.min  minimum fraction of residual variance for combined error model (default = 1e-3)
@@ -68,9 +70,9 @@
 #' @importFrom dplyr filter select rename arrange bind_rows mutate
 #' @importFrom dplyr %>%
 #' @export
-buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL,
+buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, coef.w1=0.5,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
-                     criterion="BICc", linearization=FALSE, ll=T, 
+                     criterion="BICc", linearization=FALSE, ll=T, test=T, 
                      direction=NULL, steps=1000, n.full=10,
                      max.iter=20, explor.iter=2, fError.min=1e-3, 
                      seq.cov=FALSE, seq.cov.iter=0, seq.corr=TRUE, 
@@ -105,7 +107,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   
   method.ll <- iop.ll <- pen.coef <- NULL
   r <- buildmlx.check(project, final.project, model, paramToUse, covToTest, covToTransform, center.covariate, 
-                      criterion, linearization, ll, direction, steps, max.iter, explor.iter, 
+                      criterion, linearization, ll, test, direction, steps, max.iter, explor.iter, 
                       seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight, n.full)
   if (!is.null(r$change)) return(list(change=F))
   for (j in 1:length(r))
@@ -296,6 +298,14 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   while (!stop.test) {
     iter <- iter + 1
     
+    if (iter==1){
+      weight.covariate <- weight$covariate*coef.w1
+      weight.correlation <- weight$correlation*coef.w1
+    } else {
+      weight.covariate <- weight$covariate
+      weight.correlation <- weight$correlation
+    }
+    
     to.cat <- paste0(plain.line,"- - - Iteration ",iter," - - -\n")
     print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
     
@@ -320,7 +330,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     pmax.cov <-  p.max
     if (model$covariate) {
       #      pmax.cov <- ifelse(iter <= 1, 1, p.max) 
-      res.covariate <- covariateModelSelection(pen.coef=pen.coef[1], nb.model=nb.model, weight=weight$covariate,
+      res.covariate <- covariateModelSelection(pen.coef=pen.coef[1], nb.model=nb.model, weight=weight.covariate,
                                                covToTransform=covToTransform, covFix=covFix, direction=direction, 
                                                steps=steps, p.max=pmax.cov, paramToUse=paramToUse, sp0=sp0, iter=iter,
                                                correlation.model = correlation.model, n.full=n.full, eta=e)
@@ -358,7 +368,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     if (model$correlation & corr.test) {
       pen.corr <- ifelse(iter <= 1, pen.coef[1], pen.coef[1]) 
       res.correlation <- correlationModelSelection(e0=e, pen.coef=pen.corr, nb.model=nb.model, 
-                                                   corr0=correlation.model0, seqmod=seq.corr, weight=weight$correlation)
+                                                   corr0=correlation.model0, seqmod=seq.corr, weight=weight.correlation)
       if (nb.model==1) 
         correlation.model <- res.correlation
       else  
@@ -415,10 +425,13 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     } 
     
     if (!stop.test) {
+      p.est <- mlx.getEstimatedPopulationParameters()
       mlx.setInitialEstimatesToLastEstimates(fixedEffectsOnly = T)
       p.ini <- mlx.getPopulationParameterInformation()
       rownames(p.ini) <- p.ini$name
-      p.ini[omega,] <- omega.ini
+      i.omega <- which(grepl("omega_", p.ini$name) & (!identical(p.ini$method,"FIXED")))
+      p.ini$initialValue[i.omega] <- p.est[p.ini$name[i.omega]]*3
+      #          p.ini[omega,] <- omega.ini
       jcor <- grep("corr_",p.ini$name)
       if (length(jcor)>0)  p.ini <- p.ini[-jcor,]
       mlx.setPopulationParameterInformation(p.ini)
@@ -547,6 +560,20 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     }
     mlx.loadProject(buildmlx.project.iter)
     mlx.saveProject(final.project)
+  } else {
+    iter.opt <- iter
+  }
+  
+  if (test) {
+    
+    if (!iop.ll) {
+      g <- as.list(mlx.getLaunchedTasks())$logLikelihoodEstimation
+      if (!linearization & !("importanceSampling" %in% g)) 
+        mlx.runLogLikelihoodEstimation(linearization=F)
+      if (linearization & !("linearization" %in% g)) 
+        mlx.runLogLikelihoodEstimation(linearization=T)
+      ll.min <- compute.criterion(criterion, method.ll, weight, pen.coef)
+    }
     
     to.cat <- paste0(plain.line,"- - - Further tests - - -\n")
     print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
@@ -608,7 +635,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       
       pv <- as.numeric(gsub("<", "", r.test$p.value))
       pv[which(is.nan(pv))] <- 1
-      
       list.ipc <- NULL
       for (np in n.param) {
         gp <- g$covariateModel[[np]]
@@ -666,10 +692,83 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
           ll.min <- ll.new
           mlx.saveProject(final.project)
         }
+        
+        
+        
         # } else {
         #   mlx.loadProject(final.project)
         # }
       }
+      
+      # ---   Wald tests
+      g <- as.list(mlx.getLaunchedTasks())$standardErrorEstimation
+      if (!linearization & !("stochasticApproximation" %in% g))
+        mlx.runStandardErrorEstimation(linearization=F)
+      if (!("linearization" %in% g))
+        mlx.runStandardErrorEstimation(linearization=T)
+      
+      r.test <- mlx.getTests()$wald
+      g <- mlx.getIndividualParameterModel()
+      n.param <- g$name
+      n.cov <- names(g$covariateModel[[1]])
+      
+      pv <- as.numeric(gsub("<", "", r.test$p.value))
+      pv[which(is.nan(pv))] <- 0
+
+      list.ipc <- NULL
+      for (np in n.param) {
+        gp <- g$covariateModel[[np]]
+        ngp <- names(which(gp))
+        if (length(ngp) > 0) {
+          for (nc in ngp) {
+            ipc <- grep(paste0("beta_",np,"_",nc), r.test$parameter)
+            pv[ipc] <- p.weight(pv[ipc], weight$covariate[np, nc], pen.coef[1])
+            if (max(pv[ipc]) > p.min[2]) {
+              g$covariateModel[[np]][nc] <- F
+              list.ipc <- c(list.ipc, ipc)
+            }
+          }
+        }
+      }
+      if (length(list.ipc) >0) {
+        to.cat <- paste0(plain.short,"Remove parameters/covariates relationships:\n")
+        method <- statistics <- parameter <- NULL
+        to.print <- (r.test %>% select(-c(method, statistics)) %>%
+                       rename(coefficient=parameter))[list.ipc,]
+        print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
+        
+        mlx.setIndividualParameterModel(g)
+        iter <- iter+1
+        to.cat <- paste0("\nRun scenario for model ",iter," ... \nEstimation of the population parameters... \n")
+        print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+        buildmlx.project.iter <- file.path(buildmlx.dir,paste0("iteration",iter,".mlxtran"))
+        mlx.saveProject(buildmlx.project.iter)
+        mlx.runPopulationParameterEstimation()
+        if (lin.ll) {
+          if(!launched.tasks[["conditionalModeEstimation"]]) 
+            mlx.runConditionalModeEstimation()
+        } else {
+          to.cat <- "Sampling from the conditional distribution... \n"
+          print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+          mlx.runConditionalDistributionSampling()
+        }
+        to.cat <- "Estimation of the log-likelihood... \n"
+        print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+        mlx.runLogLikelihoodEstimation(linearization = lin.ll)
+        ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
+        ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
+        to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
+        to.print <- round(ll,2)
+        print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
+        
+        if (ll.new < ll.min) {
+          ll.min <- ll.new
+          mlx.saveProject(final.project)
+        }
+      }
+      
+      # ---  end Wald tests
+      
     }
     if (model$correlation) {
       test.cor <- T
@@ -825,63 +924,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       }
     }
     
-    if (model$residualError & 1>2) { 
-      mlx.loadProject(final.project)
-      # pen <- compute.pen(prior)
-      # ll.min <- compute.criterion(criterion, method.ll, weight, pen.coef)
-      g <- mlx.getContinuousObservationModel()
-      gc <- which(g$errorModel=="combined1" | g$errorModel=="combined2")
-      if (length(gc) >0) {
-        pop.est <- mlx.getEstimatedPopulationParameters()
-        test.err <- F
-        for (ic in gc) {
-          nc <- g$parameters[[ic]][1:2]
-          pc <- pop.est[nc]
-          yc <- names(g$errorModel)[ic]
-          yb <- mean(abs(mlx.getObservationInformation()[[yc]][[yc]]))
-          if (pc[1]/yb < pc[2]*0.01) {
-            print(pc)
-            eval(parse(text=paste0("setErrorModel(",yc," = 'proportional')")))
-            test.err <- T
-          } else if (pc[2] < pc[1]/yb*0.01) {
-            print(pc)
-            eval(parse(text=paste0("setErrorModel(",yc," = 'constant')")))
-            test.err <- T
-          }
-        }
-        if (test.err) {
-          to.cat <- paste0(plain.line,"- - - Fit new error model - - -\n")
-          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-          to.cat <- "\nEstimation of the population parameters... \n"
-          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-          mlx.runPopulationParameterEstimation()
-          if (lin.ll) {
-            if(!launched.tasks[["conditionalModeEstimation"]])
-              mlx.runConditionalModeEstimation()
-          } else {
-            to.cat <- "Sampling from the conditional distribution... \n"
-            print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-            mlx.runConditionalDistributionSampling()
-          }
-          to.cat <- "Estimation of the log-likelihood... \n"
-          print.result(print, summary.file, to.cat=to.cat, to.print=NULL)
-          mlx.runLogLikelihoodEstimation(linearization = lin.ll)
-          ll.new <- compute.criterion(criterion, method.ll, weight, pen.coef)
-          ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.new, is.weight, is.prior)
-          to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
-          to.print <- round(ll,2)
-          print.result(print, summary.file, to.cat=to.cat, to.print=to.print)
-          #     if (ll.new < ll.min) {
-          ll.min <- ll.new
-          change.error.model <- list(g, mlx.getContinuousObservationModel())
-          mlx.saveProject(final.project)
-          #     }
-        }
-      }
-    }
-  } else {
-    iter.opt <- iter
-  }
+  } 
   
   if (model$covariate & nb.model>1)
     res.covariate$res <- sortCov(res.covariate$res[[1]], cov.ini)
@@ -987,7 +1030,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
 }
 
 buildmlx.check <- function(project, final.project, model, paramToUse, covToTest, covToTransform, center.covariate, 
-                           criterion, linearization, ll, direction, steps, max.iter, explor.iter, 
+                           criterion, linearization, ll, test, direction, steps, max.iter, explor.iter, 
                            seq.cov, seq.cov.iter, seq.corr, p.max, p.min, print, nb.model, prior, weight, n.full) {
   
   if (length(mlx.getIndividualParameterModel()$variability)>1)
@@ -1000,6 +1043,8 @@ buildmlx.check <- function(project, final.project, model, paramToUse, covToTest,
   if (!grepl("\\.mlxtran",final.project))
     stop(paste0(final.project, " is not a valid name for a Monolix project (use the .mlxtran extension)"), call.=FALSE)
   
+  if (!is.logical(test))
+    stop(" 'test' should be boolean", call.=FALSE)
   if (!is.logical(center.covariate))
     stop(" 'center.covariate' should be boolean", call.=FALSE)
   if (!is.logical(linearization))

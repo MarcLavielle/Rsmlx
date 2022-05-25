@@ -18,7 +18,7 @@
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
 #' @param remove  {TRUE}/FALSE try to remove random effects (default=TRUE)
 #' @param add  {TRUE}/FALSE try to add random effects (default=TRUE)
-#' @param delta  maximum difference in criteria for testing a new model (default=c(30,5))
+#' @param delta  maximum difference in criteria for testing a new model (default=c(30,10,5))
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
@@ -47,7 +47,7 @@
 
 buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.project=NULL, 
                      fix.param1=NULL, fix.param0=NULL, criterion="BICc", linearization=F, remove=T, add=T,
-                     delta=c(30,5), omega.set=NULL, pop.set1=NULL, pop.set2=NULL, print=TRUE) {
+                     delta=c(30,10,5), omega.set=NULL, pop.set1=NULL, pop.set2=NULL, print=TRUE) {
   
   
   ptm <- proc.time()
@@ -228,19 +228,20 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
   endIter <- oset$endIter
   r.omega <- oset$r.omega
   
-  pset1 <- list(nbexploratoryiterations=75, nbsmoothingiterations=75, simulatedannealing=F, smoothingautostop=F, exploratoryautostop=F)
+  pset1 <- list(nbexploratoryiterations=300, nbsmoothingiterations=200, simulatedannealing=F, smoothingautostop=T, exploratoryautostop=T)
   if (!is.null(pop.set1))
     pset1 <- modifyList(pset1, pop.set1[intersect(names(pop.set1), names(pset1))])
   pop.set1 <- mlx.getPopulationParameterEstimationSettings()
   pop.set1 <- modifyList(pop.set1, pset1[intersect(names(pset1), names(pop.set1))])
   
-  pset2 <- list(nbsmoothingiterations=25)
+  pset2 <- list(nbsmoothingiterations=50, simulatedannealing=F, smoothingautostop=F, exploratoryautostop=F)
   if (!is.null(pop.set2))
     pset2 <- modifyList(pset2, pop.set2[intersect(names(pop.set2), names(pset2))])
-  pop.set2 <- modifyList(pop.set1, pset2[intersect(names(pset2), names(pop.set1))])
+  pop.set2 <- mlx.getPopulationParameterEstimationSettings()
+  pop.set2 <- modifyList(pop.set2, pset2[intersect(names(pset2), names(pop.set2))])
   pop.set2$nbexploratoryiterations <- beginIter + nbIter + endIter
-  pop.set3 <- pop.set2
-  pop.set3$nbburningiterations <- pop.set3$nbexploratoryiterations <- pop.set3$nbsmoothingiterations <- 0
+  # pop.set3 <- pop.set2
+  # pop.set3$nbburningiterations <- pop.set3$nbexploratoryiterations <- pop.set3$nbsmoothingiterations <- 0
   
   stop <- F 
   change.any <- change.ini
@@ -339,25 +340,32 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
             order.min <- order(BICc.min)
             j.min <- 0
             test.min <- T
+            p.cvmin <- NULL
             while (test.min) {
-              j.min <- j.min+1
-              i.min <- order.min[j.min]
-              
-              p.min <- gsub("omega_","",op.min[[i.min]])
-              # r <- c(BICc.built, BICc.min[i.min])
-              # if (length(param0) == 0)
-              #   names(r) <- c("none", paste0("test_",p.min))
-              # else
-              #   names(r) <- c(paste0(param0, collapse='_'), paste0("test_",p.min))
+              if (is.null(p.cvmin)) {
+                j.min <- j.min+1
+                i.min <- order.min[j.min]
+                p.min <- gsub("omega_","",op.min[[i.min]])
+              } else {
+                p.min <- p.cvmin
+                i.min <- i.cvmin
+              }
               param0 <- c(param0, p.min)
               param1 <- setdiff(param1, p.min)
               update.project(project.built, project.temp, param0, param1, pop.min[[i.min]], pop.set1)
               
               if (print)
                 cat("\nfitting the model with no variability on ", param0, ": ")
-              
               if (BICc.min[i.min] > -Inf) {
                 mlx.runPopulationParameterEstimation(parameters=ind.min[[i.min]])
+                pop.est <- mlx.getEstimatedPopulationParameters()
+                cv.est <- compute.cv(pop.est, param1)$cv
+                i0.cv <- which(cv.est < cv.min)
+                if (length(i0.cv)>0) {  
+                  p.cvmin <- c(p.min, gsub("cv_","", names(cv.est[i0.cv])))
+                  i.cvmin <- i.min
+                  if (j.min==n.remove) n.remove <- n.remove + 1
+                }
                 if (linearization) {
                   mlx.runConditionalModeEstimation()
                   mlx.runLogLikelihoodEstimation(linearization=TRUE)
@@ -468,7 +476,7 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
           n.add <- 0
           for (j in 1: length(param0)) {
             pj <- param0[j]
-            if (!identical(pj, p.last.remove) | m>1) {
+            if (!(pj %in% p.last.remove) | m>1) {
               op <- paste0("omega_",pj)
               if (print)
                 cat("trying to add", sprintf(paste0("%-",lpar+6,"s"), op), ": ")
@@ -507,7 +515,7 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
               } else {
                 if (print)
                   cat(sprintf("%.1f", BICc1.iter), "\n")
-                if (BICc1.iter - BICc.built.iter < delta[2]) {
+                if (BICc1.iter - BICc.built.iter < delta[3]) {
                   n.add <- n.add+1
                   BICc.min[n.add] <- BICc1.iter
                   op.min[[n.add]] <- op
@@ -875,10 +883,10 @@ buildVar.check <- function(project, final.project, fix.param1, fix.param0,
     stop(" 'criterion' should be in {'AIC', 'BIC', 'BICc'} or be numerical > 0", call.=FALSE)
   if (is.numeric(criterion) && criterion<=0)
     stop(" 'criterion' should be in {'AIC', 'BIC', 'BICc'} or be numerical > 0", call.=FALSE)
-  if (!is.numeric(delta) | (length(delta) != 2))
-    stop(" 'delta' should be a 2-vector of thresholds >= 0", call.=FALSE)
+  if (!is.numeric(delta) | (length(delta) != 3))
+    stop(" 'delta' should be a 3-vector of thresholds >= 0", call.=FALSE)
   if (min(delta)< 0 )
-    stop(" 'delta' should be a 2-vector of thresholds >= 0", call.=FALSE)
+    stop(" 'delta' should be a 3-vector of thresholds >= 0", call.=FALSE)
   
   
   if (!is.null(prior) & !is.list(prior))

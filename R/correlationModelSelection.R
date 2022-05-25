@@ -23,7 +23,8 @@ correlationModelSelection <- function(e0=NULL, pen.coef=NULL, nb.model=1, corr0=
   nrep <- max(e$rep)
   N <- nrow(e)/nrep
   e$rep <- e$id <- NULL
-  e.name <- names(which(mlx.getIndividualParameterModel()$variability$id))
+ # e.name <- names(which(mlx.getIndividualParameterModel()$variability$id))
+  e.name <- gsub("eta_","",names(e))
   e.var <- paste0("eta_",e.name)
   e.var <- e.var[e.var %in% names(e)]
   e <- e[e.var]

@@ -12,6 +12,7 @@
 #' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
 #' @param prior  list of prior probabilities for each component of the model (default=NULL)
 #' @param weight list of penalty weights for each component of the model (default=NULL)
+#' @param coef.w1 multiplicative weight coefficient used for the first iteration only (default=0.5)
 #' @param cv.min  value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)
 #' @param fError.min  minimum fraction of residual variance for combined error model (default = 1e-3)
 #' @param paramToUse  list of parameters possibly function of covariates (default="all")
@@ -22,6 +23,7 @@
 #' @param center.covariate TRUE/{FALSE} center the covariates of the final model (default=FALSE) 
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
 #' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)
+#' @param test  {TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)
 #' @param ll  {TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
 #' @param seq.cov TRUE/{FALSE} whether the covariate model is built before the correlation model  
 #' @param seq.cov.iter number of iterations before building the correlation model (only when seq.cov=F, default=0) 
@@ -30,7 +32,7 @@
 #' @param p.min minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))
 #' @param remove  try to remove random effects (default=T)
 #' @param add  try to add random effects (default=T)
-#' @param delta  maximum difference in criteria for testing a new model (default=c(30,5))
+#' @param delta  maximum difference in criteria for testing a new model (default=c(30,10,5))
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
@@ -63,12 +65,12 @@
 #' @importFrom dplyr filter select rename arrange bind_rows rename
 #' @importFrom dplyr %>%
 #' @export
-buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, cv.min=0.001, fError.min=1e-3,
+buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, weight=NULL, coef.w1=0.5, cv.min=0.001, fError.min=1e-3,
                      paramToUse="all", covToTest="all", covToTransform="none", center.covariate=FALSE, 
-                     criterion="BICc", linearization=FALSE, ll=T, direction=NULL, steps=1000,
+                     criterion="BICc", linearization=FALSE, ll=T, test=T, direction=NULL, steps=1000,
                      max.iter=20, explor.iter=2, seq.cov=FALSE, seq.corr=TRUE, seq.cov.iter=0, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1), print=TRUE, nb.model=1,
-                     fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,5), 
+                     fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,10,5), 
                      omega.set=NULL, pop.set1=NULL, pop.set2=NULL) {
   
   ptm <- proc.time()
@@ -118,16 +120,16 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   mlx.setScenario(g)
   
   # ---------------------
-  pset1 <- list(nbexploratoryiterations=75, nbsmoothingiterations=75, simulatedannealing=F, smoothingautostop=F, exploratoryautostop=F)
-  if (!is.null(pop.set1))
-    pset1 <- modifyList(pset1, pop.set1[intersect(names(pop.set1), names(pset1))])
-  pop.set1 <- mlx.getPopulationParameterEstimationSettings()
-  pop.set1 <- modifyList(pop.set1, pset1[intersect(names(pset1), names(pop.set1))])
-  
-  pset2 <- list(nbsmoothingiterations=25)
-  if (!is.null(pop.set2))
-    pset2 <- modifyList(pset2, pop.set2[intersect(names(pop.set2), names(pset2))])
-  pop.set2 <- modifyList(pop.set1, pset2[intersect(names(pset2), names(pop.set1))])
+  # pset1 <- list(nbexploratoryiterations=75, nbsmoothingiterations=75, simulatedannealing=F, smoothingautostop=F, exploratoryautostop=F)
+  # if (!is.null(pop.set1))
+  #   pset1 <- modifyList(pset1, pop.set1[intersect(names(pop.set1), names(pset1))])
+  # pop.set1 <- mlx.getPopulationParameterEstimationSettings()
+  # pop.set1 <- modifyList(pop.set1, pset1[intersect(names(pset1), names(pop.set1))])
+  # 
+  # pset2 <- list(nbsmoothingiterations=25)
+  # if (!is.null(pop.set2))
+  #   pset2 <- modifyList(pset2, pop.set2[intersect(names(pop.set2), names(pset2))])
+  # pop.set2 <- modifyList(pop.set1, pset2[intersect(names(pset2), names(pop.set1))])
   # ---------------------
   
   r <- def.variable(weight=weight, prior=prior, criterion=criterion, fix.param0=fix.param0, fix.param1=fix.param1)
@@ -149,6 +151,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       if (iter==1) {
         project.ini.build <- project.ini
       } else {
+        coef.w1=1
         project.ini.build <- project.final.builtvar
         seq.corr <- seq.cov <- F
         seq.cov.iter=0
@@ -159,10 +162,10 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       cor1 <- rep(F, length(cov1))
       names(cor1) <- names(cov1)
       cor1[unlist(mlx.getIndividualParameterModel()$correlationBlocks$id)] <- T
-      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight,
+      r.build <- buildmlx(project=project.ini.build, final.project=project.final.built, covToTest=covToTest, prior=NULL, weight=weight, coef.w1=coef.w1,
                           covToTransform=covToTransform, seq.corr=seq.corr, seq.cov=seq.cov, seq.cov.iter=seq.cov.iter, p.max=p.max, p.min=p.min,
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                          linearization=linearization, ll=ll, direction=direction, steps=steps, fError.min=fError.min,
+                          linearization=linearization, ll=ll, test=test, direction=direction, steps=steps, fError.min=fError.min,
                           max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
       pv.re <- covariateTest()$p.value.randomEffects
       if (!is.null(pv.re))
@@ -212,7 +215,9 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   if (!identical(model, "all") & !("covariate" %in% model))
     relToTest <- NULL
   
-  if (!is.null(relToTest) & ll==T) {
+  add.test <- NULL
+  test.all <- F
+  if (!is.null(relToTest) & test.all==T) {
     param0 <- names(which(!mlx.getIndividualParameterModel()$variability$id))
     relToTest <- unique(relToTest) %>% mutate(param=gsub("eta_","", random.effect)) %>% filter(param %in% param0) %>% select(-random.effect)
     if (nrow(relToTest)>0) {
@@ -248,7 +253,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       scenario.ini <- mlx.getScenario()
       mlx.setPopulationParameterEstimationSettings(pop.set1)
       g.min <- g.ini <- mlx.getIndividualParameterModel()
-      for (k in 1:nrow(relToTest)) {
+       for (k in 1:nrow(relToTest)) {
         if (print)  print(relToTest[k,])
         g <- g.min
         g$covariateModel[[relToTest$param[k]]][[relToTest$covariate[k]]] <- T
@@ -272,6 +277,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         }
       }
       if (!identical(g.ini, g.min)) {
+        add.test <- list( relToTest=relToTest, g.ini=g.ini, g.min=g.min)
         mlx.loadProject(final.project)
         mlx.saveProject(project.relToTest)
         mlx.setPopulationParameterEstimationSettings(pop.set.ini)
@@ -304,7 +310,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
           r.build <- buildmlx(project=final.project, covToTest=covToTest, prior=NULL, weight=weight,
                               covToTransform=covToTransform, seq.corr=F, seq.cov=F, seq.cov.iter=0, p.max=p.max, p.min=p.min,
                               model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
-                              linearization=linearization, ll=ll, direction=direction, steps=steps, fError.min=fError.min,
+                              linearization=linearization, ll=ll, test=test, direction=direction, steps=steps, fError.min=fError.min,
                               max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
           mlx.saveProject(final.project)
           unlink(r.build$project)
@@ -349,6 +355,8 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     
   }
   
+#  if (!is.null(add.test))  browser()
+#  return(list(project=final.project, add.test=add.test))
   return(list(project=final.project))
 }
 

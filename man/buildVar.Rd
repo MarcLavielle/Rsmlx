@@ -16,7 +16,7 @@ buildVar(
   linearization = F,
   remove = T,
   add = T,
-  delta = c(30, 5),
+  delta = c(30, 10, 5),
   omega.set = NULL,
   pop.set1 = NULL,
   pop.set2 = NULL,
@@ -46,7 +46,7 @@ buildVar(
 
 \item{add}{{TRUE}/FALSE try to add random effects (default=TRUE)}
 
-\item{delta}{maximum difference in criteria for testing a new model (default=c(30,5))}
+\item{delta}{maximum difference in criteria for testing a new model (default=c(30,10,5))}
 
 \item{omega.set}{settings to define how a variance varies during iterations of SAEM}
 
