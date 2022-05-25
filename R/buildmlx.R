@@ -691,13 +691,9 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         if (ll.new < ll.min) {
           ll.min <- ll.new
           mlx.saveProject(final.project)
+        } else {
+          mlx.loadProject(final.project)
         }
-        
-        
-        
-        # } else {
-        #   mlx.loadProject(final.project)
-        # }
       }
       
       # ---   Wald tests
@@ -714,7 +710,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       
       pv <- as.numeric(gsub("<", "", r.test$p.value))
       pv[which(is.nan(pv))] <- 0
-
+      
       list.ipc <- NULL
       for (np in n.param) {
         gp <- g$covariateModel[[np]]
