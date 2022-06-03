@@ -434,6 +434,7 @@ read.res <- function(file) {
 # Get the separator of a file --------------------------------------------------
 .getDelimiter <- function(fileName, sep = NULL){
   L <- suppressMessages(suppressWarnings(readLines(fileName, n = 1)))
+  L <- gsub("#","", L)
   sepToCheck = c(' ', '\t', ',', ';')
   if (!is.null(sep)) sepToCheck <- unique(c(sep, sepToCheck))
   nSepToCheck <- length(sepToCheck)

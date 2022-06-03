@@ -51,7 +51,7 @@
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     tasks=c(populationParameterEstimation=TRUE), 
                     settings = NULL){
-
+  
   params <- as.list(match.call(expand.dots=T))[-1]
   
   monolixPath <- mlx.getLixoftConnectorsState()$path
@@ -70,14 +70,14 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   if (is.element("dataFolder", names(params)) & (is.element("nboot", names(params)))) {
     stop("DataFolder and nBoot can not be used both at the same time.", call.=F)
   }
-
+  
   .check_strict_pos_integer(nboot, "nboot")
   if (is.null(nboot)) nboot <- 100
   .check_bool(parametric, "parametric")
   .check_in_vector(names(tasks), "tasks names", names(mlx.getScenario()$tasks))
   .check_bool(tasks, "tasks")
   tasks['populationParameterEstimation'] <- TRUE
-
+  
   # check and initialize the settings
   settings <- .initBootstrapSettings(settings, parametric)
   settings$nboot <- nboot
@@ -103,7 +103,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     }
   } else {
     # Prepare all the output folders
-
+    
     # generate data sets from the initial data set
     if (parametric) {
       boot.folder = '/bootstrap/parametric/'
@@ -114,7 +114,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       cleanbootstrap(project, boot.folder)
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
-
+    
     if (parametric) {
       version <- mlx.getLixoftConnectorsState()$version
       v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
@@ -135,7 +135,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     projectBoot <-  paste0(exportDir, boot.folder, projectName, '_bootstrap_', toString(indexSample), '.mlxtran')
     mlx.loadProject(projectBoot)
     cat(paste0('Project ', toString(indexSample), '/', toString(settings$nboot)))
-
+    
     # Check if the run was done
     # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
     launched.tasks <- mlx.getLaunchedTasks()
@@ -179,17 +179,17 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
           cat(' => Tasks already performed \n')
       }
     }
-
+    
     paramResults <-  rbind(paramResults, mlx.getEstimatedPopulationParameters())
   }
   colnames(paramResults) <- names(mlx.getEstimatedPopulationParameters())
   paramResults <- as.data.frame(paramResults)
-
+  
   res.file <- file.path(exportDir,boot.folder,"populationParameters.txt")
   write.table(x = paramResults, file = res.file,
               eol = "\n", sep = ",", col.names = TRUE, quote = FALSE, row.names = FALSE)
   cat("Estimated population parameters have been saved: ", normalizePath(res.file), ".\n")
-
+  
   # Plot the results
   if (plot.res) {
     nbFig <- ncol(paramResults)
@@ -254,7 +254,8 @@ generateDataSetResample = function(project, settings, boot.folder){
   
   # Load the data set
   sepBoot <- .getDelimiter(datasetFile)
-  dataset <- read.table(file=datasetFile, sep=sepBoot, header=T, dec=".", check.names=FALSE)
+  dataset <- read.table(file=datasetFile, sep=sepBoot, header=T, dec=".", 
+                        check.names=FALSE, comment.char="")
   names(dataset) <- gsub(" ", "_", names(dataset))
   
   indexID <- which(referenceDataset$headerTypes=="id")
@@ -396,7 +397,7 @@ generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL
         simSettings = list(format.original=TRUE)  
       }
       if(!file.exists(datasetFileName)){
-  #      res <- simulx(project = project,  result.file=datasetFileName, setting=simSettings)
+        #      res <- simulx(project = project,  result.file=datasetFileName, setting=simSettings)
         res <- mlxR::simulx(project = project,  result.file=datasetFileName, setting=simSettings)
       }
     }
@@ -407,7 +408,7 @@ generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL
 
 generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=NULL){
   version <- mlx.getLixoftConnectorsState()$version
-
+  
   if(!file.exists(project)){
     stop("Project ", project, ", does not exist.", call.=F)
   }
@@ -429,7 +430,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
   projectName <- basename(tools::file_path_sans_ext(project))
   dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
   dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE, recursive = TRUE)
-
+  
   if (!is.na(settings$seed)) smlx.setProjectSettings(settings$seed)
   
   monolixPath <- mlx.getLixoftConnectorsState()$path
@@ -446,13 +447,13 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
         # activate only lixoft errors
         op <- get_lixoft_options()
         set_options(errors = TRUE, warnings = FALSE, info = FALSE)
-
+        
         smlx.importMonolixProject(project)
         smlx.setNbReplicates(settings$nboot)
         smlx.runSimulation()
         
         writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
-
+        
         set_options(errors = op$errors, warnings = op$warnings, info = op$info)
       },
       message = function(m) {
@@ -464,11 +465,11 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
         }
       }
     )
-      
+    
     # warning for simulx bug
     .catchSimulxBug()
   }
-    
+  
   suppressMessages(mlx.initializeLixoftConnectors(software = "monolix"))
   
 }
@@ -488,12 +489,12 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
   scenario = mlx.getScenario()
   scenario$tasks = c(populationParameterEstimation=TRUE)
   mlx.setScenario(scenario)
-
+  
   # generate boot headers
   referenceDataset <- mlx.getData()
   b1 <- paste0(dataFolder,'/',dataFiles[1])
   bootData <- .getBootData(referenceDataset, b1)
-
+  
   cat("Generating projects with bootstrap data sets...\n")
   for(indexSample in seq_along(dataFiles)){
     projectBootFileName =  file.path(exportDir, boot.folder, paste0(projectName, '_bootstrap_', toString(indexSample), '.mlxtran'))
@@ -501,14 +502,14 @@ generateBootstrapProject = function(project, dataFolder, boot.folder){
       # deactivate lixoft warnings
       op <- get_lixoft_options()
       set_options(warnings = FALSE)
-
+      
       bootData$dataFile <- paste0(dataFolder,'/',dataFiles[indexSample])
       mlx.setData(bootData)
       
       # reactivate lixoft warnings
       set_options(warnings = op$warnings)
       
-#      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
+      #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
       mlx.saveProject(projectFile =projectBootFileName)
     }
   }
@@ -540,7 +541,7 @@ cleanbootstrap <- function(project,boot.folder){
 ###################################################################################
 .initBootstrapSettings = function(settings, parametric){
   if (is.null(settings)) settings <- list()
-
+  
   invalidParametricSettings <- intersect(c("N", "covStrat"), names(settings))
   if (parametric == T & length(invalidParametricSettings)) {
     if (length(invalidParametricSettings) > 1) {
@@ -551,7 +552,7 @@ cleanbootstrap <- function(project,boot.folder){
     warning("In case of parametric boostrap, ", message, call. = FALSE)
     settings <- settings[! names(settings) %in% c("N", "covStrat")]
   }
-
+  
   .check_in_vector(
     names(settings), "settings",
     c("plot", "level", "N", "newResampling", "covStrat", "seed")
@@ -576,7 +577,7 @@ cleanbootstrap <- function(project,boot.folder){
     .check_in_vector(settings$covStrat, "settings covStrat", catcovariates)
   }
   if (!is.na(settings$seed)) .check_strict_pos_integer(settings$seed, "settings seed")
-
+  
   if (parametric) settings <- settings[! names(settings) %in% c("N", "covStrat")]
   return(settings)
 }
@@ -585,18 +586,22 @@ cleanbootstrap <- function(project,boot.folder){
   bootData <- refData
   mlxHeaders <- refData$header
   mlxHeadersType <- refData$headerTypes
-  df <- utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), header = T)
+  df <- utils::read.table(file = bootFile, nrow = 0, sep = .getDelimiter(bootFile), 
+                          header = T, comment.char="", check.names = FALSE)
   
   if (is.null(smlxHeaders)) {
     smlxHeaders <- names(df)
   }
-
+  
+  jid <- which(mlxHeadersType=="id")
+  if (gsub("_","",mlxHeaders[jid]) == gsub("#","",smlxHeaders[jid]))
+    smlxHeaders[jid] <- mlxHeaders[jid]
   intersectHeaders <- intersect(smlxHeaders, mlxHeaders)
   smlxHeadersType <- rep(NA, length(smlxHeaders))
   for (h in intersectHeaders) {
     smlxHeadersType[smlxHeaders == h] <- mlxHeadersType[mlxHeaders == h]
   }
-
+  
   matchSmlx <- c(id = "id", amt = "amount", time = "time", tinf = "tinf", OCCevid = "occ",
                  admtype = "admid", ytype = "obsid", evid = "evid", y = "observation")
   smlxHeadersType[smlxHeaders %in% setdiff(smlxHeaders, intersectHeaders)] <- unname(matchSmlx[setdiff(smlxHeaders, intersectHeaders)])
@@ -622,14 +627,14 @@ cleanbootstrap <- function(project,boot.folder){
   } else {
     bootData$observationTypes <- unname(refData$observationTypes)
   }
-
+  
   # warning for simulx bug
   version <- mlx.getLixoftConnectorsState()$version
   if (length(obsInfo$name) > 1 & ! is.element("obsid", smlxHeadersType) & version == "2020R1") {
     warning("Due to a bug in Simulx 2020R1, non-continuous outputs will be excluded from the simulation.", call. = FALSE)
   }
   bootData <- bootData[c("dataFile", "headerTypes", "observationTypes")]
-
+  
   return(bootData)
 }
 

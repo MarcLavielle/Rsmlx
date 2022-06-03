@@ -1319,7 +1319,9 @@ sortCov <- function(r, cov.ini) {
 }
 
 formatErrorModel <- function(m) {
-  out.names <- names(m)
+  i.ln <- which(mlx.getContinuousObservationModel()$distribution=="logNormal")
+  if (length(i.ln) > 0)
+    m[i.ln] <- "exponential"
   return(m)
 }
 

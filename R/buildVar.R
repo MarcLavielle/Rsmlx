@@ -349,6 +349,7 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
               } else {
                 p.min <- p.cvmin
                 i.min <- i.cvmin
+                p.cvmin <- NULL
               }
               param0 <- c(param0, p.min)
               param1 <- setdiff(param1, p.min)
