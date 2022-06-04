@@ -347,6 +347,7 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
                 i.min <- order.min[j.min]
                 p.min <- gsub("omega_","",op.min[[i.min]])
               } else {
+                j.min <- j.min+1
                 p.min <- p.cvmin
                 i.min <- i.cvmin
                 p.cvmin <- NULL
