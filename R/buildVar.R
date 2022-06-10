@@ -675,6 +675,8 @@ buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.
           } else {
             test0 <- F
           }
+        } else {
+          test0 <- F
         }
       }
     }

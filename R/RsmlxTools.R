@@ -317,8 +317,10 @@ compute.ini <- function(r, parameter) {
   Vm_ini <- Cl_ini*(2*Km_ini)
   k12_ini <- k_ini/2
   k21_ini <- k_ini/2
-  k13_ini <- k_ini/2
-  k31_ini <- k_ini/2
+  k13_ini <- k_ini/4
+  k31_ini <- k_ini/4
+  # k13_ini <- k_ini/2
+  # k31_ini <- k_ini/2
   
   list.ini <- c(list.ini, Cl=Cl_ini, Km=Km_ini, Vm=Vm_ini)
   list.ini <- c(list.ini, k12=k12_ini, k21=k21_ini, k13=k13_ini, k31=k31_ini)
@@ -334,8 +336,9 @@ err <-  function(parameter, y, p.ind, N, a) {
   if (any(is.nan(f)) | any(is.infinite(f)))
     e <- Inf
   else
-    e <- mean((log(f+a)-log(y+a))^2)
-  #  return(e)
+  e <- mean((log(f+a)-log(y+a))^2)
+#    e <- mean((f^a-y^a)^2)
+  return(e)
 }
 
 #-------------------------------------------------
@@ -351,15 +354,16 @@ pop.opt <- function(p0) {
   else
     p.ind <- p0
   a <- max(-min(y) + 0.5, 0.5)
+#  if ("k12" %in% names(p0))  browser()
   r <- optim(log(p0), err, y=y, p.ind=p.ind, N=N, a=a)
   return(exp(r$par))
 }
 
 
 #-------------------------------------------------
-compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
+compute.bic <- function(parameter, data, new.dir=NULL, level=NULL, par.ini=NULL, linearization=F) {
   cat("\n")
-  r <- pkpopini(parameter=parameter, data=data, new.dir=new.dir) 
+  r <- pkpopini(parameter=parameter, data=data, new.dir=new.dir, par.ini=par.ini) 
   print(r$project)
   mlx.loadProject(projectFile = r$project)
   g=mlx.getObservationInformation()
@@ -385,14 +389,18 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL) {
   }
   if (!("importanceSampling" %in% launched.tasks[["logLikelihoodEstimation"]])) { 
     cat("Estimation of the log-likelihood... \n")
-    mlx.runLogLikelihoodEstimation()
+    mlx.runLogLikelihoodEstimation(linearization=linearization)
   }
   setwd(w.dir)
-  ofv <- mlx.getEstimatedLogLikelihood()[[1]][['OFV']]
+  g <- mlx.getEstimatedLogLikelihood()[[1]]
+  r$ofv <- g[['OFV']]
   # if (is.null(ofv))
   #   ofv <- mlx.getEstimatedLogLikelihood()[[1]][['OFV']]
-  r$bic <- ofv + (2*length(parameter)+2)*log(n)
+  r$bicc <- g[['BICc']]
+  r$bic <- g[['BIC']]
+  r$aic <- g[['AIC']]
   r$pop.est <- mlx.getEstimatedPopulationParameters()
+  print(g)
   return(r)
 }
 

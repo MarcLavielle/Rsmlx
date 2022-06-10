@@ -628,13 +628,12 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       #   w.cov <- weight$covariate[cbind(r.test[['parameter']], r.test[['covariate']])]
       #   r.test <- r.test %>%  mutate(p.value = p.weight(p.value, w.cov, pen.coef[1]))
       # }
-      
       g <- mlx.getIndividualParameterModel()
       n.param <- g$name
       n.cov <- names(g$covariateModel[[1]])
       
       pv <- as.numeric(gsub("<", "", r.test$p.value))
-      pv[which(is.nan(pv))] <- 1
+      pv[which(is.nan(pv))] <- 0.99999
       list.ipc <- NULL
       for (np in n.param) {
         gp <- g$covariateModel[[np]]
@@ -664,13 +663,15 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       }
       
       if (!stop.test) {
-        mlx.setIndividualParameterModel(g)
-        iter <- iter+1
-        to.cat <- paste0("\nRun scenario for model ",iter," ... \nEstimation of the population parameters... \n")
-        print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
-        buildmlx.project.iter <- file.path(buildmlx.dir,paste0("iteration",iter,".mlxtran"))
-        mlx.saveProject(buildmlx.project.iter)
-        mlx.runPopulationParameterEstimation()
+        if (length(list.ipc) >0) {
+          mlx.setIndividualParameterModel(g)
+          iter <- iter+1
+          to.cat <- paste0("\nRun scenario for model ",iter," ... \nEstimation of the population parameters... \n")
+          print.result(print, summary.file, to.cat=to.cat, to.print=NULL) 
+          buildmlx.project.iter <- file.path(buildmlx.dir,paste0("iteration",iter,".mlxtran"))
+          mlx.saveProject(buildmlx.project.iter)
+          mlx.runPopulationParameterEstimation()
+        }
         if (lin.ll) {
           if(!launched.tasks[["conditionalModeEstimation"]]) 
             mlx.runConditionalModeEstimation()
@@ -1437,6 +1438,8 @@ covariate.test <- function(cov.test, covToTest, covToTransform, paramToUse) {
 
 
 p.weight <- function(p, pw, coef) {
+  p <- pmax(p, 2.2e-16)
+  p <- pmin(p, 0.99999)
   A <- pmax(p/(1-p)*(exp(pw*coef/2)-1)/(exp(coef/2)-1)  , 0)
   p <- A/(1+A)
   # r <- exp(coef*(pw-1)/2)

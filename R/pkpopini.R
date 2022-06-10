@@ -35,7 +35,7 @@
 #' }
 #' @export
 pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, new.dir=NULL, par.ini=NULL) {
-  
+
   if (!initRsmlx()$status)
     return()
   
@@ -55,7 +55,6 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
     else
       data$administration <- "iv"
   }
-  
   check.popini(data, parameter, par.ini)
   
   if (!is.null(new.dir) && !dir.exists(new.dir))
@@ -115,7 +114,7 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
   r <- readDataRsmlx(data=data)
   #r <- readDatamlx(data=data)
   pini <- compute.ini(r, parameter)
-  if (param=="rate") 
+  if (param=="rate" & is.null(par.ini)) 
     popt <- pop.opt(pini)
   else
     popt <- par.ini
