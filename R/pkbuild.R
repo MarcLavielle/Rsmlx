@@ -62,11 +62,11 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     r.cl <- pkbuild(data=data, param="clearance", new.dir=new.dir, MM=MM, level=level, linearization=linearization)
     r.k  <- pkbuild(data=data, param="rate", new.dir=new.dir, MM=MM, level=level, linearization=linearization)
     if (criterion == "AIC")
-      test <- r.cl$res$aic[[1]] < r.k$res$aic[[1]]
+      test <- r.cl$res$AIC[[1]] < r.k$res$AIC[[1]]
     else if (criterion == "BIC")
-      test <- r.cl$res$bic[[1]] < r.k$res$bic[[1]]
+      test <- r.cl$res$BIC[[1]] < r.k$res$BIC[[1]]
     else
-      test <- r.cl$res$bicc[[1]] < r.k$res$bicc[[1]]
+      test <- r.cl$res$BICc[[1]] < r.k$res$BICc[[1]]
     
     if (test) 
       r.final <- r.cl
@@ -74,13 +74,13 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
       r.final <- r.k
     df.res <- rbind(r.cl$res, r.k$res)
     if (criterion == "AIC")
-      r.final$res <- df.res[order(df.res$aic),]
+      r.final$res <- df.res[order(df.res$AIC),]
     else if (criterion == "BIC")
-      r.final$res <- df.res[order(df.res$bic),]
+      r.final$res <- df.res[order(df.res$BIC),]
     else
-      r.final$res <- df.res[order(df.res$bicc),]
+      r.final$res <- df.res[order(df.res$BICc),]
     r.final$res <- r.final$res[!duplicated(r.final$res), ]
-    row.names(r.final$bic) =NULL
+    row.names(r.final$res) <- NULL
     if (stat) 
       r.final <- pkbuild.stat(r.final, settings.stat)
     return(r.final)
@@ -105,7 +105,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     p.mm3 <- c("V1", "V2", "V3", "Q2", "Q3", "Vm", "Km")
   }
   
-  r.model <- r.aic <- r.bic <- r.bicc <- NULL
+  r.model <- r.ofv <- r.aic <- r.bic <- r.bicc <- NULL
   admin <- data$administration
   if (admin %in% c("oral", "ev")) {
     if (param=="rate") {
@@ -128,6 +128,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     names(par.ini)=gsub("_pop","",names(par.ini))
     r.abs4 <- compute.bic(parameter=p.abs4, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
     r.model <- c(r.model, c(r.abs1$model, r.abs2$model, r.abs3$model, r.abs4$model))
+    r.ofv   <- c(r.ofv, c(r.abs1$ofv, r.abs2$ofv, r.abs3$ofv, r.abs4$ofv))
     r.aic   <- c(r.aic, c(r.abs1$aic, r.abs2$aic, r.abs3$aic, r.abs4$aic))
     r.bic   <- c(r.bic, c(r.abs1$bic, r.abs2$bic, r.abs3$bic, r.abs4$bic))
     r.bicc   <- c(r.bicc, c(r.abs1$bicc, r.abs2$bicc, r.abs3$bicc, r.abs4$bicc))
@@ -141,7 +142,8 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     eval(parse(text = paste0("p.absb <- p.abs",oabs[2])))
     p.absa <- p.absa[1:(length(p.absa)-2)]
     p.absb <- p.absb[1:(length(p.absb)-2)]
-    p.lin1 <- c(p.absa, p.lin1)
+    p.lin1a <- c(p.absa, p.lin1)
+    p.lin1b <- c(p.absb, p.lin1)
     p.lin2a <- c(p.absa, p.lin2)
     p.lin2b <- c(p.absb, p.lin2)
     p.lin3a <- c(p.absa, p.lin3)
@@ -149,9 +151,10 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     p.mm1 <- c(p.absa, p.mm1)
     p.mm2a <- c(p.absa, p.mm2)
     p.mm3a <- c(p.absa, p.mm3)
-    eval(parse(text = paste0("r.lin1 <- r.abs",oabs[1])))
+    eval(parse(text = paste0("r.lin1a <- r.abs",oabs[1])))
+    eval(parse(text = paste0("r.lin1b <- r.abs",oabs[2])))
     
-    par.ini <- r.lin1$pop.est[grep("_pop", names(r.lin1$pop.est))]
+    par.ini <- r.lin1a$pop.est[grep("_pop", names(r.lin1a$pop.est))]
     names(par.ini)=gsub("_pop","",names(par.ini))
     if (param=="rate") {
       par.ini[['V']] <- par.ini[['V']]/2
@@ -162,11 +165,17 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     }
     #    browser()
     r.lin2a <- compute.bic(parameter=p.lin2a, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
-    par.ini <- c(r.abs3$pop.est['Tlag_pop'], r.lin2a$pop.est[grep("_pop", names(r.lin2a$pop.est))])
-    names(par.ini)=gsub("_pop","",names(par.ini))
-    par.ini <- par.ini[p.lin2b]
+    
+    r2a <- r.lin2a$pop.est[grep("_pop", names(r.lin2a$pop.est))]
+    names(r2a)=gsub("_pop","",names(r2a))
+    r2a <- r2a[which(names(r2a) %in% p.lin2b)]
+    r1b <- r.lin1b$pop.est[grep("_pop", names(r.lin1b$pop.est))]
+    names(r1b)=gsub("_pop","",names(r1b))
+    r1b <- r1b[setdiff(p.lin2b, names(r2a))]
+    par.ini <- c(r2a, r1b)
     r.lin2b <- compute.bic(parameter=p.lin2b, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
     r.model <- c(r.model, r.lin2a$model, r.lin2b$model)
+    r.ofv <- c(r.ofv, r.lin2a$ofv, r.lin2b$ofv)
     r.aic <- c(r.aic, r.lin2a$aic, r.lin2b$aic)
     r.bic <- c(r.bic, r.lin2a$bic, r.lin2b$bic)
     r.bicc <- c(r.bicc, r.lin2a$bicc, r.lin2b$bicc)
@@ -176,7 +185,6 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
       test <- r.lin2a$bic < r.lin2b$bic
     else
       test <- r.lin2a$bicc < r.lin2b$bicc
-    
     if (test) {
       r.lin2 <- r.lin2a
       p.lin2 <- p.lin2a
@@ -186,6 +194,8 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
       p.lin2 <- p.lin2b
       p.lin3 <- p.lin3b
     }
+    p.lin1 <- p.lin1a
+    r.lin1 <- r.lin1a
   } else {
     r.lin1 <- compute.bic(parameter=p.lin1, data=data, new.dir=new.dir, level=level, linearization=linearization) 
     par.ini <- r.lin1$pop.est[grep("_pop", names(r.lin1$pop.est))]
@@ -198,6 +208,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     }
     r.lin2 <- compute.bic(parameter=p.lin2, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
     r.model <- c(r.model, r.lin1$model, r.lin2$model)
+    r.ofv <- c(r.ofv, r.lin1$ofv, r.lin2$ofv)
     r.aic <- c(r.aic, r.lin1$aic, r.lin2$aic)
     r.bic <- c(r.bic, r.lin1$bic, r.lin2$bic)
     r.bicc <- c(r.bicc, r.lin1$bicc, r.lin2$bicc)
@@ -219,6 +230,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     }
     r.lin3 <- compute.bic(parameter=p.lin3, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
     r.model <- c(r.model, r.lin3$model)
+    r.ofv <- c(r.ofv, r.lin3$ofv)
     r.aic <- c(r.aic, r.lin3$aic)
     r.bic <- c(r.bic, r.lin3$bic)
     r.bicc <- c(r.bicc, r.lin3$bicc)
@@ -250,6 +262,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
       r.mm  <- compute.bic(parameter=p.mm3, data=data, new.dir=new.dir, level=level, linearization=linearization) 
     }
     r.model <- c(r.model, r.mm$model)
+    r.ofv <- c(r.ofv, r.mm$ofv)
     r.aic <- c(r.aic, r.mm$aic)
     r.bic <- c(r.bic, r.mm$bic)
     r.bicc <- c(r.bicc, r.mm$bicc)
@@ -264,7 +277,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     }
   }
   r.model <- unlist(lapply(as.character(r.model), function(x) basename(x)))
-  df.res <- data.frame(model=r.model, AIC=r.aic, BIC=r.bic, BICc=r.bicc)
+  df.res <- data.frame(model=r.model, OFV=r.ofv, AIC=r.aic, BIC=r.bic, BICc=r.bicc)
   if (criterion == "AIC")
     df.res <- df.res[order(df.res$AIC),]
   else if (criterion == "BIC")

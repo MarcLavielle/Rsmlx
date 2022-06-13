@@ -118,6 +118,7 @@ pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, 
     popt <- pop.opt(pini)
   else
     popt <- par.ini
+  popt <- popt[parameter]
   
   pop.ini <- mlx.getPopulationParameterInformation()
   j.pop <- which(pop.ini$name %in% paste0(parameter,"_pop"))
