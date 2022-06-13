@@ -772,6 +772,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       while (test.cor) {
         mlx.loadProject(final.project)
         p.cortest <- NULL
+        if (!mlx.getLaunchedTasks()$conditionalDistributionSampling)
+          mlx.runConditionalDistributionSampling()
         r.test <- correlationTest()$p.value %>% filter(!in.model) %>% rename(p.value=p.cortest)
         param1 <- gsub("eta_","",r.test$randomEffect.1)
         param2 <- gsub("eta_","",r.test$randomEffect.2)
@@ -1341,7 +1343,8 @@ formatLL <- function(ll, criterion, cr, is.weight, is.prior=F) {
       llr[paste0("w",criterion)] <- cr
     }
   }
-  llr["s.e."] <- ll["standardError"]
+  if (!is.na(ll["standardError"]))
+    llr["s.e."] <- ll["standardError"]
   return(llr)
 }
 

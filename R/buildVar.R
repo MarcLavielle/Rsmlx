@@ -45,7 +45,7 @@
 #' @importFrom utils modifyList 
 #' @export
 
-buildVar <- function(project=NULL, weight=NULL, prior=NULL, cv.min=0.001, final.project=NULL, 
+buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, cv.min=0.001, 
                      fix.param1=NULL, fix.param0=NULL, criterion="BICc", linearization=F, remove=T, add=T,
                      delta=c(30,10,5), omega.set=NULL, pop.set1=NULL, pop.set2=NULL, print=TRUE) {
   

@@ -530,7 +530,9 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
       d1$p.wald_SA <- NA
     for (i in i.in) {
       di <- d1[i,]
-      ij <- which(w1$parameter==paste0("beta_",di$p.ori,"_",di$covariate))
+      ij <- which(paste0("beta_",di$p.ori,"_",di$covariate) == w1$parameter)
+      if (length(ij)==0)
+        ij <- grep(paste0("beta_",di$p.ori,"_",di$covariate),w1$parameter)[1]
       if (!is.null(w1$fisher_linearization))
         d1$p.wald_lin[i] <- w1$fisher_linearization[ij] 
       if (!is.null(w1$fisher_stochasticApproximation))

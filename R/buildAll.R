@@ -167,9 +167,13 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
                           model=model, paramToUse=paramToUse, center.covariate=center.covariate, criterion=criterion, 
                           linearization=linearization, ll=ll, test=test, direction=direction, steps=steps, fError.min=fError.min,
                           max.iter=max.iter, explor.iter=explor.iter, nb.model=nb.model, print=print)
+      if (test) {
+      if (!mlx.getLaunchedTasks()$conditionalDistributionSampling)
+        mlx.runConditionalDistributionSampling()
       pv.re <- covariateTest()$p.value.randomEffects
       if (!is.null(pv.re))
         relToTest <- rbind(relToTest, covariateTest()$p.value.randomEffects %>% filter(in.model==F & p.ttest<p.min[1]) %>% select(c(random.effect, covariate, p.ttest)))
+      }
       cov2 <- mlx.getIndividualParameterModel()$covariateModel
       cor2 <- rep(F, length(cov2))
       names(cor2) <- names(cov2)
