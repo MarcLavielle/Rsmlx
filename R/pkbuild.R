@@ -16,7 +16,7 @@
 #' @param new.dir   name of the directory where the created files are stored 
 #' (default is the current working directory) )
 #' @param MM   ({FALSE}, TRUE): tested models include or not Michaelis Menten elimination models
-#' @param linearization  {TRUE}/FALSE whether the computation of the likelihood is based on a linearization of the model (default=TRUE)
+#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
 #' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
 #' @param level an integer between 1 and 9 (used by setSettings)
 #' @param settings.stat list of settings used by buildmlx (only if stat=TRUE)
@@ -39,7 +39,7 @@
 #' @importFrom stats aggregate optim 
 #' @export
 pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.dir=".", 
-                    MM=FALSE, linearization=T, criterion="BICc", level=NULL, settings.stat=NULL) {
+                    MM=FALSE, linearization=F, criterion="BICc", level=NULL, settings.stat=NULL) {
   
   if (!initRsmlx()$status)
     return()
@@ -203,7 +203,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     if (param=="rate") {
       par.ini <- c(par.ini, k12=par.ini[["k"]]/2, k21=par.ini[["k"]]/2)
     } else {
-      par.ini <- c(par.ini, V2=par.ini[["V"]]/2, Q=par.ini[["Cl"]]/2)
+      par.ini <- c(par.ini, V1=par.ini[["V"]]/2, V2=par.ini[["V"]]/2, Q=par.ini[["Cl"]]/2)
       par.ini <- par.ini[names(par.ini) != "V"]
     }
     r.lin2 <- compute.bic(parameter=p.lin2, data=data, new.dir=new.dir, level=level, linearization=linearization, par.ini=par.ini) 
