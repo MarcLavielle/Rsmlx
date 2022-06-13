@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 4.2.5
+Version: 4.2.6
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
@@ -34,6 +34,7 @@ Collate: mlxConnectors.R
          testmlx.R
          zzz.R
          RsmlxTools.R
+         readDatamlx.R
          pkbuild.R
          pkpopini.R
          whichPKmodel.R

@@ -151,6 +151,7 @@ pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.
     p.mm1 <- c(p.absa, p.mm1)
     p.mm2a <- c(p.absa, p.mm2)
     p.mm3a <- c(p.absa, p.mm3)
+    r.lin1a <- r.lin1b <- NULL
     eval(parse(text = paste0("r.lin1a <- r.abs",oabs[1])))
     eval(parse(text = paste0("r.lin1b <- r.abs",oabs[2])))
     
