@@ -150,7 +150,7 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     if (iter==1 || r.buildvar$change) {
       if (iter==1) {
         project.ini.build <- project.ini
-        loadProject(project.ini)
+        mlx.loadProject(project.ini)
       } else {
         coef.w1=1
         project.ini.build <- project.final.builtvar
