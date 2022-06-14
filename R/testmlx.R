@@ -520,26 +520,34 @@ covariateTest <- function(project=NULL, n.sample=NULL, plot=FALSE) {
   foo <- d1[order(d1$parameter, d1$p.ttest),]
   d1 <- foo[order(foo$in.model, decreasing=TRUE),]
   
-  i.in <- which(d1$in.model)
-  if (length(i.in)>0 & !is.null(mlx.getTests()$wald)) {
-    wald <- mlx.getTests()$wald %>% mutate(p.value=as.numeric(gsub("<", "", p.value)))
-    w1 <-wald %>% select(-statistics) %>% spread(key=method, value=p.value)
-    if (!is.null(w1$fisher_linearization))
-      d1$p.wald_lin <- NA
-    if (!is.null(w1$fisher_stochasticApproximation))
-      d1$p.wald_SA <- NA
-    for (i in i.in) {
-      di <- d1[i,]
-      ij <- which(paste0("beta_",di$p.ori,"_",di$covariate) == w1$parameter)
-      if (length(ij)==0)
-        ij <- grep(paste0("beta_",di$p.ori,"_",di$covariate),w1$parameter)[1]
+  d1 <- tryCatch({
+    i.in <- which(d1$in.model)
+    if (length(i.in)>0 & !is.null(mlx.getTests()$wald)) {
+      wald <- mlx.getTests()$wald %>% mutate(p.value=as.numeric(gsub("<", "", p.value)))
+      w1 <-wald %>% select(-statistics) %>% spread(key=method, value=p.value)
       if (!is.null(w1$fisher_linearization))
-        d1$p.wald_lin[i] <- w1$fisher_linearization[ij] 
+        d1$p.wald_lin <- NA
       if (!is.null(w1$fisher_stochasticApproximation))
-        d1$p.wald_SA[i] <- w1$fisher_stochasticApproximation[ij] 
+        d1$p.wald_SA <- NA
+      for (i in i.in) {
+        di <- d1[i,]
+        ij <- which(paste0("beta_",di$p.ori,"_",di$covariate) == w1$parameter)
+        if (length(ij)==0)
+          ij <- grep(paste0("beta_",di$p.ori,"_",di$covariate),w1$parameter)[1]
+        if (!is.null(w1$fisher_linearization))
+          d1$p.wald_lin[i] <- w1$fisher_linearization[ij] 
+        if (!is.null(w1$fisher_stochasticApproximation))
+          d1$p.wald_SA[i] <- w1$fisher_stochasticApproximation[ij] 
+      }
+      d1 <- cbind(d1 %>% select(-in.model), in.model=d1$in.model)
     }
-    d1 <- cbind(d1 %>% select(-in.model), in.model=d1$in.model)
-  }
+    d1
+  } , 
+  error=function(e) {
+#    print('Error in Wald')
+    return(d1) }
+  )
+  
   d1 <- d1 %>% select(-p.ori)
   
   m.randeff <- aggregate(m.randeff[var.randeff],list(m.randeff$id),mean)

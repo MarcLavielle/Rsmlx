@@ -150,11 +150,14 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     if (iter==1 || r.buildvar$change) {
       if (iter==1) {
         project.ini.build <- project.ini
+        loadProject(project.ini)
       } else {
         coef.w1=1
         project.ini.build <- project.final.builtvar
         seq.corr <- seq.cov <- F
         seq.cov.iter=0
+        covToTransform <- NULL
+        covToTest <- r.build$covToTest
       }
       project.final.built <- file.path(dir.built, paste0("project_built",iter,".mlxtran"))
       mlx.loadProject(project.ini.build)
