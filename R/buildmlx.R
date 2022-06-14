@@ -662,8 +662,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
       }
       
+      g1 <- g
       if (!stop.test) {
-        g1 <- g
         if (length(list.ipc) >0) {
           mlx.setIndividualParameterModel(g)
           iter <- iter+1

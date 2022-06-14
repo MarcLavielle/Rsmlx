@@ -7,13 +7,11 @@
 #'   \item \code{dataFile}: path of a formatted data file
 #'   \item \code{headerTypes}: a vector of strings
 #' }
-#' @param project a Monolix project
 #' @param out.data TRUE/FALSE (default=FALSE) returns the original data as a table and some information about the Monolix project  
 #' @param nbSSDoses number of additional doses to use for steady-state (default=10) 
 #' @param obs.rows a list of observation indexes 
 #' @param datafile (deprecated) a formatted data file 
 #' @param header (deprecated) a vector of strings  
-#' @param infoProject (deprecated) an xmlfile 
 #' 
 #' @return A list of data frames 
 #' @examples
@@ -32,12 +30,13 @@
 #' }
 #' @importFrom stats time
 #' @export
-readDatamlx  <- function(data = NULL, project=NULL, out.data=FALSE, nbSSDoses=10, obs.rows=FALSE,
-                         datafile=NULL, header=NULL, infoProject=NULL){
+readDatamlx  <- function(data = NULL,out.data=FALSE, nbSSDoses=10, obs.rows=FALSE,
+                         datafile=NULL, header=NULL){
   id <- NULL
   observationName <- NULL
   datas=NULL
   time <- NULL
+  infoProject <- NULL
   addl.ss <- nbSSDoses 
  
   header <- data$headerTypes
