@@ -770,7 +770,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
     }
     if (model$correlation) {
       test.cor <- T
-      cor.block0 <- getIndividualParameterModel()$correlationBlocks$id
+      cor.block0 <- mlx.getIndividualParameterModel()$correlationBlocks$id
       while (test.cor) {
         mlx.loadProject(final.project)
         p.cortest <- NULL
