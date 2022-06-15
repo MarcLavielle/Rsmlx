@@ -548,7 +548,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       stop.test <- TRUE
     mlx.saveProject(final.project)
   }
-  
   change.error.model <- NULL
   if (iop.ll) {
     ll.min <- min(list.criterion)
@@ -622,7 +621,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
       else
         mlx.runStandardErrorEstimation(linearization=T)
       #mlx.runStandardErrorEstimation(linearization = lin.ll)
-       
+      
       # if (is.weight | is.prior) {
       #   w.cov <- weight$covariate[cbind(r.test[['parameter']], r.test[['covariate']])]
       #   r.test <- r.test %>%  mutate(p.value = p.weight(p.value, w.cov, pen.coef[1]))
@@ -758,7 +757,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
         to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
         to.print <- round(ll,2)
         print.result(print, summary.file, to.cat=to.cat, to.print=to.print) 
-        
         if (ll.new < ll.min) {
           ll.min <- ll.new
           mlx.saveProject(final.project)
@@ -1355,16 +1353,25 @@ formatLL <- function(ll, criterion, cr, is.weight, is.prior=F) {
 
 compute.criterion <- function(criterion, method.ll, weight=NULL, pen.coef=NULL) {
   ofv <- mlx.getEstimatedLogLikelihood()[[method.ll]][["OFV"]]
-  
   ind.model <- mlx.getIndividualParameterModel()
-  i1 <- names(which(ind.model$variability$id))
-  i0 <- names(which(!ind.model$variability$id))
   
-  cov.model <- do.call(rbind, ind.model$covariateModel)
-  if (ncol(cov.model) > 0)
+  cov.model <- do.call(rbind, ind.model$covariateModel)*1
+  if (ncol(cov.model) > 0) {
+    cov.info <- mlx.getCovariateInformation()
+    cat.name <- cov.info$name[grep("categorical",cov.info$type)]
+    if (length(cat.name)>0) {
+      cat.cov <- cov.info$covariate[cat.name]
+      cat.cov[] <- lapply( cat.cov, factor) 
+      cat.nb <- unlist(lapply(cat.cov, nlevels)) -1
+      for (j in cat.name)
+        cov.model[, j] <- cov.model[, j]*cat.nb[j]
+    }
+    i1 <- names(which(ind.model$variability$id))
+    i0 <- names(which(!ind.model$variability$id))
     pen.covariate <- sum((cov.model*weight$covariate)[i1,])*pen.coef[1] + sum((cov.model*weight$covariate)[i0,])*pen.coef[2]
-  else
+  } else {
     pen.covariate <- 0
+  }
   
   cB <- ind.model$correlationBlocks$id
   cor.model <- weight$correlation*0
