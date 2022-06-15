@@ -6,13 +6,11 @@
 \usage{
 readDatamlx(
   data = NULL,
-  project = NULL,
   out.data = FALSE,
   nbSSDoses = 10,
   obs.rows = FALSE,
   datafile = NULL,
-  header = NULL,
-  infoProject = NULL
+  header = NULL
 )
 }
 \arguments{
@@ -21,8 +19,6 @@ readDatamlx(
   \item \code{dataFile}: path of a formatted data file
   \item \code{headerTypes}: a vector of strings
 }}
-
-\item{project}{a Monolix project}
 
 \item{out.data}{TRUE/FALSE (default=FALSE) returns the original data as a table and some information about the Monolix project}
 
@@ -33,8 +29,6 @@ readDatamlx(
 \item{datafile}{(deprecated) a formatted data file}
 
 \item{header}{(deprecated) a vector of strings}
-
-\item{infoProject}{(deprecated) an xmlfile}
 }
 \value{
 A list of data frames
