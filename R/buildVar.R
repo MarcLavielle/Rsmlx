@@ -964,7 +964,7 @@ compute.cv <- function(vp, lp) {
   for (k in seq_along(j2)) {
     lk <- mlx.getIndividualParameterModel()$limits[[lp[j2[k]]]]
     ok <- o[j2[k]]
-    muk <- log((p[j2[k]] - lk[1])/(lk[2]-p[j2[k]]))
+    muk <- min(log((p[j2[k]] - lk[1])/(lk[2]-p[j2[k]])), 10)
     mk <- integrate(f1, lower = 0, upper = 1, mu=muk, sigma=ok)$value
     vk <- integrate(f2, lower = 0, upper = 1, mu=muk, sigma=ok)$value - mk^2
     cv[j2[k]] <- (lk[2]-lk[1])*sqrt(vk)/(mk*(lk[2]-lk[1])+lk[1])
