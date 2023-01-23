@@ -82,6 +82,8 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
   if (method=="proflike") {
     if (identical(parameters, "all"))
       parameters=NULL
+    if (!linearization)
+      settings$method <- "is"
     settings$dLLthreshold <- qchisq(level,1)
     r <- llp(project, parameters, settings)
     r$level <- level
