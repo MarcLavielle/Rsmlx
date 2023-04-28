@@ -617,7 +617,7 @@ cleanbootstrap <- function(project,boot.folder){
   if ("obsid" %in% mlxHeadersType) {
     if (! "obsid" %in% smlxHeadersType) {
       obsmapping <- obsInfo$mapping[obsNames]
-      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping] <- obsNames
+      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping & !is.na(obsmapping)] <- obsNames
       bootData$observationTypes <- bootData$observationTypes[names(bootData$observationTypes) %in% obsNames]
       bootData$observationTypes <- unname(bootData$observationTypes)
     } else {
