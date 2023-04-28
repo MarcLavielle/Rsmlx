@@ -77,7 +77,6 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
   
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
-  
   r <- def.variable(weight, prior, criterion)
   for (j in 1:length(r))
     eval(parse(text=paste0(names(r)[j],"= r[[j]]")))
@@ -128,7 +127,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
     mlx.setIndividualParameterModel(g)
     change.ini <- T
   }
-  
+
   p.param1 <- sapply(mlx.getIndividualParameterModel()$name,function(x) NULL)
   lpar <- max(nchar(mlx.getIndividualParameterModel()$name))
   
@@ -194,6 +193,14 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
   N <- nrow(p0.ind)
   
   g <- as.list(mlx.getLaunchedTasks())
+
+  if (!linearization | !linearization.iter) {
+    if (!("importanceSampling" %in% g[['logLikelihoodEstimation']])) {
+      mlx.runConditionalDistributionSampling()
+      mlx.runLogLikelihoodEstimation(linearization=FALSE)
+    }
+  }
+
   if (linearization | linearization.iter) {
     if (!("linearization" %in% g[['logLikelihoodEstimation']])) {
       if (!g$conditionalModeEstimation) {
@@ -202,16 +209,10 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
       mlx.runLogLikelihoodEstimation(linearization=TRUE)
     }
   }
-  
-  if (!linearization | !linearization.iter) {
-    if (!("importanceSampling" %in% g[['logLikelihoodEstimation']])) {
-      mlx.runConditionalDistributionSampling()
-      mlx.runLogLikelihoodEstimation(linearization=FALSE)
-    }
-  }
+
   BICc.built <- compute.criterion(criterion, method.ll, weight, pen.coef)
   BICc.built.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef)
-  
+
   mlx.setInitialEstimatesToLastEstimates(fixedEffectsOnly = FALSE)
   mlx.saveProject(project.built)
   
