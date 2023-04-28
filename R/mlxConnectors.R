@@ -283,8 +283,12 @@ mlx.runLogLikelihoodEstimation <- function(linearization = FALSE) {
   .hiddenCall(paste0('r <- lixoftConnectors::runLogLikelihoodEstimation(linearization = linearization)'))
 }
 
+mlx.getLibraryModelName <- function(library) {
+  .hiddenCall(paste0('r <- lixoftConnectors::getLibraryModelName(library)'))
+}
+
 smlx.importMonolixProject <- function(project) {
-  .hiddenCall(paste0('r <- lixoftConnectors::importMonolixProject(project)'))
+  .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
 }
 
 smlx.setNbReplicates <- function(nrep) {
