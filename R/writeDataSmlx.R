@@ -164,6 +164,7 @@ writeDataSmlx <- function(filename = "simulated_dataset.csv", sep = ",",
   if (nbRep == 1) return(simulationList)
   res <- simulationList
   for (n in names(simulationList)) {
+    if (n == "ID_mapping") next
     for (m in names(simulationList[[n]])) {
       res[[n]][[m]] <- subset(simulationList[[n]][[m]], rep == r)
       res[[n]][[m]] <- subset(res[[n]][[m]], select = -rep)
