@@ -15,7 +15,7 @@
 #session <- "C:/ProgramData/Lixoft/MonolixSuite2018R2"
 
 
-whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL, lib=FALSE) {
+whichPKmodel <- function(parameter) {
   
   if (!initRsmlx()$status)
     return()
@@ -24,16 +24,9 @@ whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL, lib=FALSE) {
   parameter[parameter=="Q"] <- "Q2"
   parameter[parameter=="V"] <- "V1"
   parameter <- sort(parameter)
+
   
-  
-  if (is.null(pkPath))  {
-    if (is.null(mlxPath)) 
-      mlxPath <- mlx.path()
-  pkPath <- file.path(mlxPath,"factory/library/pk")
-  }
-  
-  
-  d <- dir(pkPath)
+  d <- gsub("lib:", "", mlx.getLibraryModelName("pk"))
   id0 <- c(grep("alpha",d), grep("bolus_",d))
   d <- d0 <- d[-id0]
   d <- gsub("kk","kek",d)
@@ -47,10 +40,7 @@ whichPKmodel <- function(parameter, mlxPath=NULL, pkPath=NULL, lib=FALSE) {
   for (k in (1:length(d))) {
     lk <- plist[unlist(lapply(plist, function(x) grepl(x, d[k])))]
     if (identical(sort(lk), parameter)) 
-      if (lib)
       return(paste0("lib:",d0[k]))
-    else
-      return(file.path(pkPath,d0[k]))
   }
   
   stop("The model was not found in the PK library", call.=FALSE)
