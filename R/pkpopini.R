@@ -8,7 +8,7 @@
 #' 
 #' A Monolix project is then automatically created using these values as initial population parameters.
 #' 
-#' See http://rsmlx.webpopix.org/pkpopini/ for more details.
+#' See https://monolix.lixoft.com/rsmlx/pkpopini/ for more details.
 #' @param data a list with fields
 #' \itemize{
 #'   \item \code{dataFile}: path to a formatted data file

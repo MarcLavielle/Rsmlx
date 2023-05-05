@@ -6,7 +6,7 @@
 #' Penalization criterion can be either a custom penalization of the form gamma*(number of parameters),
 #' AIC (gamma=2) or BIC (gamma=log(N)).
 #' 
-#' See http://rsmlx.webpopix.org for more details.
+#' See https://monolix.lixoft.com/rsmlx/ for more details.
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_var" to the original project)
 #' @param prior  named vector of prior probabilities (default=NULL)
@@ -37,8 +37,8 @@
 #' 
 #' }
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/buildvar/ for detailed examples of use of buildvar
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/buildvar/ for detailed examples of use of buildvar
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #' 
 #' 
 #' @importFrom stats coef as.formula model.matrix integrate

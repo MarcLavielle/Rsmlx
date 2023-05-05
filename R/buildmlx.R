@@ -13,7 +13,7 @@
 #' can be one of "both", "backward", or "forward", with a default of "both" when there are at least 10 covariates.
 #lambda='cv', glmnet.settings=NULL)
 
-#' See http://rsmlx.webpopix.org for more details.
+#' See https://monolix.lixoft.com/rsmlx/ for more details.
 #' @param project a string: the initial Monolix project
 #' @param final.project  a string: the final Monolix project (default adds "_built" to the original project)
 #' @param model  components of the model to optimize c("residualError", "covariate", "correlation"), (default="all")
@@ -60,8 +60,8 @@
 #' # Only the covariate model will be  built, using AIC instead of BIC:
 #' r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC") 
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/buildmlx/ for detailed examples of use of buildmlx
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #' 
 #' 
 #' @importFrom MASS addterm dropterm 

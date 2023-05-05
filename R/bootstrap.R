@@ -43,8 +43,8 @@
 #' r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
 #' }
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/bootmlx/ for detailed examples of use of bootmlx
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #' 
 #' 
 #' @importFrom graphics boxplot lines par plot

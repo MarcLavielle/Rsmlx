@@ -11,8 +11,8 @@
 #' # r is a list with elements "saem", "conditionalMean", "conditionalSD",   "conditionalMode",
 #' # "popPopCov" and "popIndCov"
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export
@@ -73,8 +73,8 @@ getEstimatedIndividualParameters2 <- function() {
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
 #' r = getEstimatedPredictions() # r is a list with elements "y1" and "y2"
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export
@@ -125,8 +125,8 @@ getEstimatedPredictions <- function() {
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
 #' r = getEstimatedResiduals()  # r is a list with elements "y1" and "y2" 
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export
@@ -194,8 +194,8 @@ getEstimatedResiduals <- function() {
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
 #' r = getSimulatedPredictions()  # r is a list with elements "Cc" and "E" 
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export
@@ -253,8 +253,8 @@ getSimulatedPredictions <- function() {
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
 #' r = getSimulatedResiduals()  # r is a list with elements "y1" and "y2" 
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export
@@ -321,8 +321,8 @@ getSimulatedResiduals <- function() {
 #' # Assume that the Monolix project "warfarinPKPD.mlxtran" has been loaded
 #' r = getEstimatedCovarianceMatrix()  # r is a list with elements "cor.matrix" and "cov.matrix"
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export

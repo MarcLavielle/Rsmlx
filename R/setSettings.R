@@ -21,8 +21,8 @@
 #' new.project= file.path(tempdir(),"RsmlxDemoNew.mlxtran")
 #' setSettings(project="RsmlxDemo1.mlxtran", new.project=new.project, level=9)
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/setSettings/ for detailed examples of use of setSettings
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/setSettings/ for detailed examples of use of setSettings
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 #' }
 #' @export

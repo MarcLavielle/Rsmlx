@@ -35,8 +35,8 @@
 #' #testmlx will perform statistical tests for the covariate model and the correlation model only.
 #' r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/testmlx/ for detailed examples of use of testmlx
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #' 
 #' 
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string

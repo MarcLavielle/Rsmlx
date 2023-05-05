@@ -51,8 +51,8 @@
 #' # Confidence intervals are computed using 200 bootstrap samples:
 #' r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
 #' 
-#' # See http://rsmlx.webpopix.org/userguide/confintmlx/ for detailed examples of use of confintmlx
-#' # Download the demo examples here: http://rsmlx.webpopix.org/installation
+#' # See http://monolix.lixoft.com/rsmlx/confintmlx/ for detailed examples of use of confintmlx
+#' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #'
 #' 
 #' @importFrom stats qchisq

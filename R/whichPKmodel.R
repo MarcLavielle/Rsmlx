@@ -1,7 +1,7 @@
 #' Find a Monolix PK model
 #'
 #' Return the path of the Monolix PK model defined by a list of parameter names
-#' See http://rsmlx.webpopix.org/whichPKmodel/ for more details.
+#' See https://monolix.lixoft.com/rsmlx/whichPKmodel/ for more details.
 #' @param parameter a vector of PK parameter names
 #' @param mlxPath path to Monolix install
 #' @param pkPath path to the Monolix PK library
