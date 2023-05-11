@@ -127,10 +127,26 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     } else {
       boot.folder = '/bootstrap/nonParametric/'
     }
+
     if (settings$newResampling) {
       cleanbootstrap(project, boot.folder)
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
+
+    # Convert a project with data formatting to one with no data formatting
+    if (!is.null(getFormatting())) {
+      dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
+      formattedData <- NULL
+      formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
+      mlx.saveFormattedFile(formattedData$dataFile)
+      formattedData$headerTypes <- mlx.getData()$headerTypes
+      formattedData$observationTypes <- mlx.getData()$observationTypes
+      mlx.setData(formattedData)
+      project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
+      mlx.saveProject(project)
+      mlx.setProjectSettings(directory = exportDir)
+      mlx.saveProject()
+    }
     
     if (parametric) {
       version <- mlx.getLixoftConnectorsState()$version
@@ -415,6 +431,12 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
   suppressMessages(mlx.initializeLixoftConnectors())
   mlx.loadProject(project)
   obsInfo <- mlx.getObservationInformation()
+  if (length(obsInfo$name) > 1 && length(obsInfo$mapping) == 1) {
+    obsID <- unname(obsInfo$mapping)
+    columnName <- mlx.getData()$header[mlx.getData()$headerTypes == "obsid"]
+  } else {
+    obsID <- NULL
+  }
   mapObservation <- c(obsInfo$mapping)
   
   # return an error in case of regressor
@@ -456,7 +478,19 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
           }
           smlx.runSimulation()
           
-          writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
+          version <- mlx.getLixoftConnectorsState()$version
+          v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
+          if (v >= 2021) {
+            mlx.exportSimulatedData(path = datasetFileName)
+            if (!is.null(obsID)) {
+              data <- utils::read.csv(datasetFileName)
+              data$obsid <- obsID
+              utils::write.csv(x = data, file = datasetFileName,
+                               row.names = FALSE, quote = FALSE)
+            }
+          } else {
+            writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
+          }
           
           set_options(errors = op$errors, warnings = op$warnings, info = op$info)
         },
@@ -525,16 +559,16 @@ generateBootstrapProject = function(project, boot.folder, indexSample, dataFile)
 
     # deactivate lixoft warnings
     op <- get_lixoft_options()
-    set_options(warnings = FALSE)
+    set_options(warnings = FALSE, info = FALSE)
 
     bootData$dataFile <- dataFile
     mlx.setData(bootData)
 
-    # reactivate lixoft warnings
-    set_options(warnings = op$warnings)
-
     #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
     mlx.saveProject(projectFile =projectBootFileName)
+    
+    # reactivate lixoft warnings
+    set_options(warnings = op$warnings, info = op$info)
   } else {
     cat(" => Reusing an existing project\n")
   }
@@ -564,7 +598,14 @@ cleanbootstrap <- function(project,boot.folder){
 }
 
 runBootstrapProject <- function(projectBoot, indexSample, settings) {
+    # deactivate lixoft warnings
+    op <- get_lixoft_options()
+    set_options(warnings = FALSE, info = FALSE)
+    
     mlx.loadProject(projectBoot)
+    
+    # reactivate lixoft warnings
+    set_options(warnings = op$warnings, info = op$info)
 
     # Check if the run was done
     # if(!file.exists(paste0(mlx.getProjectSettings()$directory,'/populationParameters.txt'))){
@@ -681,8 +722,15 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
     smlxHeadersType[smlxHeaders == h] <- mlxHeadersType[mlxHeaders == h]
   }
   
-  matchSmlx <- c(id = "id", amt = "amount", time = "time", tinf = "tinf", OCCevid = "occ",
-                 admtype = "admid", ytype = "obsid", evid = "evid", y = "observation")
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
+  if (v >= 2021) {
+    matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", `INFUSION DURATION` = "tinf",
+                   `ADMINISTRATION ID` = "admid", obsid = "obsid", `EVENT ID` = "evid", obs = "observation")
+  } else {
+    matchSmlx <- c(id = "id", amt = "amount", time = "time", tinf = "tinf", OCCevid = "occ",
+                   admtype = "admid", ytype = "obsid", evid = "evid", y = "observation")
+  }
   smlxHeadersType[smlxHeaders %in% setdiff(smlxHeaders, intersectHeaders)] <- unname(matchSmlx[setdiff(smlxHeaders, intersectHeaders)])
   
   obsInfo <- mlx.getObservationInformation()
@@ -696,7 +744,7 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   if ("obsid" %in% mlxHeadersType) {
     if (! "obsid" %in% smlxHeadersType) {
       obsmapping <- obsInfo$mapping[obsNames]
-      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping & !is.na(obsmapping)] <- obsNames
+      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping & !is.na(obsmapping)] <- obsNames[!is.na(obsNames)]
       bootData$observationTypes <- bootData$observationTypes[names(bootData$observationTypes) %in% obsNames]
       bootData$observationTypes <- unname(bootData$observationTypes)
     } else {
