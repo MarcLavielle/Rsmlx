@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 5.0.1
+Version: 5.0.1.9000
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
@@ -17,7 +17,9 @@ URL: http://rsmlx.webpopix.org
 SystemRequirements: 'Monolix' (<https://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
 Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr, tidyr
-Suggests: mlxR, 
+Suggests: 
+    mlxR,
+    testthat (>= 3.0.0)
 Collate: mlxConnectors.R
          bootstrap.R
          buildmlx.R
@@ -44,4 +46,5 @@ Copyright: Inria
 NeedsCompilation: no
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
+Config/testthat/edition: 3
