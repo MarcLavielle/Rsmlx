@@ -266,7 +266,11 @@ mlx.setObservationDistribution  <- function(a) {
 
 
 mlx.saveProject <- function(projectFile=NULL) {
-  .hiddenCall(paste0('r <- lixoftConnectors::saveProject(projectFile = projectFile)'))
+  if (is.null(projectFile)) {
+    .hiddenCall(paste0('r <- lixoftConnectors::saveProject()'))
+  } else {
+    .hiddenCall(paste0('r <- lixoftConnectors::saveProject(projectFile = projectFile)'))
+  }
 }
 
 mlx.runPopulationParameterEstimation <- function(parameters=NULL) {
@@ -286,6 +290,17 @@ mlx.runLogLikelihoodEstimation <- function(linearization = FALSE) {
 mlx.getLibraryModelName <- function(library) {
   .hiddenCall(paste0('r <- lixoftConnectors::getLibraryModelName(library)'))
 }
+
+mlx.saveFormattedFile <- function(path) {
+  .hiddenCall(paste0('r <- lixoftConnectors::getFormatting()'))
+  .hiddenCall(paste0('r$formattedFile <- path'))
+  .hiddenCall(paste0('do.call(formatData, r)'))
+}
+
+mlx.exportSimulatedData <- function(path) {
+  .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
+}
+
 
 smlx.importMonolixProject <- function(project) {
   .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
