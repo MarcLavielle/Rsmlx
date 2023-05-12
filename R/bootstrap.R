@@ -94,6 +94,11 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   
   settings$level<- NULL
   
+  # check if results exist if parametric
+  if (parametric && length(mlx.getEstimatedPopulationParameters()) == 0) {
+    stop("[ERROR] No valid results present in the project.")
+  }
+  
   if (!is.null(dataFolder)) {
     dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
     if (length(dataFiles) > 0) {
@@ -134,7 +139,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
 
     # Convert a project with data formatting to one with no data formatting
-    if (!is.null(getFormatting())) {
+    if (!is.null(getFormatting()) && !parametric) {
       dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
       formattedData <- NULL
       formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
