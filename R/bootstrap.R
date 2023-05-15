@@ -139,7 +139,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
 
     # Convert a project with data formatting to one with no data formatting
-    if (!is.null(getFormatting()) && !parametric) {
+    if (!is.null(mlx.getFormatting()) && !parametric) {
       dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
       formattedData <- NULL
       formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")

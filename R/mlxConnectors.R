@@ -297,6 +297,12 @@ mlx.saveFormattedFile <- function(path) {
   .hiddenCall(paste0('do.call(formatData, r)'))
 }
 
+mlx.getFormatting <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getFormatting()'))
+  return(r)
+}
+
 mlx.exportSimulatedData <- function(path) {
   .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
 }
