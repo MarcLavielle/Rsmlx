@@ -21,7 +21,7 @@
 #' (default = FALSE)
 #' \item \code{level} level of the bootstrap confidence intervals of the population parameters
 #' (default = 0.90)
-#' \item \code{seed} seed for the generation of the data sets (default = NA)
+#' \item \code{seed} a positive integer < 2147483647, seed for the generation of the data sets (default = NA)
 #' \item \code{deleteData} delete created data set files after estimation (default = FALSE)
 #' \item \code{deleteProjects} delete created Monolix projects after estimation (default = FALSE)
 #' }
