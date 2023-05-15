@@ -436,7 +436,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
   suppressMessages(mlx.initializeLixoftConnectors())
   mlx.loadProject(project)
   obsInfo <- mlx.getObservationInformation()
-  if (length(obsInfo$name) > 1 && length(obsInfo$mapping) == 1) {
+  if (length(obsInfo$mapping) == 1 && "obsid" %in% mlx.getData()$headerTypes) {
     obsID <- unname(obsInfo$mapping)
     columnName <- mlx.getData()$header[mlx.getData()$headerTypes == "obsid"]
   } else {
@@ -519,6 +519,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
     # Generate a Monolix project and run the tasks
     suppressMessages(mlx.initializeLixoftConnectors(software="monolix", path=monolixPath, force=TRUE))
     projectName <- generateBootstrapProject(project, boot.folder, indexSample, datasetFileName)
+
     results <- runBootstrapProject(projectName, indexSample, settings)
     paramResults <- rbind(paramResults, results)
     if (settings$deleteData) {
@@ -570,10 +571,11 @@ generateBootstrapProject = function(project, boot.folder, indexSample, dataFile)
 
     bootData$dataFile <- dataFile
     mlx.setData(bootData)
-
-    #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
-    mlx.saveProject(projectFile =projectBootFileName)
     
+    #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
+    mlx.setProjectSettings(dataandmodelnexttoproject = FALSE)
+    mlx.saveProject(projectFile =projectBootFileName)
+
     # reactivate lixoft warnings
     set_options(warnings = op$warnings, info = op$info)
   } else {

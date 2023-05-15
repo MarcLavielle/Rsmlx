@@ -254,8 +254,14 @@ mlx.newProject <- function(data = NULL, modelFile = NULL) {
   .hiddenCall(paste0('r <- lixoftConnectors::newProject(data = data, modelFile = modelFile)'))
 }
 
-mlx.setProjectSettings <- function(directory=NULL) {
-  .hiddenCall(paste0('r <- lixoftConnectors::setProjectSettings(directory = directory)'))
+mlx.setProjectSettings <- function(directory = NULL, dataandmodelnexttoproject = NULL) {
+  if (!is.null(directory)) {
+    .hiddenCall(paste0('r <- lixoftConnectors::setProjectSettings(directory = directory)'))
+  } else {
+    if (!is.null(dataandmodelnexttoproject)) {
+      .hiddenCall(paste0('r <- lixoftConnectors::setProjectSettings(dataandmodelnexttoproject = dataandmodelnexttoproject)'))
+    }
+  }
 }
 mlx.setStandardErrorEstimationSettings  <- function(a) {
   .hiddenCall(paste0('r <- lixoftConnectors::setStandardErrorEstimationSettings (a)'))
