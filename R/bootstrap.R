@@ -476,10 +476,12 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
           set_options(errors = TRUE, warnings = FALSE, info = FALSE)
           
           smlx.importMonolixProject(project)
+          incrementSeed <- smlx.getGroups()[[1]]$size
+
           if (!is.na(settings$seed)) {
-            smlx.setProjectSettings(seed = settings$seed + indexSample)
+            smlx.setProjectSettings(seed = settings$seed + indexSample * incrementSeed)
           } else {
-            smlx.setProjectSettings(seed = 123456 + indexSample)
+            smlx.setProjectSettings(seed = 123456 + indexSample * incrementSeed)
           }
           smlx.runSimulation()
           
