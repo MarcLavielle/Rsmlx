@@ -77,6 +77,14 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     warning("Data sets will not be deleted when using dataFolder argument.")
   }
 
+  if (!parametric) {
+    # Check if header names match between data and Monolix
+    originalData <- read.res(mlx.getData()$dataFile)
+    if (!all(mlx.getData()$header == names(originalData))) {
+      stop("[ERROR] Monolix headers do not match headers in the data set. Please check if the data set headers contain special characters.")
+    }
+  }
+
   .check_strict_pos_integer(nboot, "nboot")
   if (is.null(nboot)) nboot <- 100
   .check_bool(parametric, "parametric")
@@ -437,7 +445,8 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
   suppressMessages(mlx.initializeLixoftConnectors())
   mlx.loadProject(project)
   obsInfo <- mlx.getObservationInformation()
-  if (length(obsInfo$mapping) == 1 && "obsid" %in% mlx.getData()$headerTypes) {
+  mlxHeaders <- mlx.getData()$headerTypes
+  if (length(obsInfo$mapping) == 1 && "obsid" %in% mlxHeaders) {
     obsID <- unname(obsInfo$mapping)
     columnName <- mlx.getData()$header[mlx.getData()$headerTypes == "obsid"]
   } else {
@@ -487,13 +496,15 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
           smlx.runSimulation()
           
           if (v >= 2023) {
-            mlx.exportSimulatedData(path = datasetFileName)
+            smlx.exportSimulatedData(path = datasetFileName)
             data <- utils::read.csv(datasetFileName)
             if (!is.null(obsID)) {
               data$obsid <- obsID
             } else {
-              for (obs in names(mapObservation)) {
-                data$obsid[data$obsid == obs] <- mapObservation[obs]
+              if ("obsid" %in% mlxHeaders) {
+                for (obs in names(mapObservation)) {
+                  data$obsid[data$obsid == obs] <- mapObservation[obs]
+                }
               }
             }
             utils::write.csv(x = data, file = datasetFileName,
@@ -574,7 +585,7 @@ generateBootstrapProject = function(project, boot.folder, indexSample, dataFile)
 
     bootData$dataFile <- dataFile
     mlx.setData(bootData)
-    
+
     #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
     mlx.setProjectSettings(dataandmodelnexttoproject = FALSE)
     mlx.saveProject(projectFile =projectBootFileName)
@@ -724,7 +735,7 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   if (is.null(smlxHeaders)) {
     smlxHeaders <- names(df)
   }
-  
+
   jid <- which(mlxHeadersType=="id")
   if (gsub("_","",mlxHeaders[jid]) == gsub("#","",smlxHeaders[jid]))
     smlxHeaders[jid] <- mlxHeaders[jid]
