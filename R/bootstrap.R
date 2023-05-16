@@ -797,19 +797,15 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   if (length(grep("^mlx_", group$output)) >= 1) {
     outputelements <- smlx.getOutputElements()[grep("^mlx_", group$output, value = TRUE)]
     outputelements <- outputelements[sapply(outputelements, function(o) is.element("ID", names(o$data)))]
-    if (length(outputelements) > 1) {
-      ids <- c(ids, sapply(outputelements, function(o) unique(o$data$ID)))
-    } else if (length(outputelements) == 1) {
-      ids[[names(outputelements)]] <- unique(outputelements[[1]]$data$ID)
+    for (element in names(outputelements)) {
+      ids[[element]] <- unique(outputelements[[element]]$data$ID)
     }
   }
   if (any(grepl("^mlx_", group$treatment))) {
     treatelements <- smlx.getTreatmentElements()[grep("^mlx_", group$treatment, value = TRUE)]
     treatelements <- treatelements[sapply(treatelements, function(o) is.element("ID", names(o$data)))]
-    if (length(treatelements) > 1) {
-      ids <- c(ids, sapply(treatelements, function(o) unique(o$data$ID)))
-    } else if (length(treatelements) == 1) {
-      ids[[names(treatelements)]] <- unique(treatelements[[1]]$data$ID)
+    for (element in names(treatelements)) {
+      ids[[element]] <- unique(treatelements[[element]]$data$ID)
     }
   }
   missingIds  <- c()
