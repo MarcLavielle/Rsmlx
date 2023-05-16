@@ -315,7 +315,14 @@ smlx.exportSimulatedData <- function(path) {
 
 
 smlx.importMonolixProject <- function(project) {
-  .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
+  if (v >= 2023) {
+    .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
+  } else {
+    .hiddenCall(paste0('r <- lixoftConnectors::importMonolixProject(project)'))
+  }
+  
 }
 
 smlx.setNbReplicates <- function(nrep) {
