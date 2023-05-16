@@ -429,6 +429,7 @@ generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL
 
 generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=NULL){
   version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   
   if(!file.exists(project)){
     stop("Project ", project, ", does not exist.", call.=F)
@@ -485,16 +486,18 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
           }
           smlx.runSimulation()
           
-          version <- mlx.getLixoftConnectorsState()$version
-          v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-          if (v >= 2021) {
+          if (v >= 2023) {
             mlx.exportSimulatedData(path = datasetFileName)
+            data <- utils::read.csv(datasetFileName)
             if (!is.null(obsID)) {
-              data <- utils::read.csv(datasetFileName)
               data$obsid <- obsID
-              utils::write.csv(x = data, file = datasetFileName,
-                               row.names = FALSE, quote = FALSE)
+            } else {
+              for (obs in names(mapObservation)) {
+                data$obsid[data$obsid == obs] <- mapObservation[obs]
+              }
             }
+            utils::write.csv(x = data, file = datasetFileName,
+                             row.names = FALSE, quote = FALSE)
           } else {
             writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
           }
