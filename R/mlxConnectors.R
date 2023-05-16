@@ -309,7 +309,7 @@ mlx.getFormatting <- function() {
   return(r)
 }
 
-mlx.exportSimulatedData <- function(path) {
+smlx.exportSimulatedData <- function(path) {
   .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
 }
 
