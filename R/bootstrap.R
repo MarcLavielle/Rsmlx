@@ -55,6 +55,8 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     settings = NULL){
   
   params <- as.list(match.call(expand.dots=T))[-1]
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   
   monolixPath <- mlx.getLixoftConnectorsState()$path
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
@@ -138,19 +140,21 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
 
-    # Convert a project with data formatting to one with no data formatting
-    if (!is.null(mlx.getFormatting()) && !parametric) {
-      dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
-      formattedData <- NULL
-      formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
-      mlx.saveFormattedFile(formattedData$dataFile)
-      formattedData$headerTypes <- mlx.getData()$headerTypes
-      formattedData$observationTypes <- mlx.getData()$observationTypes
-      mlx.setData(formattedData)
-      project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
-      mlx.saveProject(project)
-      mlx.setProjectSettings(directory = exportDir)
-      mlx.saveProject()
+    if (v >= 2023) {
+      # Convert a project with data formatting to one with no data formatting
+      if (!is.null(mlx.getFormatting()) && !parametric) {
+        dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
+        formattedData <- NULL
+        formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
+        mlx.saveFormattedFile(formattedData$dataFile)
+        formattedData$headerTypes <- mlx.getData()$headerTypes
+        formattedData$observationTypes <- mlx.getData()$observationTypes
+        mlx.setData(formattedData)
+        project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
+        mlx.saveProject(project)
+        mlx.setProjectSettings(directory = exportDir)
+        mlx.saveProject()
+      }
     }
     
     if (!parametric) {
@@ -162,8 +166,6 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     }
     
     if (parametric) {
-      version <- mlx.getLixoftConnectorsState()$version
-      v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
       if (v >= 2020) {
         paramResults <- generateDataSetParametricSimulx(project, settings, boot.folder)
       } else {
