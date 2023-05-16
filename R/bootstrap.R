@@ -77,14 +77,6 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     warning("Data sets will not be deleted when using dataFolder argument.")
   }
 
-  if (!parametric) {
-    # Check if header names match between data and Monolix
-    originalData <- read.res(mlx.getData()$dataFile)
-    if (!all(mlx.getData()$header == names(originalData))) {
-      stop("[ERROR] Monolix headers do not match headers in the data set. Please check if the data set headers contain special characters.")
-    }
-  }
-
   .check_strict_pos_integer(nboot, "nboot")
   if (is.null(nboot)) nboot <- 100
   .check_bool(parametric, "parametric")
@@ -159,6 +151,14 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       mlx.saveProject(project)
       mlx.setProjectSettings(directory = exportDir)
       mlx.saveProject()
+    }
+    
+    if (!parametric) {
+      # Check if header names match between data and Monolix
+      originalData <- read.res(mlx.getData()$dataFile)
+      if (!all(mlx.getData()$header == names(originalData))) {
+        stop("[ERROR] Monolix headers do not match headers in the data set. Please check if the data set headers contain special characters.")
+      }
     }
     
     if (parametric) {
@@ -794,20 +794,20 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   ids <- list()
   if (length(grep("^mlx_", group$output)) >= 1) {
     outputelements <- smlx.getOutputElements()[grep("^mlx_", group$output, value = TRUE)]
-    outputelements <- outputelements[sapply(outputelements, function(o) is.element("id", names(o$data)))]
+    outputelements <- outputelements[sapply(outputelements, function(o) is.element("ID", names(o$data)))]
     if (length(outputelements) > 1) {
-      ids <- c(ids, sapply(outputelements, function(o) unique(o$data$id)))
+      ids <- c(ids, sapply(outputelements, function(o) unique(o$data$ID)))
     } else if (length(outputelements) == 1) {
-      ids[[names(outputelements)]] <- unique(outputelements[[1]]$data$id)
+      ids[[names(outputelements)]] <- unique(outputelements[[1]]$data$ID)
     }
   }
   if (any(grepl("^mlx_", group$treatment))) {
     treatelements <- smlx.getTreatmentElements()[grep("^mlx_", group$treatment, value = TRUE)]
-    treatelements <- treatelements[sapply(treatelements, function(o) is.element("id", names(o$data)))]
+    treatelements <- treatelements[sapply(treatelements, function(o) is.element("ID", names(o$data)))]
     if (length(treatelements) > 1) {
-      ids <- c(ids, sapply(treatelements, function(o) unique(o$data$id)))
+      ids <- c(ids, sapply(treatelements, function(o) unique(o$data$ID)))
     } else if (length(treatelements) == 1) {
-      ids[[names(treatelements)]] <- unique(treatelements[[1]]$data$id)
+      ids[[names(treatelements)]] <- unique(treatelements[[1]]$data$ID)
     }
   }
   missingIds  <- c()
