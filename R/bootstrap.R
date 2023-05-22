@@ -390,11 +390,7 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
     obsID <- NULL
   }
   mapObservation <- c(obsInfo$mapping)
-  
-  # return an error in case of regressor
-  if (is.element("regressor", mlx.getData()$headerTypes) & version == "2020R1") {
-    stop("Projects with regressor are not supported for Boostrap in monolix suite 2020R1.", call. = FALSE)
-  }
+
   # return a warning in case of censoring data
   if (is.element("cens", mlx.getData()$headerTypes)) {
     warning("Note that censoring is not performed on boostrap simulations.", call. = FALSE)
