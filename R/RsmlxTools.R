@@ -55,7 +55,7 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
   } else {
     
     if (grepl("2020",initRsmlx()$version) | grepl("2019",initRsmlx()$version) )
-      stop("Rsmlx 4.x is compatible only with MonolixSuite >= 2021R1" , call.=FALSE)
+      stop("Rsmlx versions above 4.0 are compatible only with MonolixSuite >= 2021R1" , call.=FALSE)
     
     if (!initRsmlx()$status)
       return()
