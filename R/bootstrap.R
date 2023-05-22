@@ -167,11 +167,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     }
     
     if (parametric) {
-      if (v >= 2020) {
-        paramResults <- generateDataSetParametricSimulx(project, settings, boot.folder)
-      } else {
-        paramResults <- generateDataSetParametricMlxR(project, settings, boot.folder)
-      }
+      paramResults <- generateDataSetParametricSimulx(project, settings, boot.folder)
     } else {
       paramResults <- generateDataSetResample(project, settings, boot.folder, dataFolderToUse)
     }
@@ -376,68 +372,6 @@ generateDataSetResample = function(project, settings, boot.folder, dataFolder){
   return(paramResults)
 }
 
-##############################################################################
-# Generate data sets by resimulating the project
-##############################################################################
-generateDataSetParametricMlxR= function(project, settings=NULL, boot.folder=NULL){
-  
-  if(!file.exists(project)){
-    stop("project '", project, "' does not exist.", call.=F)
-  }
-  suppressMessages(mlx.initializeLixoftConnectors())
-  mlx.loadProject(project)   
-  # Prepare all the output folders
-  exportDir <- mlx.getProjectSettings()$directory
-  projectName <- basename(tools::file_path_sans_ext(project))
-  dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
-  dir.create(file.path(exportDir, boot.folder, 'data'), showWarnings = FALSE, recursive = TRUE)
-  if(is.null(settings)){
-    settings$nboot <- 100 
-    settings$N <- NA
-    settings$covStrat <- NA
-    settings$seed <- NA
-  }
-  if(!is.na(settings$seed)){set.seed(settings$seed)}
-  
-  monolixPath <- mlx.getLixoftConnectorsState()$path
-  mlx.initializeLixoftConnectors(software="simulx", path=monolixPath, force=TRUE)
-
-  paramResults <- NULL
-  for(indexSample in 1:settings$nboot){
-    cat(paste0("Bootstrap replicate ", indexSample, "/", settings$nboot, "\n"))
-
-    datasetFileName <- paste0(exportDir,boot.folder, 'data/dataset_',toString(indexSample),'.csv')
-    if(!file.exists(datasetFileName)){
-      if(!is.na(settings$seed)){
-        simSettings = list(format.original=TRUE, seed = settings$seed+indexSample)
-      }else{
-        simSettings = list(format.original=TRUE)  
-      }
-      if(!file.exists(datasetFileName)){
-        #      res <- simulx(project = project,  result.file=datasetFileName, setting=simSettings)
-        res <- mlxR::simulx(project = project,  result.file=datasetFileName, setting=simSettings)
-      }
-    }
-
-    # Generate a Monolix project and run the tasks
-    projectName <- generateBootstrapProject(project, boot.folder, indexSample, datasetFileName)
-    results <- runBootstrapProject(projectName, indexSample, settings)
-    paramResults <- rbind(paramResults, results)
-    if (settings$deleteData) {
-      cat(" => Deleting the data set\n")
-      unlink(datasetFileName)
-    }
-    if (settings$deleteProjects) {
-      cat(" => Deleting the project\n")
-      unlink(projectName)
-      unlink(paste0(tools::file_path_sans_ext(projectName), ".mlxproperties"))
-      unlink(tools::file_path_sans_ext(projectName), recursive = TRUE)
-    }
-  }
-  suppressMessages(mlx.initializeLixoftConnectors())
-  return(paramResults)
-}
-
 generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=NULL){
   version <- mlx.getLixoftConnectorsState()$version
   v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
@@ -497,24 +431,21 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
             smlx.setProjectSettings(seed = 123456 + indexSample * incrementSeed)
           }
           smlx.runSimulation()
-          
-          if (v >= 2023) {
-            smlx.exportSimulatedData(path = datasetFileName)
-            data <- utils::read.csv(datasetFileName)
-            if (!is.null(obsID)) {
-              data$obsid <- obsID
-            } else {
-              if ("obsid" %in% mlxHeaders) {
-                for (obs in names(mapObservation)) {
-                  data$obsid[data$obsid == obs] <- mapObservation[obs]
-                }
+          smlx.exportSimulatedData(path = datasetFileName)
+
+          # add observation ID column
+          data <- utils::read.csv(datasetFileName)
+          if (!is.null(obsID)) {
+            data$obsid <- obsID
+          } else {
+            if ("obsid" %in% mlxHeaders) {
+              for (obs in names(mapObservation)) {
+                data$obsid[data$obsid == obs] <- mapObservation[obs]
               }
             }
-            utils::write.csv(x = data, file = datasetFileName,
-                             row.names = FALSE, quote = FALSE)
-          } else {
-            writeDataSmlx(filename = datasetFileName, mapObservation = mapObservation)
           }
+          utils::write.csv(x = data, file = datasetFileName,
+                           row.names = FALSE, quote = FALSE)
           
           set_options(errors = op$errors, warnings = op$warnings, info = op$info)
         },
@@ -750,13 +681,8 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   
   version <- mlx.getLixoftConnectorsState()$version
   v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  if (v >= 2021) {
-    matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", INFUSION.DURATION = "tinf",
-                   ADMINISTRATION.ID = "admid", obsid = "obsid", EVENT.ID = "evid", obs = "observation")
-  } else {
-    matchSmlx <- c(id = "id", amt = "amount", time = "time", tinf = "tinf", OCCevid = "occ",
-                   admtype = "admid", ytype = "obsid", evid = "evid", y = "observation")
-  }
+  matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", INFUSION.DURATION = "tinf",
+                 ADMINISTRATION.ID = "admid", obsid = "obsid", EVENT.ID = "evid", obs = "observation")
   smlxHeadersType[smlxHeaders %in% setdiff(smlxHeaders, intersectHeaders)] <- unname(matchSmlx[setdiff(smlxHeaders, intersectHeaders)])
   
   obsInfo <- mlx.getObservationInformation()
@@ -780,12 +706,7 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   } else {
     bootData$observationTypes <- unname(refData$observationTypes)
   }
-  
-  # warning for simulx bug
-  version <- mlx.getLixoftConnectorsState()$version
-  if (length(obsInfo$name) > 1 & ! is.element("obsid", smlxHeadersType) & version == "2020R1") {
-    warning("Due to a bug in Simulx 2020R1, non-continuous outputs will be excluded from the simulation.", call. = FALSE)
-  }
+
   bootData <- bootData[c("dataFile", "headerTypes", "observationTypes")]
   
   return(bootData)
