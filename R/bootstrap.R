@@ -751,8 +751,8 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   version <- mlx.getLixoftConnectorsState()$version
   v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   if (v >= 2021) {
-    matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", `INFUSION DURATION` = "tinf",
-                   `ADMINISTRATION ID` = "admid", obsid = "obsid", `EVENT ID` = "evid", obs = "observation")
+    matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", INFUSION.DURATION = "tinf",
+                   ADMINISTRATION.ID = "admid", obsid = "obsid", EVENT.ID = "evid", obs = "observation")
   } else {
     matchSmlx <- c(id = "id", amt = "amount", time = "time", tinf = "tinf", OCCevid = "occ",
                    admtype = "admid", ytype = "obsid", evid = "evid", y = "observation")
