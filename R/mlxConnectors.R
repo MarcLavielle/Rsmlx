@@ -310,7 +310,17 @@ mlx.getFormatting <- function() {
 }
 
 smlx.exportSimulatedData <- function(path) {
-  .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
+  if (v >= 2023) {
+    .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
+  } else {
+    results_path <- NULL
+    .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData()'))
+    .hiddenCall(paste0('resultsPath <- lixoftConnectors::getProjectSettings()'))
+    old_path <- file.path(resultsPath$directory, "Simulation", "simulatedData.txt")
+    file.copy(from = old_path, to = path)
+  }
 }
 
 
