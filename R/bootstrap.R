@@ -55,8 +55,6 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     settings = NULL){
   
   params <- as.list(match.call(expand.dots=T))[-1]
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   
   monolixPath <- mlx.getLixoftConnectorsState()$path
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
@@ -65,6 +63,9 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   if (r$demo)
     return(r$res)
   project <- r$project
+
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
