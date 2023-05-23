@@ -487,6 +487,9 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
 ##############################################################################
 generateBootstrapProject = function(project, boot.folder, indexSample, dataFile){
 
+  version <- mlx.getLixoftConnectorsState()$version
+  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
+
   # Get the data set information
   op <- get_lixoft_options()
   set_options(info = FALSE)
@@ -512,9 +515,17 @@ generateBootstrapProject = function(project, boot.folder, indexSample, dataFile)
     # deactivate lixoft warnings
     op <- get_lixoft_options()
     set_options(warnings = FALSE, info = FALSE)
+    
+    if (v >= 2023) {
+      mapping <- mlx.getMapping()
+    }
 
     bootData$dataFile <- dataFile
     mlx.setData(bootData)
+    
+    if (v >= 2023) {
+      mlx.setMapping(mapping)
+    }
 
     #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
     mlx.setProjectSettings(dataandmodelnexttoproject = FALSE)
@@ -690,15 +701,8 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   bootData$headerTypes <- smlxHeadersType
   
   if ("obsid" %in% mlxHeadersType) {
-    if (! "obsid" %in% smlxHeadersType) {
-      obsmapping <- obsInfo$mapping[obsNames]
-      names(bootData$observationTypes)[names(bootData$observationTypes) == obsmapping & !is.na(obsmapping)] <- obsNames[!is.na(obsNames)]
-      bootData$observationTypes <- bootData$observationTypes[names(bootData$observationTypes) %in% obsNames]
-      bootData$observationTypes <- unname(bootData$observationTypes)
-    } else {
-      obsids <- sort(unique(df[[smlxHeaders[!is.na(smlxHeadersType) & smlxHeadersType == "obsid"]]]))
-      bootData$observationTypes <- refData$observationTypes[intersect(sort(obsids), names(refData$observationTypes))]
-    }
+    obsids <- sort(unique(df[[smlxHeaders[!is.na(smlxHeadersType) & smlxHeadersType == "obsid"]]]))
+    bootData$observationTypes <- refData$observationTypes[intersect(sort(obsids), names(refData$observationTypes))]
   } else {
     bootData$observationTypes <- unname(refData$observationTypes)
   }

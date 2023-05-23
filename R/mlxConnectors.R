@@ -231,6 +231,15 @@ mlx.setIndividualParameterModel <- function(a) {
   .hiddenCall(paste0('lixoftConnectors::setIndividualParameterModel(a)'))
 }
 
+mlx.getMapping <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getMapping()'))
+  return(r)
+}
+
+mlx.setMapping <- function(a) {
+  .hiddenCall(paste0('lixoftConnectors::setMapping(a)'))
+}
 
 mlx.setCorrelationBlocks <- function(a) {
   .hiddenCall(paste0('r <- lixoftConnectors::setCorrelationBlocks(a)'))
