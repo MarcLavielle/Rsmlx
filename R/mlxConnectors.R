@@ -309,7 +309,7 @@ mlx.getLibraryModelName <- function(library) {
 mlx.saveFormattedFile <- function(path) {
   .hiddenCall(paste0('r <- lixoftConnectors::getFormatting()'))
   .hiddenCall(paste0('r$formattedFile <- path'))
-  .hiddenCall(paste0('do.call(formatData, r)'))
+  .hiddenCall(paste0('do.call(lixoftConnectors::formatData, r)'))
 }
 
 mlx.getFormatting <- function() {
