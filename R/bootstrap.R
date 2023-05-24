@@ -223,7 +223,7 @@ generateDataSetResample = function(project, settings, boot.folder, dataFolder){
   
   # Get the data set information
   referenceDataset <- mlx.getData()
-  cov <- mlx.getCovariateInformation()
+  cov <- mlx.getAllCovariateInformation()
   datasetFile <- referenceDataset$dataFile
   refCovInfo  <- mlx.getCovariateInformation()
   # Get the index in mlx.getCovariateInformation()$ of the covariates used in the statistical model
@@ -656,8 +656,9 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   .check_bool(settings$deleteProjects, "settings deleteProjects")
   if (!is.na(settings$covStrat)) {
     .check_string(settings$covStrat, "settings covStrat")
-    covariates <- mlx.getCovariateInformation()
-    catcovariates <- names(covariates$type[covariates$type %in% c("categorical", "categoricaltransformed")])
+    covariates <- mlx.getAllCovariateInformation()
+    catcovariates <- names(covariates$type[covariates$type %in% c("categorical", "categoricaltransformed", "stratificationcategorical")])
+    print(catcovariates)
     .check_in_vector(settings$covStrat, "settings covStrat", catcovariates)
   }
   if (!is.na(settings$seed)) .check_strict_pos_integer(settings$seed, "settings seed")

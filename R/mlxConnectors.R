@@ -122,6 +122,12 @@ mlx.getCovariateInformation <- function() {
   return(r)
 }
 
+mlx.getAllCovariateInformation <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getCovariateInformation()'))
+  return(r)
+}
+
 mlx.getData <- function() {
   r <- NULL
   .hiddenCall(paste0('r <- lixoftConnectors::getData()'))
