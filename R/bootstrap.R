@@ -101,6 +101,10 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
   if (parametric && length(mlx.getEstimatedPopulationParameters()) == 0) {
     stop("[ERROR] No valid results present in the project.")
   }
+  # check if filters are used
+  if (!parametric && !mlx.getAvailableData()[[1]]$current) {
+    stop("[ERROR] Nonparametric bootstrap is not available for projects that use data filtering.")
+  }
   
   if (!is.null(dataFolder)) {
     dataFiles <- list.files(path = dataFolder, pattern = '*.txt|*.csv')
@@ -150,7 +154,9 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
         mlx.saveFormattedFile(formattedData$dataFile)
         formattedData$headerTypes <- mlx.getData()$headerTypes
         formattedData$observationTypes <- mlx.getData()$observationTypes
+        mapping <- mlx.getMapping()
         mlx.setData(formattedData)
+        mlx.setMapping(mapping)
         project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
         mlx.saveProject(project)
         mlx.setProjectSettings(directory = exportDir)
@@ -308,10 +314,10 @@ generateDataSetResample = function(project, settings, boot.folder, dataFolder){
       while(!areAllModalitiesdrawn){
         sampleIDs <- NULL
         for(indexValidID in 1:length(validID)){
+          samples <- NULL
           if(length(validID[[indexValidID]])==1){
             sampleIDs <- c(sampleIDs,  rep(x = validID[[indexValidID]], times = propCAT[indexValidID]) )
           }else{
-            samples <- NULL
             samples <- sample(x = validID[[indexValidID]], size = propCAT[indexValidID], replace = TRUE)
           }
           sampleIDs <- c(sampleIDs, as.character(samples))
@@ -658,7 +664,6 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
     .check_string(settings$covStrat, "settings covStrat")
     covariates <- mlx.getAllCovariateInformation()
     catcovariates <- names(covariates$type[covariates$type %in% c("categorical", "categoricaltransformed", "stratificationcategorical")])
-    print(catcovariates)
     .check_in_vector(settings$covStrat, "settings covStrat", catcovariates)
   }
   if (!is.na(settings$seed)) .check_strict_pos_integer(settings$seed, "settings seed")

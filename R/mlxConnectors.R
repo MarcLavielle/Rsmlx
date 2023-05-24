@@ -350,6 +350,12 @@ smlx.importMonolixProject <- function(project) {
   
 }
 
+mlx.getAvailableData <- function() {
+  r <- NULL
+  .hiddenCall(paste0('r <- lixoftConnectors::getAvailableData()'))
+  return(r)
+}
+
 smlx.setNbReplicates <- function(nrep) {
   .hiddenCall(paste0('r <- lixoftConnectors::setNbReplicates(nrep)'))
 }
