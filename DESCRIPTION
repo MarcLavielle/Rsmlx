@@ -1,11 +1,12 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 5.0.1.9000
+Version: 2023.1
 Authors@R: c(
     person( "Marc", "Lavielle", role = c("aut","cre"), email = "Marc.Lavielle@inria.fr" ),
     person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
-    person( "Clémence", "Pinaud", role = c("ctb"), email = "Clemence.Pinaud@lixoft.com" ))
+    person( "Clémence", "Pinaud", role = c("ctb")),
+	person( "Frano", "Mihaljevic", role = c("ctb"), email = "Frano.Mihaljevic@lixoft.com" ))
 Description: Provides methods for model building and model evaluation of mixed effects models using 
     'Monolix' <https://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
     modeling that must have been installed in order to use 'Rsmlx'. 
@@ -13,13 +14,12 @@ Description: Provides methods for model building and model evaluation of mixed e
     statistical tests for model assessment, bootstrap simulation and likelihood profiling for 
     computing confidence intervals. 'Rsmlx' also proposes several automatic covariate search methods for 
     mixed effects models. 
-URL: http://rsmlx.webpopix.org
+URL: https://monolix.lixoft.com/rsmlx/
 SystemRequirements: 'Monolix' (<https://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
 Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr, tidyr
 Suggests: 
-    mlxR,
-    testthat (>= 3.0.0)
+    mlxR
 Collate: mlxConnectors.R
          bootstrap.R
          buildmlx.R
@@ -47,4 +47,3 @@ NeedsCompilation: no
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.2.3
-Config/testthat/edition: 3
