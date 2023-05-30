@@ -21,7 +21,7 @@ r = getEstimatedIndividualParameters2()
 # r is a list with elements "saem", "conditionalMean", "conditionalSD",   "conditionalMode",
 # "popPopCov" and "popIndCov"
 
-# See http://rsmlx.webpopix.org/userguide/newconnectors/ for more detailed examples
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/newconnectors/ for more detailed examples
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 }
 }

@@ -44,7 +44,7 @@ Allowed names are: 'Tlag', 'Mtt', 'Ktr', 'ka', 'Tk0', 'V', 'V1', 'V2', 'V3', 'Q'
 \details{
 A Monolix project is then automatically created using these values as initial population parameters.
 
-See http://rsmlx.webpopix.org/pkpopini/ for more details.
+See https://monolix.lixoft.com/rsmlx/pkpopini/ for more details.
 }
 \examples{
 \dontrun{

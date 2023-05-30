@@ -67,7 +67,7 @@ which individual parameters vary and which ones are fixed.
 Penalization criterion can be either a custom penalization of the form gamma*(number of parameters),
 AIC (gamma=2) or BIC (gamma=log(N)).
 
-See http://rsmlx.webpopix.org for more details.
+See https://monolix.lixoft.com/rsmlx/ for more details.
 }
 \examples{
 \dontrun{
@@ -82,8 +82,8 @@ r3 <- buildVar(project="warfarinPK_project.mlxtran", linearization=T)
 
 }
 
-# See http://rsmlx.webpopix.org/userguide/buildvar/ for detailed examples of use of buildvar
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/buildvar/ for detailed examples of use of buildvar
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
 }

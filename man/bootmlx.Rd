@@ -38,7 +38,9 @@ within the subject (in case of IOV), it will not be taken into account.
 (default = FALSE)
 \item \code{level} level of the bootstrap confidence intervals of the population parameters
 (default = 0.90)
-\item \code{seed} seed for the generation of the data sets (default = NA)
+\item \code{seed} a positive integer < 2147483647, seed for the generation of the data sets (default = NA)
+\item \code{deleteData} delete created data set files after estimation (default = FALSE)
+\item \code{deleteProjects} delete created Monolix projects after estimation (default = FALSE)
 }}
 }
 \value{
@@ -65,8 +67,8 @@ r2 <- bootmlx(project="RsmlxDemo1.mlxtran",  nboot = 5, settings = list(N = 50))
 r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
 }
 
-# See http://rsmlx.webpopix.org/userguide/bootmlx/ for detailed examples of use of bootmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/bootmlx/ for detailed examples of use of bootmlx
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
 }

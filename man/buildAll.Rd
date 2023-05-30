@@ -124,7 +124,7 @@ Penalization criterion can be either a custom penalization of the form gamma*(nu
 AIC (gamma=2) or BIC (gamma=log(N)).
 }
 \details{
-See http://rsmlx.webpopix.org for more details.
+See https://monolix.lixoft.com/rsmlx/ for more details.
 }
 \examples{
 \dontrun{
@@ -139,7 +139,7 @@ r3 <- buildAll(project="warfarinPK_project.mlxtran", linearization=T)
 
 }
 
-# See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/buildmlx/ for detailed examples of use of buildmlx
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 }

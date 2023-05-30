@@ -51,7 +51,7 @@ A list of results
 Fit several structural PK models and select the best one based on a Bayesian Information Criterion.
 Models to compare can be defined by rate constants and/or clearances and can include or not nonlinear elimination
 models.
-See http://rsmlx.webpopix.org/pkbuild/ for more details.
+See https://monolix.lixoft.com/rsmlx/pkbuild/ for more details.
 }
 \examples{
 \dontrun{

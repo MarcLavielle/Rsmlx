@@ -76,8 +76,8 @@ r3 <- covariateSearch(project    = "RsmlxDemo1.mlxtran",
                       paramToUse = c("V","Cl"), 
                       covToTest  = c("age","wt"))
 
-# See http://rsmlx.webpopix.org/userguide/covariatesearch/ for detailed examples of covariatesearch
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/covariatesearch/ for detailed examples of covariatesearch
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
 }

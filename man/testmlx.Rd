@@ -58,8 +58,8 @@ r1 <- testmlx(project="RsmlxDemo2.mlxtran")
 #testmlx will perform statistical tests for the covariate model and the correlation model only.
 r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
 
-# See http://rsmlx.webpopix.org/userguide/testmlx/ for detailed examples of use of testmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/testmlx/ for detailed examples of use of testmlx
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
 }

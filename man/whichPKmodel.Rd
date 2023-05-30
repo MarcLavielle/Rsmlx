@@ -17,7 +17,7 @@ whichPKmodel(parameter, mlxPath = NULL, pkPath = NULL, lib = FALSE)
 }
 \description{
 Return the path of the Monolix PK model defined by a list of parameter names
-See http://rsmlx.webpopix.org/whichPKmodel/ for more details.
+See https://monolix.lixoft.com/rsmlx/whichPKmodel/ for more details.
 }
 \examples{
 \dontrun{

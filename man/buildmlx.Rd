@@ -105,7 +105,7 @@ Several strategies can be used for building the covariate model at each iteratio
 \code{direction="full"} means that all the possible models are compared (default when the number of covariates
 is less than 10). Othrwise, \code{direction} is the mode of stepwise search of \code{stepAIC {MASS}}, 
 can be one of "both", "backward", or "forward", with a default of "both" when there are at least 10 covariates.
-See http://rsmlx.webpopix.org for more details.
+See https://monolix.lixoft.com/rsmlx/ for more details.
 }
 \examples{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
@@ -125,8 +125,8 @@ r2 <- buildmlx(project="RsmlxDemo1.mlxtran", paramToUse=c("V", "Cl"), covToTrans
 # Only the covariate model will be  built, using AIC instead of BIC:
 r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC") 
 
-# See http://rsmlx.webpopix.org/userguide/buildmlx/ for detailed examples of use of buildmlx
-# Download the demo examples here: http://rsmlx.webpopix.org/installation
+# See http://monolix.lixoft.com/rsmlx/buildmlx/ for detailed examples of use of buildmlx
+# Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
 }
