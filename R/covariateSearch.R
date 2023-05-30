@@ -104,6 +104,7 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
     }
     for(index in 1:length(covToTransform)){
       cov <- covToTransform[index]
+      indexCov <- NULL
       eval(parse(text=paste0('indexCov <- which(names(mlx.getCovariateInformation()$type)=="',cov,'")')))
       if(length(intersect(mlx.getCovariateInformation()$type[indexCov],"continuous"))>0){
         eval(parse(text=paste0('meanCov <- mean(mlx.getCovariateInformation()$covariate$',cov,')')))

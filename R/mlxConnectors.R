@@ -330,7 +330,7 @@ smlx.exportSimulatedData <- function(path) {
   if (v >= 2023) {
     .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
   } else {
-    results_path <- NULL
+    resultsPath <- NULL
     .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData()'))
     .hiddenCall(paste0('resultsPath <- lixoftConnectors::getProjectSettings()'))
     old_path <- file.path(resultsPath$directory, "Simulation", "simulatedData.txt")
