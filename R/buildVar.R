@@ -167,7 +167,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
         }
         param0 <- c(param0, list.param1[j0])
         param1 <- setdiff(param1, list.param1[j0])
-        update.project(project, project.built, param0, param1, NULL, pop.set1)
+        update_project(project, project.built, param0, param1, NULL, pop.set1)
         list.param1 <- names(which(!unlist(lapply(p.param1[param1], function(x) all(param1 %in% x)))))
         list.param1 <- setdiff(list.param1, fix.param1)
       }
@@ -355,7 +355,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
               }
               param0 <- c(param0, p.min)
               param1 <- setdiff(param1, p.min)
-              update.project(project.built, project.temp, param0, param1, pop.min[[i.min]], pop.set1)
+              update_project(project.built, project.temp, param0, param1, pop.min[[i.min]], pop.set1)
               
               if (print)
                 cat("\nfitting the model with no variability on ", param0, ": ")
@@ -438,7 +438,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
           stop.remove=T
         }
       } 
-      update.project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
+      update_project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
       change.remove <- change
       if (change.remove)
         change.any <- T
@@ -546,7 +546,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
               param1 <- c(param1, p.min)
               param0 <- setdiff(param0, p.min)
               fparam0 <- c(fix.param0,param0)
-              update.project(project.built, project.temp, param0, param1, pop.min[[i.min]], pop.set1)
+              update_project(project.built, project.temp, param0, param1, pop.min[[i.min]], pop.set1)
               
               if (print) {
                 if (length(fparam0)>0)
@@ -619,7 +619,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
         }
       }
       #      browser()
-      update.project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
+      update_project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
       stop <- !change
       if (change)
         change.any <- T
@@ -670,7 +670,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
             change0 <- T
             param0 <- c(param0, list.param1[j0])
             param1 <- setdiff(param1, list.param1[j0])
-            update.project(project.built, project.built, param0, param1, NULL, pop.set0)
+            update_project(project.built, project.built, param0, param1, NULL, pop.set0)
             mlx.saveProject(project.built)
             mlx.runPopulationParameterEstimation(parameters=ind.built)
           } else {
@@ -708,7 +708,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
     # ll <- formatLL(mlx.getEstimatedLogLikelihood()[[method.ll]], criterion, ll.final, is.weight, is.prior)
     # to.cat <- paste0("\nEstimated criteria (",method.ll,"):\n")
     # to.print <- round(ll,2)
-    # print.result(print, NULL, to.cat=to.cat, to.print=to.print) 
+    # print_result(print, NULL, to.cat=to.cat, to.print=to.print) 
     
   } else {
     if (print) {
@@ -819,7 +819,7 @@ runPopEstOmega <- function(omega=NULL, o.ini=NULL, o.final=NULL, r.o=0.001, K.in
     return(estimates)
 }
 
-update.project <- function(project, project.temp, param0, param1, pop=NULL, pop.set) {
+update_project <- function(project, project.temp, param0, param1, pop=NULL, pop.set) {
   mlx.loadProject(project)
   ind.mod <- mlx.getIndividualParameterModel()
   cb <- ind.mod$correlationBlocks$id
@@ -1052,7 +1052,7 @@ compute.cv <- function(vp, lp) {
 #       
 #       param1 <- c(setdiff(param1, p.min[2]), p.min[1])
 #       param0 <- c(setdiff(param0, p.min[1]), p.min[2])
-#       update.project(project.built, project.built, param0, param1, pop.min, pop.set1)
+#       update_project(project.built, project.built, param0, param1, pop.min, pop.set1)
 #       
 #       # num.mod <- BinToDec(mlx.getIndividualParameterModel()$variability$id*1)
 #       # i.mod0 <- which(num.mod == list.mod0)
@@ -1096,7 +1096,7 @@ compute.cv <- function(vp, lp) {
 #       stop.swap <- T
 #     }
 #   }
-#   update.project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
+#   update_project(project.built, project.built, param0.built, param1.built, pop.built, pop.set1)
 #   change.swap <- change
 #   if (change.swap)
 #     change.any <- T
