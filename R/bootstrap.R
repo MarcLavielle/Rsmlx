@@ -326,11 +326,11 @@ generateDataSetResample = function(project, settings, boot.folder, dataFolder){
         if(length(indexUsedCat)>0){
           # Check if all used modalities are in the data set
           for(iUsedCat in 1:length(indexUsedCat)){
-            catModalities <- unique(refCovInfo$covariate[,indexUsedCat[iUsedCat]+1])
+            catModalities <- unique(refCovInfo$covariate[, which(names(refCovInfo$covariate)==refCovInfo$name[indexUsedCat[iUsedCat]])])
             catSamplesModalities <- NULL
             for(indexSamples in 1:length(sampleIDs)){
               idIndex = which(refCovInfo$covariate[,1]==sampleIDs[indexSamples])
-              catSamplesModalities <- c(catSamplesModalities, refCovInfo$covariate[idIndex,indexUsedCat[iUsedCat]+1])
+              catSamplesModalities <- c(catSamplesModalities, refCovInfo$covariate[idIndex,which(names(refCovInfo$covariate)==refCovInfo$name[indexUsedCat[iUsedCat]])])
             }
             areAllModalitiesdrawn <- areAllModalitiesdrawn&(length(catModalities)==length(unique(catSamplesModalities)))
           }
