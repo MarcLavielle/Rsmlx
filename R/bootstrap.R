@@ -168,7 +168,7 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
       # Check if header names match between data and Monolix
       originalData <- read.res(mlx.getData()$dataFile)
       if (!all(mlx.getData()$header == names(originalData))) {
-        stop('[ERROR] Monolix headers do not match headers in the data set. Special characters (such as space " ", slash "/", parenthesis "(", or symbols e. "%") as well as several columns with the same header are not supported by bootmlx. Please modify the headers of the original dataset, load the new dataset in Monolix and retry.')
+        stop('[ERROR] Monolix headers do not match headers in the data set. Special characters (such as space " ", slash "/", parenthesis "(", or symbols e. "%") as well as several columns with the same header are not supported by bootmlx. Please modify the headers of the original dataset, load the modified dataset in Monolix and retry. If you are using an R version prior to 4.2, the cause of this error could be the encoding of the data set file (UTF-8-BOM instead of UTF-8).')
       }
     }
     
