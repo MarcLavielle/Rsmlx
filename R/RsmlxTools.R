@@ -336,8 +336,8 @@ err <-  function(parameter, y, p.ind, N, a) {
   if (any(is.nan(f)) | any(is.infinite(f)))
     e <- Inf
   else
-  e <- mean((log(f+a)-log(y+a))^2)
-#    e <- mean((f^a-y^a)^2)
+    e <- mean((log(f+a)-log(y+a))^2)
+  #    e <- mean((f^a-y^a)^2)
   return(e)
 }
 
@@ -354,7 +354,7 @@ pop.opt <- function(p0) {
   else
     p.ind <- p0
   a <- max(-min(y) + 0.5, 0.5)
-#  if ("k12" %in% names(p0))  browser()
+  #  if ("k12" %in% names(p0))  browser()
   r <- optim(log(p0), err, y=y, p.ind=p.ind, N=N, a=a)
   return(exp(r$par))
 }
@@ -372,30 +372,46 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL, par.ini=NULL,
   N <- length(unique(gy[['id']]))
   n <- nrow(gy)
   scenario <- mlx.getScenario()
-  scenario$tasks[1:6] <- c(TRUE, FALSE, FALSE, FALSE, TRUE, FALSE)
-  scenario$linearization <- FALSE
+  scenario$tasks[seq_along(scenario$tasks)] <- FALSE
+  scenario$tasks[c("populationParameterEstimation", "logLikelihoodEstimation")] <- TRUE
+  if (linearization)
+    scenario$tasks[c("conditionalModeEstimation")] <- TRUE
+  else
+    scenario$tasks[c("conditionalDistributionSampling")] <- TRUE
   mlx.setScenario(scenario)
+  
   if (!is.null(level))
     setSettings(level=level)
   mlx.saveProject(r$project)
-  launched.tasks <- mlx.getLaunchedTasks()
-  # Sys.sleep(0.1)
-  # dir.create(final.dir)
   w.dir <- getwd()
   setwd(new.dir)
+  
+  launched.tasks <- mlx.getLaunchedTasks()
   if (!launched.tasks[["populationParameterEstimation"]]) {
     cat("Estimation of the population parameters...\n")
     mlx.runPopulationParameterEstimation()
   }
-  if (!("importanceSampling" %in% launched.tasks[["logLikelihoodEstimation"]])) { 
-    cat("Estimation of the log-likelihood... \n")
-    mlx.runLogLikelihoodEstimation(linearization=linearization)
+  if (linearization) {
+    if (!launched.tasks[["conditionalModeEstimation"]])
+      cat("Estimation of the conditional modes... \n")
+    mlx.runConditionalModeEstimation()
+    if (!("linearization" %in% launched.tasks[["logLikelihoodEstimation"]])) { 
+      cat("Estimation of the log-likelihood (linearization)... \n")
+      mlx.runLogLikelihoodEstimation(linearization=T)
+      g <- mlx.getEstimatedLogLikelihood()[["linearization"]]
+    }
+  } else {
+    if (!launched.tasks[["conditionalDistributionSampling"]])
+      cat("Estimation of the conditional distributions... \n")
+    mlx.runConditionalDistributionSampling()
+    if (!("importanceSampling" %in% launched.tasks[["logLikelihoodEstimation"]])) { 
+      cat("Estimation of the log-likelihood (importance sampling)... \n")
+      mlx.runLogLikelihoodEstimation(linearization=F)
+      g <- mlx.getEstimatedLogLikelihood()[["importanceSampling"]]
+    }
   }
   setwd(w.dir)
-  g <- mlx.getEstimatedLogLikelihood()[[1]]
   r$ofv <- g[['OFV']]
-  # if (is.null(ofv))
-  #   ofv <- mlx.getEstimatedLogLikelihood()[[1]][['OFV']]
   r$bicc <- g[['BICc']]
   r$bic <- g[['BIC']]
   r$aic <- g[['AIC']]
