@@ -152,7 +152,6 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   print_result(print, summary.file, to.cat=to.cat, to.print=NULL) 
   
   print.line <- F
-  launched.tasks <- mlx.getLaunchedTasks()
   # if (!launched.tasks[["populationParameterEstimation"]]) {
   #   to.cat <- paste0(plain.line,"\nEstimation of the population parameters using the initial model ... \n")
   #   print_result(print, summary.file, to.cat=to.cat, to.print=NULL) 
@@ -202,12 +201,13 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   }
   
   
-  if (!launched.tasks[["populationParameterEstimation"]]) {
+  if (!mlx.getLaunchedTasks()[["populationParameterEstimation"]]) {
     to.cat <- "\nEstimation of the population parameters using the initial model ... \n"
     print_result(print, summary.file, to.cat=to.cat, to.print=NULL) 
     mlx.runPopulationParameterEstimation()
   }
-  if (!launched.tasks[["conditionalDistributionSampling"]]) {
+
+  if (!mlx.getLaunchedTasks()[["conditionalDistributionSampling"]]) {
     to.cat <- "Sampling of the conditional distribution using the initial model ... \n"
     print_result(print, summary.file, to.cat=to.cat, to.print=NULL) 
     mlx.runConditionalDistributionSampling()
@@ -216,6 +216,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   gi <- mlx.getSimulatedIndividualParameters()
   gi <- gi %>% filter(rep==gi$rep[nrow(gi)]) %>% select(-rep)
   lin.ll <- method.ll=="linearization"
+  launched.tasks <- mlx.getLaunchedTasks()
+  
   if (iop.ll) {
     if (!(method.ll %in% launched.tasks[["logLikelihoodEstimation"]]))  {
       if (lin.ll & !launched.tasks[["conditionalModeEstimation"]])
@@ -1346,7 +1348,7 @@ formatLL <- function(ll, criterion, cr, is.weight, is.prior=F) {
       llr[paste0("w",criterion)] <- cr
     }
   }
-  if (!is.na(ll["standardError"]))
+  if (!is.null(ll) && !is.na(ll["standardError"]))
     llr["s.e."] <- ll["standardError"]
   return(llr)
 }
