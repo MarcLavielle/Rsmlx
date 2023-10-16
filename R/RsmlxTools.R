@@ -410,6 +410,7 @@ compute.bic <- function(parameter, data, new.dir=NULL, level=NULL, par.ini=NULL,
       g <- mlx.getEstimatedLogLikelihood()[["importanceSampling"]]
     }
   }
+  
   setwd(w.dir)
   r$ofv <- g[['OFV']]
   r$bicc <- g[['BICc']]
