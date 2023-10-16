@@ -712,8 +712,7 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
   } else {
     bootData$observationTypes <- unname(refData$observationTypes)
   }
-
-  bootData <- bootData[c("dataFile", "headerTypes", "observationTypes")]
+  bootData <- bootData[c("dataFile", "headerTypes", "observationTypes", "nbSSDoses")]
   
   return(bootData)
 }
