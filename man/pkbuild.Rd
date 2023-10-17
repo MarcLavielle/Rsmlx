@@ -27,18 +27,18 @@ pkbuild(
 
 \item{project}{a Monolix project}
 
-\item{stat}{({FALSE}, TRUE): the statistical model is also built (using buildmlx)}
+\item{stat}{(FALSE, TRUE): the statistical model is also built (using buildmlx) (default=FALSE)}
 
-\item{param}{({"clearance"}, "rate", "both): parameterization}
+\item{param}{("clearance", "rate", "both): parametrization  (default="clearance")}
 
 \item{new.dir}{name of the directory where the created files are stored 
 (default is the current working directory) )}
 
-\item{MM}{({FALSE}, TRUE): tested models include or not Michaelis Menten elimination models}
+\item{MM}{(FALSE, TRUE): tested models include or not Michaelis Menten elimination models (default=FALSE)}
 
-\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
+\item{linearization}{TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
-\item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
+\item{criterion}{penalization criterion to optimize c("AIC", "BIC", "BICc", gamma) (default="BICc")}
 
 \item{level}{an integer between 1 and 9 (used by setSettings)}
 

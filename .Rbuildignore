@@ -1,2 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^tests/
+^cran-comments\.md$
+^CRAN-SUBMISSION$

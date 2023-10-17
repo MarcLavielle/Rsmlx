@@ -14,10 +14,10 @@
 #' function
 #' 
 #' @param project a Monolix project
-#' @param method  method c({"fim"}, "proflike", "bootstrap")
+#' @param method  method c("fim", "proflike", "bootstrap") (default="fim")
 #' @param parameters list of parameters for which confidence intervals are computed (default="all")
 #' @param level  confidence level, a real number between 0 and 1 (default=0.90)
-#' @param linearization  {TRUE}/FALSE  whether the calculation of the standard errors 
+#' @param linearization  TRUE/FALSE  whether the calculation of the standard errors (default=TRUE)
 #' or the profile likelihood  is based on a linearization of the model (default=TRUE) 
 #' @param nboot number of bootstrat replicates (default=100, used when method="bootstrap")
 #' @param parametric boolean to define if parametric bootstrap is performed (new data is drawn from the model), (default: false)

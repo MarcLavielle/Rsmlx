@@ -14,15 +14,15 @@
 #' @param cv.min  value of the coefficient of variation below which an individual parameter is considered fixed (default=0.001)
 #' @param fix.param1  parameters with variability that cannot be removed (default=NULL)
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
-#' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
-#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
-#' @param remove  {TRUE}/FALSE try to remove random effects (default=TRUE)
-#' @param add  {TRUE}/FALSE try to add random effects (default=TRUE)
+#' @param criterion  penalization criterion to optimize c("AIC", "BIC", "BICc", gamma) (default=BICc)
+#' @param linearization  TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
+#' @param remove  TRUE/FALSE try to remove random effects (default=TRUE)
+#' @param add  TRUE/FALSE try to add random effects (default=TRUE)
 #' @param delta  maximum difference in criteria for testing a new model (default=c(30,10,5))
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
-#' @param print {TRUE}/FALSE display the results (default=TRUE)
+#' @param print TRUE/FALSE display the results (default=TRUE)
 #' @return a new Monolix project with a new inter individual variability model.
 #' @examples
 #' \dontrun{

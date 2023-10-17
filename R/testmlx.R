@@ -21,8 +21,8 @@
 #' @param project a Monolix project
 #' @param tests  a vector of strings: the list of tests to perform 
 #' among c("covariate","randomEffect","correlation","residual")
-#' @param plot  {FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)
-#' @param adjust method to take into account the dependency of MCMC sample  c({"edf"},"BH")
+#' @param plot  FALSE/TRUE  display some diagnostic plots associated to the tests (default=FALSE)
+#' @param adjust method to take into account the dependency of MCMC sample  c("edf","BH") (default="edf")
 #' @param n.sample number of samples from the conditional distribution to be used (default = number of available samples in the project)
 #' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples

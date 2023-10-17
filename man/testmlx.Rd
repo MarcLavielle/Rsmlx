@@ -18,9 +18,9 @@ testmlx(
 \item{tests}{a vector of strings: the list of tests to perform 
 among c("covariate","randomEffect","correlation","residual")}
 
-\item{plot}{{FALSE}/TRUE  display some diagnostic plots associated to the tests (default=FALSE)}
+\item{plot}{FALSE/TRUE  display some diagnostic plots associated to the tests (default=FALSE)}
 
-\item{adjust}{method to take into account the dependency of MCMC sample  c({"edf"},"BH")}
+\item{adjust}{method to take into account the dependency of MCMC sample  c("edf","BH") (default="edf")}
 
 \item{n.sample}{number of samples from the conditional distribution to be used (default = number of available samples in the project)}
 }
