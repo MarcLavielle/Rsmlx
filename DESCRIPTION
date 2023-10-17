@@ -1,7 +1,7 @@
 Package: Rsmlx
 Type: Package
 Title: R Speaks 'Monolix'
-Version: 2023.1.4
+Version: 2023.1.5
 Authors@R: c(
     person( "Frano", "Mihaljevic", role = c("aut","cre"), email = "Frano.Mihaljevic@simulations-plus.com" ),
     person( "Marc", "Lavielle", role = c("ctb"), email = "Marc.Lavielle@inria.fr" ),
