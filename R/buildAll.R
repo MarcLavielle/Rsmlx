@@ -36,7 +36,7 @@
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
-#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
+#' @param direction method for covariate search c("full", "both", "backward", "forward"), (default="full" or "both")
 #' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @param max.iter maximum number of iterations (default=20)
 #' @param explor.iter  number of iterations during the exploratory phase (default=2)

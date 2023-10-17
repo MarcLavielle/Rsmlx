@@ -26,7 +26,7 @@
 #' \item \code{max.iter} maximum number of iterations to find the solution (default=10)
 #' \item \code{tol.LL} absolute tolerance for -2LL  (default=0.001)
 #' \item \code{tol.param} relative tolerance for the parameter (default=0.01)
-#' \item \code{print} {TRUE}/FALSE display the results (default=TRUE)
+#' \item \code{print} TRUE/FALSE display the results (default=TRUE)
 #' }
 #' @return a list with the computed confidence intervals, the method used and the level.
 #' @examples
