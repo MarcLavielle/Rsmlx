@@ -65,15 +65,15 @@ buildAll(
 
 \item{covToTransform}{list of (continuous) covariates to be log-transformed (default="none")}
 
-\item{center.covariate}{TRUE/{FALSE} center the covariates of the final model (default=FALSE)}
+\item{center.covariate}{TRUE/FALSE center the covariates of the final model (default=FALSE)}
 
-\item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
+\item{criterion}{penalization criterion to optimize c("AIC", "BIC", "BICc", gamma)}
 
-\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
+\item{linearization}{TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)}
 
-\item{ll}{{TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
+\item{ll}{TRUE/FALSE  compute the observe likelihood and the criterion to optimize at each iteration}
 
-\item{test}{{TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)}
+\item{test}{TRUE/FALSE  perform additional statistical tests for building the model (default=TRUE)}
 
 \item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
 
@@ -83,9 +83,9 @@ buildAll(
 
 \item{explor.iter}{number of iterations during the exploratory phase (default=2)}
 
-\item{seq.cov}{TRUE/{FALSE} whether the covariate model is built before the correlation model}
+\item{seq.cov}{TRUE/FALSE whether the covariate model is built before the correlation model}
 
-\item{seq.corr}{{TRUE}/FALSE whether the correlation model is built iteratively (default=TRUE)}
+\item{seq.corr}{TRUE/FALSE whether the correlation model is built iteratively (default=TRUE)}
 
 \item{seq.cov.iter}{number of iterations before building the correlation model (only when seq.cov=F, default=0)}
 
@@ -93,7 +93,7 @@ buildAll(
 
 \item{p.min}{minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))}
 
-\item{print}{{TRUE}/FALSE display the results (default=TRUE)}
+\item{print}{TRUE/FALSE display the results (default=TRUE)}
 
 \item{nb.model}{number of models to display at each iteration (default=1)}
 

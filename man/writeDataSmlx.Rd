@@ -19,10 +19,10 @@ In case of multiple replicates, the function creates one dataset per replicate w
 If filename contains an extension, it must be "csv" or "txt". If it does not, extension is defined by `ext` argument.}
 
 \item{sep}{(\emph{string}) (\emph{optional}) Separator used to write dataset file. (default ",")
-It must be one of {"\\t", " ", ";", ","}}
+It must be one of "\\t", " ", ";", ","}
 
 \item{ext}{(\emph{bool}) (\emph{optional}) Extension used to write dataset file. (default "csv")
-It must be one of {"csv", "txt"}
+It must be one of "csv", "txt"
 To defined only if filename with no extension}
 
 \item{nbdigits}{(\emph{integer}) (\emph{optional}) number of decimal digits in output file.

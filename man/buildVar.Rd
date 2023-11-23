@@ -38,13 +38,13 @@ buildVar(
 
 \item{fix.param0}{parameters without variability that cannot be added (default=NULL)}
 
-\item{criterion}{penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)}
+\item{criterion}{penalization criterion to optimize c("AIC", "BIC", "BICc", gamma) (default=BICc)}
 
-\item{linearization}{TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
+\item{linearization}{TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE)}
 
-\item{remove}{{TRUE}/FALSE try to remove random effects (default=TRUE)}
+\item{remove}{TRUE/FALSE try to remove random effects (default=TRUE)}
 
-\item{add}{{TRUE}/FALSE try to add random effects (default=TRUE)}
+\item{add}{TRUE/FALSE try to add random effects (default=TRUE)}
 
 \item{delta}{maximum difference in criteria for testing a new model (default=c(30,10,5))}
 
@@ -54,7 +54,7 @@ buildVar(
 
 \item{pop.set2}{Monolix settings 2}
 
-\item{print}{{TRUE}/FALSE display the results (default=TRUE)}
+\item{print}{TRUE/FALSE display the results (default=TRUE)}
 }
 \value{
 a new Monolix project with a new inter individual variability model.

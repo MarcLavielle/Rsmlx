@@ -20,14 +20,14 @@
 #' @param fix.param0  parameters without variability that cannot be added (default=NULL)
 #' @param covToTest  components of the covariate model that can be modified   (default="all")
 #' @param covToTransform  list of (continuous) covariates to be log-transformed (default="none")
-#' @param center.covariate TRUE/{FALSE} center the covariates of the final model (default=FALSE) 
-#' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
-#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)
-#' @param test  {TRUE}/FALSE  perform additional statistical tests for building the model (default=TRUE)
-#' @param ll  {TRUE}/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
-#' @param seq.cov TRUE/{FALSE} whether the covariate model is built before the correlation model  
+#' @param center.covariate TRUE/FALSE center the covariates of the final model (default=FALSE) 
+#' @param criterion  penalization criterion to optimize c("AIC", "BIC", "BICc", gamma)
+#' @param linearization  TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE, deprecated)
+#' @param test  TRUE/FALSE  perform additional statistical tests for building the model (default=TRUE)
+#' @param ll  TRUE/FALSE  compute the observe likelihood and the criterion to optimize at each iteration
+#' @param seq.cov TRUE/FALSE whether the covariate model is built before the correlation model  
 #' @param seq.cov.iter number of iterations before building the correlation model (only when seq.cov=F, default=0) 
-#' @param seq.corr {TRUE}/FALSE whether the correlation model is built iteratively (default=TRUE) 
+#' @param seq.corr TRUE/FALSE whether the correlation model is built iteratively (default=TRUE) 
 #' @param p.max  maximum p-value used for removing non significant relationships between covariates and individual parameters (default=0.1)
 #' @param p.min minimum p-values used for testing the components of a new model (default=c(0.075, 0.05, 0.1))
 #' @param remove  try to remove random effects (default=T)
@@ -36,11 +36,11 @@
 #' @param omega.set settings to define how a variance varies during iterations of SAEM
 #' @param pop.set1  Monolix settings 1
 #' @param pop.set2  Monolix settings 2
-#' @param direction method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")
+#' @param direction method for covariate search c("full", "both", "backward", "forward"), (default="full" or "both")
 #' @param steps maximum number of iteration for stepAIC (default=1000)
 #' @param max.iter maximum number of iterations (default=20)
 #' @param explor.iter  number of iterations during the exploratory phase (default=2)
-#' @param print {TRUE}/FALSE display the results (default=TRUE)
+#' @param print TRUE/FALSE display the results (default=TRUE)
 #' @param nb.model number of models to display at each iteration (default=1)
 #' @return a new Monolix project with a new statistical model.
 #' @examples

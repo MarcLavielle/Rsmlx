@@ -11,13 +11,13 @@
 #'   \item \code{administration} ("iv", "bolus", "infusion", "oral", "ev"): route of administration 
 #' }
 #' @param project a Monolix project
-#' @param stat ({FALSE}, TRUE): the statistical model is also built (using buildmlx)
-#' @param param ({"clearance"}, "rate", "both): parameterization 
+#' @param stat (FALSE, TRUE): the statistical model is also built (using buildmlx) (default=FALSE)
+#' @param param ("clearance", "rate", "both): parametrization  (default="clearance")
 #' @param new.dir   name of the directory where the created files are stored 
 #' (default is the current working directory) )
-#' @param MM   ({FALSE}, TRUE): tested models include or not Michaelis Menten elimination models
-#' @param linearization  TRUE/{FALSE} whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
-#' @param criterion  penalization criterion to optimize c("AIC", "BIC", {"BICc"}, gamma)
+#' @param MM   (FALSE, TRUE): tested models include or not Michaelis Menten elimination models (default=FALSE)
+#' @param linearization  TRUE/FALSE whether the computation of the likelihood is based on a linearization of the model (default=FALSE)
+#' @param criterion  penalization criterion to optimize c("AIC", "BIC", "BICc", gamma) (default="BICc")
 #' @param level an integer between 1 and 9 (used by setSettings)
 #' @param settings.stat list of settings used by buildmlx (only if stat=TRUE)
 #' 
