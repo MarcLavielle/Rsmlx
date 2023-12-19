@@ -290,7 +290,7 @@ compute.ini <- function(r, parameter) {
     ymax <- th$max1$y
     tmax <- th$max1$time
     ka_ini <- lm(log(y) ~  time, data=subset(abs, y>0))$coefficients[[2]]
-    if (ka_ini < 0)
+    if (is.na(ka_ini) || ka_ini < 0)
       ka_ini <- 1
     #    ka_ini <- lm(y ~ -1 + time, data=subset(abs, y>0))$coefficients[[1]]
     Tk0_ini <- mean(tmax)
