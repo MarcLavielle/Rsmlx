@@ -102,10 +102,16 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 #' }
 #' @export
 initRsmlx <- function(path=NULL){
-  packinfo <- utils::installed.packages()
-  # if (!is.element("lixoftConnectors", packinfo[,1]))
-  #   stop("You need to install the lixoftConnectors package in order to use Rsmlx", call. = FALSE)
+  if (system.file(package = "lixoftConnectors") == "")
+    stop("You need to install the lixoftConnectors package in order to use Rsmlx", call. = FALSE)
   
+  ver_Connectors <- packageVersion("lixoftConnectors")
+  ver_Rsmlx <- packageVersion("Rsmlx")
+  
+  if (ver_Rsmlx$major != ver_Connectors$major) {
+    stop(paste0("The major version number for the lixoftConnectors package and the Rsmlx package must be the same:\nlixoftConnectors package version -> ",
+                ver_Connectors, "\nRsmlx package version -> ", ver_Rsmlx), call. = FALSE)
+  }
   
   lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
   
@@ -120,8 +126,16 @@ initRsmlx <- function(path=NULL){
   } else {
     status = mlx.initializeLixoftConnectors(path=path)
   }
+  
   lixoftConnectorsState <- mlx.getLixoftConnectorsState(quietly = TRUE)
   lixoftConnectorsState$status <- status
+  ver_lixoft <- lixoftConnectorsState$version
+  ver_lixoft_major <- as.numeric(sub("([0-9]+).*$", "\\1", ver_lixoft))
+  
+  if (ver_Rsmlx$major != ver_lixoft_major) {
+    stop(paste0("The major version number for the Lixoft software and the Rsmlx package must be the same:\nLixoft software suite version -> ",
+                ver_lixoft, "\nRsmlx package version -> ", ver_Rsmlx), call. = FALSE)
+  }
   if (is.null(path))
     return(lixoftConnectorsState)
   else
