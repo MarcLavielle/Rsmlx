@@ -40,7 +40,6 @@ Collate: mlxConnectors.R
          pkbuild.R
          pkpopini.R
          whichPKmodel.R
-         writeDataSmlx.R
 License: BSD_2_clause + file LICENSE
 Copyright: Inria
 NeedsCompilation: no
