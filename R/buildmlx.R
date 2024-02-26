@@ -89,6 +89,8 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
   
   ptm <- proc.time()
   
+  initRsmlx()
+  
   dashed.line <- "--------------------------------------------------\n"
   plain.line <-  "__________________________________________________\n"
   dashed.short <- "-----------------------\n"

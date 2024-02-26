@@ -68,6 +68,8 @@ covariateSearch <- function(project, final.project=NULL, method = NULL, covToTes
   ###################################################################################
   # Check the validity of the project
   
+  initRsmlx()
+  
   r <- prcheck(project, f="cov", paramToUse=paramToUse, method=method)
   if (r$demo)
     return(r$res)

@@ -72,8 +72,10 @@ buildAll <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1), print=TRUE, nb.model=1,
                      fix.param1=NULL, fix.param0=NULL, remove=T, add=T, delta=c(30,10,5), 
                      omega.set=NULL, pop.set1=NULL, pop.set2=NULL) {
-  
+
   ptm <- proc.time()
+  
+  initRsmlx()
   
   dashed.line <- "--------------------------------------------------\n"
   plain.line <-  "__________________________________________________\n"

@@ -29,8 +29,7 @@
 
 setSettings  <- function(project=NULL, new.project=NULL, level=5) {
   
-  if (!initRsmlx()$status)
-    return()
+  initRsmlx()
   
   if (!is.null(project)){
     r <- prcheck(project, f="set")

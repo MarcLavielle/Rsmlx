@@ -296,7 +296,7 @@ mlx.saveProject <- function(projectFile=NULL) {
 
 mlx.runPopulationParameterEstimation <- function(parameters=NULL) {
   r <- NULL
-  if (as.numeric(substr(packageVersion("lixoftConnectors"),1,4))>=2021 & !is.null(parameters))
+  if (!is.null(parameters))
     .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation(parameters=parameters)'))
   else
     .hiddenCall(paste0('r <- lixoftConnectors::runPopulationParameterEstimation()'))
@@ -325,29 +325,12 @@ mlx.getFormatting <- function() {
 }
 
 smlx.exportSimulatedData <- function(path) {
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  if (v >= 2023) {
-    .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
-  } else {
-    resultsPath <- NULL
-    .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData()'))
-    .hiddenCall(paste0('resultsPath <- lixoftConnectors::getProjectSettings()'))
-    old_path <- file.path(resultsPath$directory, "Simulation", "simulatedData.txt")
-    file.copy(from = old_path, to = path)
-  }
+  .hiddenCall(paste0('r <- lixoftConnectors::exportSimulatedData(path)'))
 }
 
 
 smlx.importMonolixProject <- function(project) {
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  if (v >= 2023) {
-    .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
-  } else {
-    .hiddenCall(paste0('r <- lixoftConnectors::importMonolixProject(project)'))
-  }
-  
+  .hiddenCall(paste0('r <- lixoftConnectors::importProject(project)'))
 }
 
 mlx.getAvailableData <- function() {

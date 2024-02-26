@@ -36,8 +36,7 @@
 #' @export
 pkpopini <- function(data=NULL, project=NULL, parameter=NULL, new.project=NULL, new.dir=NULL, par.ini=NULL) {
 
-  if (!initRsmlx()$status)
-    return()
+  initRsmlx()
   
   if (!is.null(project)) {
     r <- prcheck(project)

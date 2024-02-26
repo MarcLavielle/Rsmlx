@@ -54,12 +54,6 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
     
   } else {
     
-    if (grepl("2020",initRsmlx()$version) | grepl("2019",initRsmlx()$version) )
-      stop("Rsmlx versions above 4.0 are compatible only with MonolixSuite >= 2021R1" , call.=FALSE)
-    
-    if (!initRsmlx()$status)
-      return()
-    
     if (!grepl("\\.",project))
       project <- paste0(project,".mlxtran")
     
@@ -86,7 +80,7 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 
 #' Initialize Rsmlx library
 #' 
-#' Initialize Rsmlx library
+#' Initialize Rsmlx library and lixoftConnectors. Prints information about the versions of Monolix and lixoftConnectors used.
 #' @param path Monolix path 
 #' @return A list:
 #' \itemize{
@@ -97,8 +91,8 @@ prcheck <- function(project, f=NULL, settings=NULL, model=NULL, paramToUse=NULL,
 #' }
 #' @examples
 #' \dontrun{
-#' initRsmlx()  # print the info about Monolix and lixoftConnectors
-#' initRsmlx(path="C:/ProgramData/Lixoft/MonolixSuite2019R1")  # use MonolixSuite 2019R1
+#' initRsmlx() 
+#' initRsmlx(path="C:/ProgramData/Lixoft/MonolixSuite2024R1")  # specifiy a specific path
 #' }
 #' @export
 initRsmlx <- function(path=NULL){
@@ -136,11 +130,14 @@ initRsmlx <- function(path=NULL){
     stop(paste0("The major version number for the Lixoft software and the Rsmlx package must be the same:\nLixoft software suite version -> ",
                 ver_lixoft, "\nRsmlx package version -> ", ver_Rsmlx), call. = FALSE)
   }
+  
+  if (!status)
+    stop("Failed to initialize lixoftConnectors package.", call. = FALSE)
+  
   if (is.null(path))
     return(lixoftConnectorsState)
   else
     return(invisible(lixoftConnectorsState))
-  
 }
 
 

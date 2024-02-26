@@ -41,10 +41,7 @@
 pkbuild <- function(data=NULL, project=NULL, stat=FALSE, param="clearance", new.dir=".", 
                     MM=FALSE, linearization=F, criterion="BICc", level=NULL, settings.stat=NULL) {
   
-  if (!initRsmlx()$status)
-    return()
-  
-  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  initRsmlx()
   
   if (!is.null(project)) {
     r <- prcheck(project)

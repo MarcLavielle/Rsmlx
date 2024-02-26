@@ -62,19 +62,15 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     settings = NULL){
   warning("This function will be deprecated. Please migrate to lixoftConnectors::runBootstrap().", call. = FALSE)
   
-  params <- as.list(match.call(expand.dots=T))[-1]
+  initRsmlx()
   
-  monolixPath <- mlx.getLixoftConnectorsState()$path
-  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  params <- as.list(match.call(expand.dots=T))[-1]
   
   r <- prcheck(project, f="boot", settings=settings)
   if (r$demo)
     return(r$res)
   project <- r$project
 
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  
   mlx.loadProject(project)
   exportDir <- mlx.getProjectSettings()$directory
   projectName <- basename(tools::file_path_sans_ext(project))
@@ -153,25 +149,23 @@ bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
     }
     dataFolderToUse = file.path(exportDir, boot.folder, 'data')
 
-    if (v >= 2023) {
-      # Convert a project with data formatting to one with no data formatting
-      if (!is.null(mlx.getFormatting()) && !parametric) {
-        dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
-        formattedData <- NULL
-        formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
-        mlx.saveFormattedFile(formattedData$dataFile)
-        formattedData$headerTypes <- mlx.getData()$headerTypes
-        formattedData$observationTypes <- mlx.getData()$observationTypes
-        mapping <- mlx.getMapping()
-        mlx.setData(formattedData)
-        mlx.setMapping(mapping)
-        project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
-        mlx.saveProject(project)
-        mlx.setProjectSettings(directory = exportDir)
-        mlx.saveProject()
-      }
+    # Convert a project with data formatting to one with no data formatting
+    if (!is.null(mlx.getFormatting()) && !parametric) {
+      dir.create(file.path(exportDir, boot.folder), showWarnings = FALSE, recursive = TRUE)
+      formattedData <- NULL
+      formattedData$dataFile <- file.path(exportDir, boot.folder, "noFormatting.csv")
+      mlx.saveFormattedFile(formattedData$dataFile)
+      formattedData$headerTypes <- mlx.getData()$headerTypes
+      formattedData$observationTypes <- mlx.getData()$observationTypes
+      mapping <- mlx.getMapping()
+      mlx.setData(formattedData)
+      mlx.setMapping(mapping)
+      project <- file.path(exportDir, boot.folder, paste0(projectName, ".mlxtran"))
+      mlx.saveProject(project)
+      mlx.setProjectSettings(directory = exportDir)
+      mlx.saveProject()
     }
-    
+
     if (!parametric) {
       # Check if header names match between data and Monolix
       originalData <- read.res(mlx.getData()$dataFile)
@@ -387,9 +381,7 @@ generateDataSetResample = function(project, settings, boot.folder, dataFolder){
 }
 
 generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=NULL){
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  
+
   if(!file.exists(project)){
     stop("Project ", project, ", does not exist.", call.=F)
   }
@@ -501,9 +493,6 @@ generateDataSetParametricSimulx = function(project, settings=NULL, boot.folder=N
 ##############################################################################
 generateBootstrapProject = function(project, boot.folder, indexSample, dataFile){
 
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-
   # Get the data set information
   op <- get_lixoft_options()
   set_options(info = FALSE)
@@ -530,16 +519,12 @@ generateBootstrapProject = function(project, boot.folder, indexSample, dataFile)
     op <- get_lixoft_options()
     set_options(warnings = FALSE, info = FALSE)
     
-    if (v >= 2023) {
-      mapping <- mlx.getMapping()
-    }
+    mapping <- mlx.getMapping()
 
     bootData$dataFile <- dataFile
     mlx.setData(bootData)
     
-    if (v >= 2023) {
-      mlx.setMapping(mapping)
-    }
+    mlx.setMapping(mapping)
 
     #      mlx.setStructuralModel(modelFile=mlx.getStructuralModel())
     mlx.setProjectSettings(dataandmodelnexttoproject = FALSE)
@@ -700,8 +685,6 @@ runBootstrapProject <- function(projectBoot, indexSample, settings) {
     smlxHeadersType[smlxHeaders == h] <- mlxHeadersType[mlxHeaders == h]
   }
   
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
   matchSmlx <- c(ID = "id", AMOUNT = "amount", TIME = "time", INFUSION.DURATION = "tinf",
                  ADMINISTRATION.ID = "admid", obsid = "obsid", EVENT.ID = "evid", obs = "observation")
   smlxHeadersType[smlxHeaders %in% setdiff(smlxHeaders, intersectHeaders)] <- unname(matchSmlx[setdiff(smlxHeaders, intersectHeaders)])

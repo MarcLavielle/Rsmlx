@@ -53,7 +53,7 @@ testmlx <- function(project=NULL,
                     tests=c("covariate","randomEffect","correlation","residual"), 
                     plot=FALSE, adjust="edf", n.sample=NULL) 
 {
-  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  initRsmlx()
   
   if (!is.null(project)) {
     r <- prcheck(project, f="test", tests=tests)

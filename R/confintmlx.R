@@ -80,7 +80,7 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
          proflike = "",
          warning(paste("Unrecognized method:", method), call. = FALSE))
   
-  RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
+  initRsmlx()
   
   r <- prcheck(project, f="conf", level=level, method=method )
   if (r$demo)

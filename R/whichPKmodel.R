@@ -17,27 +17,15 @@
 
 whichPKmodel <- function(parameter, mlxPath = NULL, pkPath = NULL, lib = FALSE) {
   
-  if (!initRsmlx()$status)
-    return()
+  initRsmlx()
   
   parameter[parameter=="k"] <- "ke"
   parameter[parameter=="Q"] <- "Q2"
   parameter[parameter=="V"] <- "V1"
   parameter <- sort(parameter)
 
-  version <- mlx.getLixoftConnectorsState()$version
-  v <- regmatches(version, regexpr("^[0-9]*", version, perl = TRUE))
-  if (v < 2023) {
-    if (is.null(pkPath))  {
-      if (is.null(mlxPath))
-        mlxPath <- mlx.path()
-      pkPath <- file.path(mlxPath,"factory/library/pk")
-    }
-    d <- dir(pkPath)
-  } else {
-    d <- gsub("lib:", "", mlx.getLibraryModelName("pk"))
-    lib <- TRUE
-  }
+  d <- gsub("lib:", "", mlx.getLibraryModelName("pk"))
+  lib <- TRUE
 
   id0 <- c(grep("alpha",d), grep("bolus_",d))
   d <- d0 <- d[-id0]

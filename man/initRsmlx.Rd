@@ -19,11 +19,11 @@ A list:
 }
 }
 \description{
-Initialize Rsmlx library
+Initialize Rsmlx library and lixoftConnectors. Prints information about the versions of Monolix and lixoftConnectors used.
 }
 \examples{
 \dontrun{
-initRsmlx()  # print the info about Monolix and lixoftConnectors
-initRsmlx(path="C:/ProgramData/Lixoft/MonolixSuite2019R1")  # use MonolixSuite 2019R1
+initRsmlx() 
+initRsmlx(path="C:/ProgramData/Lixoft/MonolixSuite2024R1")  # specifiy a specific path
 }
 }
