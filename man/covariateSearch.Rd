@@ -46,7 +46,8 @@ adding a log-transformed covariate on a lognormally distributed parameter result
 }}
 }
 \description{
-Automatic search of the best covariate model. 
+Automatic search of the best covariate model. Automatic covariate model building is available directly in the lixoftConnectors package using the function
+\code{\link[lixoftConnectors]{runModelBuilding}}. Please migrate, as this function will be deprecated in the future. \cr \cr
 Two methods for covariate model building are proposed
 \itemize{
 \item SCM: stepwise covariate modeling method
@@ -80,4 +81,9 @@ r3 <- covariateSearch(project    = "RsmlxDemo1.mlxtran",
 # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
+}
+\seealso{
+\code{\link[lixoftConnectors]{getModelBuildingSettings}} settings for model building with lixoftConnectors \cr
+\code{\link[lixoftConnectors]{runModelBuilding}} run model building with lixoftConnectors \cr
+\code{\link[lixoftConnectors]{getModelBuildingResults}} results for model building with lixoftConnectors
 }

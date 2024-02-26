@@ -85,7 +85,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1),
                      print=TRUE, nb.model=1)
 {
-  info("This functionality is directly available in the lixoftConnectors package  with the function runModelBuilding.", call. = FALSE)
+  info("This functionality is directly available in the lixoftConnectors package with the function runModelBuilding.", call. = FALSE)
   
   ptm <- proc.time()
   
