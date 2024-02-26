@@ -2,25 +2,37 @@
 #'
 #' Compute confidence intervals for the population parameters estimated by Monolix.
 #' 
+#' Most functionality to compute confidence intervals (other than profile likelihood) is 
+#' now available directly in the lixoftConnectors package. Please migrate 
+#' the following uses of this function:
+#' \tabular{lll}{
+#' confintmlx method \tab \tab lixoftConnectors function \cr
+#' \code{"fim"} \tab \code{linearizarion = TRUE} \tab \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}(method = "linearization")} \cr
+#' \code{"fim"} \tab \code{linearizarion = FALSE} \tab \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}(method = "stochasticApproximation")} \cr
+#' \code{"bootstrap"} \tab \code{parametric = TRUE} \tab \code{\link[lixoftConnectors]{runBootstrap}(method = "parametric")} \cr
+#' \code{"bootstrap"} \tab \code{parametric = FALSE} \tab \code{\link[lixoftConnectors]{runBootstrap}(method = "nonparametric")} \cr
+#' }
+#' For \code{method="proflike"}, continue using this function.
+#' 
 #' The method used for computing the confidence intervals can be either based on the 
 #' standard errors derived from an estimation of the Fisher Information Matrix ("fim"),
 #' on the profile likelihood ("proflike") or on nonparametric bootstrap estimate ("bootstrap").
 #' \code{method="fim"} is used by default.
 #' 
-#' When method="fim", the FIM can be either estimated using a linearization of the model 
-#' or a stochastic approximation. When method="proflike", the observed likelihood can be 
+#' When \code{method="fim"}, the FIM can be either estimated using a linearization of the model 
+#' or a stochastic approximation. When \code{method="proflike"}, the observed likelihood can be 
 #' either estimated using a linearization of the model or an importance sampling Monte Carlo 
-#' procedure. When method="bootstrap", the bootstrap estimates are obtained using the bootmlx
+#' procedure. When \code{method="bootstrap"}, the bootstrap estimates are obtained using the bootmlx
 #' function
 #' 
 #' @param project a Monolix project
-#' @param method  method c("fim", "proflike", "bootstrap") (default="fim")
+#' @param method  method \code{c("fim", "proflike", "bootstrap")} (default="fim")
 #' @param parameters list of parameters for which confidence intervals are computed (default="all")
 #' @param level  confidence level, a real number between 0 and 1 (default=0.90)
 #' @param linearization  TRUE/FALSE  whether the calculation of the standard errors (default=TRUE)
 #' or the profile likelihood  is based on a linearization of the model (default=TRUE) 
 #' @param nboot number of bootstrat replicates (default=100, used when method="bootstrap")
-#' @param parametric boolean to define if parametric bootstrap is performed (new data is drawn from the model), (default: false)
+#' @param parametric boolean to define if parametric bootstrap is performed (new data is drawn from the model), (default: FALSE)
 #' @param settings a list of settings for the profile likelihood method:
 #' \itemize{
 #' \item \code{max.iter} maximum number of iterations to find the solution (default=10)
@@ -29,6 +41,8 @@
 #' \item \code{print} TRUE/FALSE display the results (default=TRUE)
 #' }
 #' @return a list with the computed confidence intervals, the method used and the level.
+#' @seealso \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
+#' \code{\link[lixoftConnectors]{runBootstrap}} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
 #' @examples
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
@@ -60,6 +74,11 @@
 confintmlx <- function(project, parameters="all", method="fim", level=0.90, 
                        linearization=TRUE, nboot=100, parametric=FALSE, settings=NULL)
 {
+  switch(method,
+         fim = warning("Please migrate to lixoftConnectors::getEstimatedConfidenceIntervals().", call. = FALSE),
+         bootstrap = warning("Please migrate to lixoftConnectors::runBootstrap().", call. = FALSE),
+         proflike = "",
+         warning(paste("Unrecognized method:", method), call. = FALSE))
   
   RsmlxDemo1.project <- RsmlxDemo2.project <- warfarin.data  <- resMonolix <- NULL
   
@@ -76,7 +95,6 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
     cat("\nEstimation of the population parameters... \n")
     mlx.runPopulationParameterEstimation()
   }
-  
   
   parameters <- unlist(parameters)
   if (method=="proflike") {

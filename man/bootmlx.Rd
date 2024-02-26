@@ -50,6 +50,10 @@ a data frame with the bootstrap estimates
 Generate replicates of the original data using random sampling with replacement.
 Population parameters are then estimated from each replicate.
 }
+\details{
+Bootstrap functionality is now available directly in the lixoftConnectors package using the function
+\code{\link[lixoftConnectors]{runBootstrap}}. Please migrate, as this function will be deprecated in the future.
+}
 \examples{
 \dontrun{
 # RsmlxDemo1.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
@@ -71,4 +75,9 @@ r3 <- bootmlx(project="RsmlxDemo1.mlxtran",  settings = list(covStrat = "sex"))
 # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 
 
+}
+\seealso{
+\code{\link[lixoftConnectors]{getBootstrapSettings}} settings for bootstrap with lixoftConnectors \cr
+\code{\link[lixoftConnectors]{runBootstrap}} run the bootstrap with lixoftConnectors \cr
+\code{\link[lixoftConnectors]{getBootstrapResults}} results for bootstrap with lixoftConnectors
 }

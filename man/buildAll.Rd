@@ -75,7 +75,7 @@ buildAll(
 
 \item{test}{TRUE/FALSE  perform additional statistical tests for building the model (default=TRUE)}
 
-\item{direction}{method for covariate search c({"full"}, "both", "backward", "forward"), (default="full" or "both")}
+\item{direction}{method for covariate search c("full", "both", "backward", "forward"), (default="full" or "both")}
 
 \item{steps}{maximum number of iteration for stepAIC (default=1000)}
 
