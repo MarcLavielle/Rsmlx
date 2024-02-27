@@ -194,16 +194,18 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
   N <- nrow(p0.ind)
   
   g <- as.list(mlx.getLaunchedTasks())
+  rerunLinearLikelihood <- FALSE
 
   if (!linearization | !linearization.iter) {
     if (!("importanceSampling" %in% g[['logLikelihoodEstimation']])) {
       mlx.runConditionalDistributionSampling()
       mlx.runLogLikelihoodEstimation(linearization=FALSE)
+      rerunLinearLikelihood <- TRUE # existing likelihood invalid after conditional distribution task 
     }
   }
 
   if (linearization | linearization.iter) {
-    if (!("linearization" %in% g[['logLikelihoodEstimation']])) {
+    if (!("linearization" %in% g[['logLikelihoodEstimation']]) | rerunLinearLikelihood) {
       if (!g$conditionalModeEstimation) {
         mlx.runConditionalModeEstimation()
       }
@@ -513,7 +515,7 @@ buildVar <- function(project=NULL,final.project=NULL, prior=NULL, weight=NULL, c
               }
               BICc1.iter <- compute.criterion(criterion, method.ll.iter, weight, pen.coef) 
               cvj <- compute.cv(popj, pj)$cv
-              if (cvj < cv.min) {
+              if (!is.nan(cvj) & cvj < cv.min) {
                 if (print)
                   cat(sprintf("%.1f", BICc1.iter), " ; cv = ", cvj, "\n")
               } else {
