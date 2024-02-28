@@ -60,7 +60,8 @@
 bootmlx <- function(project, nboot = 100, dataFolder = NULL, parametric = FALSE,
                     tasks=c(populationParameterEstimation=TRUE), 
                     settings = NULL){
-  warning("This function will be deprecated. Please migrate to lixoftConnectors::runBootstrap().", call. = FALSE)
+  warning("This function will be deprecated. Please migrate to lixoftConnectors::runBootstrap().", 
+          call. = FALSE, immediate. = TRUE)
   
   initRsmlx()
   

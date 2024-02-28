@@ -75,10 +75,12 @@ confintmlx <- function(project, parameters="all", method="fim", level=0.90,
                        linearization=TRUE, nboot=100, parametric=FALSE, settings=NULL)
 {
   switch(method,
-         fim = warning("Please migrate to lixoftConnectors::getEstimatedConfidenceIntervals().", call. = FALSE),
-         bootstrap = warning("Please migrate to lixoftConnectors::runBootstrap().", call. = FALSE),
+         fim = warning("Please migrate to lixoftConnectors::getEstimatedConfidenceIntervals().", 
+                       call. = FALSE, immediate. = TRUE),
+         bootstrap = warning("Please migrate to lixoftConnectors::runBootstrap().", 
+                             call. = FALSE, immediate. = TRUE),
          proflike = "",
-         warning(paste("Unrecognized method:", method), call. = FALSE))
+         warning(paste("Unrecognized method:", method), call. = FALSE, immediate. = TRUE))
   
   initRsmlx()
   

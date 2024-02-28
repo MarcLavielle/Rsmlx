@@ -61,7 +61,8 @@
 #'
 #' @export
 covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, testRelations = NULL, settings = NULL){
-  warning("This function will be deprecated. Please migrate to lixoftConnectors::runModelBuilding().", call. = FALSE)
+  warning("This function will be deprecated. Please migrate to lixoftConnectors::runModelBuilding().", 
+          call. = FALSE, immediate. = TRUE)
   
   ###################################################################################
   # Initial check
