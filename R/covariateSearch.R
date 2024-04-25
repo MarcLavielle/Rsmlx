@@ -39,6 +39,7 @@
 #' \code{\link[lixoftConnectors]{runModelBuilding}} run model building with lixoftConnectors \cr
 #' \code{\link[lixoftConnectors]{getModelBuildingResults}} results for model building with lixoftConnectors
 #' @examples
+#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -54,10 +55,10 @@
 #' r3 <- covariateSearch(project    = "RsmlxDemo1.mlxtran", 
 #'                       paramToUse = c("V","Cl"), 
 #'                       covToTest  = c("age","wt"))
+#' }
 #' 
 #' # See http://monolix.lixoft.com/rsmlx/covariatesearch/ for detailed examples of covariatesearch
 #' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
-#'
 #'
 #' @export
 covariateSearch <- function(project, final.project=NULL, method = NULL, covToTest = NULL, covToTransform=NULL, paramToUse = NULL, testRelations = NULL, settings = NULL){

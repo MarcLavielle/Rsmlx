@@ -70,6 +70,7 @@ procedure. When \code{method="bootstrap"}, the bootstrap estimates are obtained 
 function
 }
 \examples{
+\dontrun{
 # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 # with parameters ka, V, Cl.
 
@@ -90,10 +91,10 @@ r <- confintmlx(project    = "RsmlxDemo2.mlxtran",
 
 # Confidence intervals are computed using 200 bootstrap samples:
 r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
+}
 
 # See http://monolix.lixoft.com/rsmlx/confintmlx/ for detailed examples of use of confintmlx
 # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
-
 
 }
 \seealso{

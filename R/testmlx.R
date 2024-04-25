@@ -26,6 +26,7 @@
 #' @param n.sample number of samples from the conditional distribution to be used (default = number of available samples in the project)
 #' @return a list of data frames and ggplot objects if plot=TRUE
 #' @examples
+#' \dontrun{
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -34,10 +35,10 @@
 #' 
 #' #testmlx will perform statistical tests for the covariate model and the correlation model only.
 #' r2 <- testmlx(project="RsmlxDemo2.mlxtran", tests=c("covariate","correlation"))
+#' }
 #' 
 #' # See http://monolix.lixoft.com/rsmlx/testmlx/ for detailed examples of use of testmlx
 #' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
-#' 
 #' 
 #' @importFrom ggplot2 ggplot geom_point theme theme_set theme_bw aes geom_line xlab ylab facet_wrap facet_grid stat_ecdf aes_string
 #'             geom_abline geom_boxplot geom_smooth

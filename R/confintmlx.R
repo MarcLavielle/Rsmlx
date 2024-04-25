@@ -44,6 +44,7 @@
 #' @seealso \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
 #' \code{\link[lixoftConnectors]{runBootstrap}} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
 #' @examples
+#' \dontrun{
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
 #' # with parameters ka, V, Cl.
 #' 
@@ -64,11 +65,11 @@
 #' 
 #' # Confidence intervals are computed using 200 bootstrap samples:
 #' r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
+#' }
 #' 
 #' # See http://monolix.lixoft.com/rsmlx/confintmlx/ for detailed examples of use of confintmlx
 #' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
 #'
-#' 
 #' @importFrom stats qchisq
 #' @export
 confintmlx <- function(project, parameters="all", method="fim", level=0.90, 

@@ -49,6 +49,7 @@
 #' \code{\link[lixoftConnectors]{runModelBuilding}} run model building with lixoftConnectors \cr
 #' \code{\link[lixoftConnectors]{getModelBuildingResults}} results for model building with lixoftConnectors
 #' @examples
+#' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 
 #' # using a PK model with parameters ka, V, Cl.
 #' 
@@ -65,10 +66,10 @@
 #' 
 #' # Only the covariate model will be  built, using AIC instead of BIC:
 #' r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC") 
+#' }
 #' 
 #' # See http://monolix.lixoft.com/rsmlx/buildmlx/ for detailed examples of use of buildmlx
 #' # Download the demo examples here: http://monolix.lixoft.com/rsmlx/installation
-#' 
 #' 
 #' @importFrom MASS addterm dropterm 
 #' @importFrom stats coef as.formula model.matrix deviance formula extractAIC factor.scope nobs terms update update.formula
@@ -85,7 +86,7 @@ buildmlx <- function(project=NULL, final.project=NULL, model="all", prior=NULL, 
                      p.max=0.1, p.min=c(0.075, 0.05, 0.1),
                      print=TRUE, nb.model=1)
 {
-  info("This functionality is directly available in the lixoftConnectors package with the function runModelBuilding.", call. = FALSE)
+  message("This functionality is directly available in the lixoftConnectors package with the function runModelBuilding.", call. = FALSE)
   
   ptm <- proc.time()
   
