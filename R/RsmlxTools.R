@@ -127,7 +127,7 @@ initRsmlx <- function(path=NULL){
   ver_lixoft_major <- as.numeric(sub("([0-9]+).*$", "\\1", ver_lixoft))
   
   if (ver_Rsmlx$major != ver_lixoft_major) {
-    stop(paste0("The major version number for the Lixoft software and the Rsmlx package must be the same:\nLixoft software suite version -> ",
+    stop(paste0("The major version number for MonolixSuite and the Rsmlx package must be the same:\nMonolixSuite version -> ",
                 ver_lixoft, "\nRsmlx package version -> ", ver_Rsmlx), call. = FALSE)
   }
   
