@@ -38,10 +38,6 @@ Read data in a Monolix/NONMEM format
 }
 \examples{
 \dontrun{
-# using a Monolix project:
-d <- readDatamlx(project='projects/warfarinPK.mlxtran')
-
-
 # using a data file:
 warfarinPK <- list(dataFile = "data/warfarinPK.csv",
                    headerTypes = c("id", "time", "observation", "amount", 
