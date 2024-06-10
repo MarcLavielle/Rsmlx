@@ -7,10 +7,10 @@
 #' the following uses of this function:
 #' \tabular{lll}{
 #' confintmlx method \tab \tab lixoftConnectors function \cr
-#' \code{"fim"} \tab \code{linearizarion = TRUE} \tab \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}(method = "linearization")} \cr
-#' \code{"fim"} \tab \code{linearizarion = FALSE} \tab \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}(method = "stochasticApproximation")} \cr
-#' \code{"bootstrap"} \tab \code{parametric = TRUE} \tab \code{\link[lixoftConnectors]{runBootstrap}(method = "parametric")} \cr
-#' \code{"bootstrap"} \tab \code{parametric = FALSE} \tab \code{\link[lixoftConnectors]{runBootstrap}(method = "nonparametric")} \cr
+#' \code{"fim"} \tab \code{linearizarion = TRUE} \tab \code{getEstimatedConfidenceIntervals} (method = "linearization") \cr
+#' \code{"fim"} \tab \code{linearizarion = FALSE} \tab \code{getEstimatedConfidenceIntervals} (method = "stochasticApproximation") \cr
+#' \code{"bootstrap"} \tab \code{parametric = TRUE} \tab \code{runBootstrap} (method = "parametric") \cr
+#' \code{"bootstrap"} \tab \code{parametric = FALSE} \tab \code{runBootstrap} (method = "nonparametric") \cr
 #' }
 #' For \code{method="proflike"}, continue using this function.
 #' 

@@ -1,7 +1,7 @@
 #' Automatic statistical model building
 #'
 #' Automatic statistical model building is available directly in the lixoftConnectors package using the function
-#' \code{\link[lixoftConnectors]{runModelBuilding}}. 
+#' \code{runModelBuilding}. 
 #'
 #' buildmlx uses SAMBA (Stochastic Approximation for Model Building Algorithm), an iterative procedure to accelerate and optimize the process of model building by identifying 
 #' at each step how best to improve some of the model components. This method allows to find 
@@ -45,9 +45,9 @@
 #' @param print TRUE/FALSE display the results (default=TRUE)
 #' @param nb.model number of models to display at each iteration (default=1)
 #' @return a new Monolix project with a new statistical model.
-#' @seealso \code{\link[lixoftConnectors]{getModelBuildingSettings}} settings for model building with lixoftConnectors \cr
-#' \code{\link[lixoftConnectors]{runModelBuilding}} run model building with lixoftConnectors \cr
-#' \code{\link[lixoftConnectors]{getModelBuildingResults}} results for model building with lixoftConnectors
+#' @seealso \code{getModelBuildingSettings} settings for model building with lixoftConnectors \cr
+#' \code{runModelBuilding} run model building with lixoftConnectors \cr
+#' \code{getModelBuildingResults} results for model building with lixoftConnectors
 #' @examples
 #' \dontrun{
 #' # RsmlxDemo1.mlxtran is a Monolix project for modelling the pharmacokinetics (PK) of warfarin 

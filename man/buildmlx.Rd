@@ -94,7 +94,7 @@ a new Monolix project with a new statistical model.
 }
 \description{
 Automatic statistical model building is available directly in the lixoftConnectors package using the function
-\code{\link[lixoftConnectors]{runModelBuilding}}.
+\code{runModelBuilding}.
 }
 \details{
 buildmlx uses SAMBA (Stochastic Approximation for Model Building Algorithm), an iterative procedure to accelerate and optimize the process of model building by identifying 
@@ -135,7 +135,7 @@ r3 <- buildmlx(project="RsmlxDemo1.mlxtran", model="covariate", criterion="AIC")
 
 }
 \seealso{
-\code{\link[lixoftConnectors]{getModelBuildingSettings}} settings for model building with lixoftConnectors \cr
-\code{\link[lixoftConnectors]{runModelBuilding}} run model building with lixoftConnectors \cr
-\code{\link[lixoftConnectors]{getModelBuildingResults}} results for model building with lixoftConnectors
+\code{getModelBuildingSettings} settings for model building with lixoftConnectors \cr
+\code{runModelBuilding} run model building with lixoftConnectors \cr
+\code{getModelBuildingResults} results for model building with lixoftConnectors
 }

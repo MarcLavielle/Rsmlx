@@ -3,10 +3,12 @@ Type: Package
 Title: R Speaks 'Monolix'
 Version: 2024.1.0
 Authors@R: c(
-    person( "Frano", "Mihaljevic", role = c("aut","cre"), email = "Frano.Mihaljevic@simulations-plus.com" ),
-    person( "Marc", "Lavielle", role = c("ctb"), email = "Marc.Lavielle@inria.fr" ),
-    person( "Jonathan", "Chauvin", role = c("ctb"), email = "Jonathan.Chauvin@lixoft.com" ),
+    person( "Chloe", "Bracis", role = c("ctb","cre"), email = "support@lixoft.com" ),
+    person( "Frano", "Mihaljevic", role = c("aut") ),
+    person( "Marc", "Lavielle", role = c("aut") ),
+    person( "Jonathan", "Chauvin", role = c("ctb") ),
     person( "Clémence", "Pinaud", role = c("ctb")))
+Maintainer:  Chloe Bracis <support@lixoft.com>
 Description: Provides methods for model building and model evaluation of mixed effects models using 
     'Monolix' <https://monolix.lixoft.com>. 'Monolix' is a software tool for nonlinear mixed effects 
     modeling that must have been installed in order to use 'Rsmlx'. 
@@ -18,8 +20,6 @@ URL: https://monolix.lixoft.com/rsmlx/
 SystemRequirements: 'Monolix' (<https://monolix.lixoft.com>)
 Depends: R (>= 3.0.0)
 Imports: graphics, grDevices, utils, stats, MASS, ggplot2, gridExtra, dplyr, tidyr
-Suggests: 
-    mlxR
 Collate: mlxConnectors.R
          bootstrap.R
          buildmlx.R
