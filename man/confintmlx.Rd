@@ -98,6 +98,6 @@ r3 <- confintmlx(project="RsmlxDemo2.mlxtran", method="bootstrap", nboot=200)
 
 }
 \seealso{
-\code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
-\code{\link[lixoftConnectors]{runBootstrap}} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
+\code{getEstimatedConfidenceIntervals} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
+\code{runBootstrap} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
 }

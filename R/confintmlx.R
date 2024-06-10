@@ -41,8 +41,8 @@
 #' \item \code{print} TRUE/FALSE display the results (default=TRUE)
 #' }
 #' @return a list with the computed confidence intervals, the method used and the level.
-#' @seealso \code{\link[lixoftConnectors]{getEstimatedConfidenceIntervals}} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
-#' \code{\link[lixoftConnectors]{runBootstrap}} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
+#' @seealso \code{getEstimatedConfidenceIntervals} replaces this function for \code{method = "fim"} in lixoftConnectors \cr
+#' \code{runBootstrap} replaces this function for \code{method = "bootstrap"} in lixoftConnectors
 #' @examples
 #' \dontrun{
 #' # RsmlxDemo2.mlxtran is a Monolix project for modelling the PK of warfarin using a PK model 
